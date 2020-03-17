@@ -79,11 +79,14 @@ void test_log()
 	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR")
 	LOGE("this log only print on logcat because of xlog_config_target=LOG_TARGET_ANDROID")
 
+	xlog_config_target = LOG_TARGET_CONSOLE;
+	LOGE_TRACE("this log only print on console because of xlog_config_target=LOG_TARGET_CONSOLE")
+
 	xlog_config_level = LOG_LEVEL_OFF;
 	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF")
 
-	xlog_config_level = LOG_LEVEL_VERBOSE;
-	xlog_config_target = LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE;
+	xlog_config_level = LOG_LEVEL_INFO;
+	xlog_config_target = (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	LOGI("LOG test finished!!!")
 }
 //#define MYLOG(...) EXPAND_ARGS(LOGD(__VA_ARGS__))

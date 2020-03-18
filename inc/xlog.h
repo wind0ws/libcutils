@@ -25,44 +25,32 @@ extern "C" {
 #define LOG_TAG_DEFAULT "XTest"
 #define CONSOLE_LOG_CONFIG_METHOD printf
 #define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
+#define IS_LOGABLE(level) (xlog_config_level && level >= xlog_config_level)
 
     //#define xlog_config_level LOG_LEVEL_VERBOSE
     extern int xlog_config_level;
     //#define xlog_config_target (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE)
     extern int xlog_config_target;
 
-    //for MSC
-#ifdef _MSC_VER
+#ifdef _MSC_VER //for MSC
 
 #include <windows.h>
 #include <sys/timeb.h>
-//#include <time.h>
 
     static __inline long long time_stamp_current() {
         struct timeb rawtime;
         ftime(&rawtime);
         return rawtime.time * 1000 + rawtime.millitm;
-        /*SYSTEMTIME sys_time;
-        time_t ltime = 0;
-        time(&ltime);
-        GetLocalTime(&sys_time);
-        return ltime * 1000 + sys_time.wMilliseconds;*/
     }
 
 #define __func__ __FUNCTION__
 
-    //fix MSC macro comma. https://stackoverflow.com/questions/5588855/standard-alternative-to-gccs-va-args-trick
-    //#define BAR_HELPER(fmt, ...) printf(fmt "\n", __VA_ARGS__)
-    //#define BAR(...) BAR_HELPER(__VA_ARGS__, 0)
-    //#define CONSOLE_LOG_NO_NEW_LINE_HELPER(level, fmt, ...) if(level >= xlog_config_level) { CONSOLE_LOG_CONFIG_METHOD(fmt, __VA_ARGS__); }
-    //#define CONSOLE_LOG_NO_NEW_LINE(level, ...) CONSOLE_LOG_NO_NEW_LINE_HELPER(level, __VA_ARGS__, 0)
-
-    //msvc-doesnt-expand-va-args-correctly https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
+//msvc-doesnt-expand-va-args-correctly https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
 #define EXPAND_VA_ARGS( x ) x
 //#define F(x, ...) X = x and VA_ARGS = __VA_ARGS__
 //#define G(...) EXPAND_VA_ARGS( F(__VA_ARGS__) )
 
-#define CONSOLE_LOG_NO_NEW_LINE_HELPER(level, ...) if(xlog_config_level && level >= xlog_config_level) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
+#define CONSOLE_LOG_NO_NEW_LINE_HELPER(level, ...) if(IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
 #define CONSOLE_LOG_NO_NEW_LINE(level, ...) EXPAND_VA_ARGS( CONSOLE_LOG_NO_NEW_LINE_HELPER(level, __VA_ARGS__) )
 
 #else  //for unix console
@@ -75,7 +63,7 @@ extern "C" {
         return te.tv_sec * 1000LL + te.tv_usec / 1000;
     }
 
-#define CONSOLE_LOG_NO_NEW_LINE(level, ...) if(xlog_config_level && level >= xlog_config_level) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
+#define CONSOLE_LOG_NO_NEW_LINE(level, ...) if(IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
 
 #endif // _MSC_VER
 
@@ -109,24 +97,23 @@ extern "C" {
 #define CONSOLE_LOGW_TRACE(fmt, ...) CONSOLE_TLOGW_TRACE(LOG_TAG_DEFAULT, fmt, ##__VA_ARGS__)
 #define CONSOLE_LOGE_TRACE(fmt, ...) CONSOLE_TLOGE_TRACE(LOG_TAG_DEFAULT, fmt, ##__VA_ARGS__)
 
-
 #if defined(__ANDROID__)
 
 #include <android/log.h>
 
-#define A_TLOGV(tag, fmt, ...) if(xlog_config_level && LOG_LEVEL_VERBOSE >= xlog_config_level) {\
+#define A_TLOGV(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_VERBOSE)) {\
         __android_log_print(ANDROID_LOG_VERBOSE, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGD(tag, fmt, ...) if(xlog_config_level && LOG_LEVEL_DEBUG >= xlog_config_level) {\
+#define A_TLOGD(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_DEBUG)) {\
         __android_log_print(ANDROID_LOG_DEBUG, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGI(tag, fmt, ...) if(xlog_config_level && LOG_LEVEL_INFO >= xlog_config_level) {\
+#define A_TLOGI(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_INFO)) {\
         __android_log_print(ANDROID_LOG_INFO, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGW(tag, fmt, ...) if(xlog_config_level && LOG_LEVEL_WARN >= xlog_config_level) {\
+#define A_TLOGW(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_WARN)) {\
         __android_log_print(ANDROID_LOG_WARN, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGE(tag, fmt, ...) if(xlog_config_level && LOG_LEVEL_ERROR >= xlog_config_level) {\
+#define A_TLOGE(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_ERROR)) {\
         __android_log_print(ANDROID_LOG_ERROR, tag, fmt, ##__VA_ARGS__);\
     }
 

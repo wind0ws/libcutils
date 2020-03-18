@@ -4,7 +4,6 @@
 #include "thread_wrapper.h"
 #include "xlog.h"
 
-
 static void* thread_func(void* args) {
 	int code;
 	LOGI("Hello pthread.");
@@ -29,14 +28,13 @@ int sem_test()
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_func, psem);
 
-	usleep(1500);
+	sleep(1);
 	LOGD("now sem_post...");
 	if (code = sem_post(psem))
 	{
 		LOGE("error on sem_post. code=%d", code);
 	}
 	pthread_join(thread, NULL);
-
 
 	sem_destroy(psem);
 	//sem_unlink(sem);
@@ -85,15 +83,15 @@ void test_log()
 	xlog_config_level = LOG_LEVEL_OFF;
 	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF")
 
-	xlog_config_level = LOG_LEVEL_INFO;
+	xlog_config_level = LOG_LEVEL_VERBOSE;
 	xlog_config_target = (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	LOGI("LOG test finished!!!")
 }
-//#define MYLOG(...) EXPAND_ARGS(LOGD(__VA_ARGS__))
 
+//#define MYLOG(...) EXPAND_VA_ARGS(LOGD(__VA_ARGS__))
 int main(int argc, char* argv[]) {
 	LOGD("Hello World");
-	//MYLOG("ssss, %d\n", 1111);
+	//MYLOG("MYLOG, %d", 1111);
 	test_log();
 
 	LOGI("yes");
@@ -103,8 +101,7 @@ int main(int argc, char* argv[]) {
 
 	sem_test();
 
-	LOGI("Exit...");
-
+	LOGI("Main Exit...");
 	return 0;
 }
 

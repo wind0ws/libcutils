@@ -10,7 +10,8 @@ extern "C" {
 #include "pthread_windows.h"
 #include "semaphore_windows.h"
 
-#define usleep(useconds)    Sleep(useconds / 1000)
+#define usleep(micro_seconds)    Sleep((micro_seconds) / 1000)
+#define sleep(seconds) Sleep((seconds) * 1000)
 
 #else /* for unix */
 #include <pthread.h>

@@ -100,6 +100,7 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 */
 int sem_init(sem_t* sem, int pshared, unsigned int value) {
 	char buf[24] = { '\0' };
+	UNUSED(pshared);
 
 	if (sem == NULL || value > (unsigned int)SEM_VALUE_MAX) {
 		return lc_set_errno(EINVAL);
@@ -285,6 +286,7 @@ int sem_getvalue(sem_t* sem, int* value) {
 		   with errno set to indicate the error.
 */
 int sem_destroy(sem_t* sem) {
+	int err = 0;
 	sem_t* pv = (sem_t*)(sem);
 
 	if (pv == NULL) {
@@ -292,14 +294,14 @@ int sem_destroy(sem_t* sem) {
 	}
 
 	if (CloseHandle(pv->handle) == 0) {
-		return lc_set_errno(EINVAL);
+		err = lc_set_errno(EINVAL);
 	}
 
 	if (pv->is_internal_malloc)
 	{
 		free(pv);
 	}
-	return 0;
+	return err;
 }
 
 /**

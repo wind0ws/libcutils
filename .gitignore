@@ -2,6 +2,6 @@
 cmake-build-debug/
 cmake-build-release/
 .idea/
-test/vs/mixed_platform/.vs/
-test/vs/mixed_platform/Debug/
-test/vs/mixed_platform/Release/
+target/vs/libcutils/.vs/
+target/vs/libcutils/Debug/
+target/vs/libcutils/Release/

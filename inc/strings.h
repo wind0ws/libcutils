@@ -19,4 +19,4 @@ extern "C" {
 };
 #endif // __cplusplus
 
-#endif
+#endif //__STRINGS_HEADER__

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef pthread_windows_h
-#define pthread_windows_h
+#ifndef _PTHREAD_WINDOWS_H
+#define _PTHREAD_WINDOWS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,4 +67,4 @@ int pthread_cond_broadcast(pthread_cond_t* cond);
 };
 #endif // __cplusplus
 
-#endif/*pthread_windows_h */
+#endif //_PTHREAD_WINDOWS_H

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _XLOG_H
 #define _XLOG_H
 

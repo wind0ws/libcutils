@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __COMMON_THREAD_WRAPPER_H
 #define __COMMON_THREAD_WRAPPER_H
 

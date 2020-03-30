@@ -149,6 +149,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\allocation_tracker.c" />
+    <ClCompile Include="..\..\..\src\allocator.c" />
+    <ClCompile Include="..\..\..\src\hash_functions.c" />
+    <ClCompile Include="..\..\..\src\hash_map.c" />
+    <ClCompile Include="..\..\..\src\list.c" />
+    <ClCompile Include="..\..\..\src\mplite.c" />
     <ClCompile Include="..\..\..\src\pthread_windows.c" />
     <ClCompile Include="..\..\..\src\semaphore_windows.c" />
     <ClCompile Include="..\..\..\src\strings.c" />
@@ -158,6 +164,13 @@
     <ClCompile Include="..\..\..\test\thread_wrapper_test.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\inc\allocation_tracker.h" />
+    <ClInclude Include="..\..\..\inc\allocator.h" />
+    <ClInclude Include="..\..\..\inc\common_macro.h" />
+    <ClInclude Include="..\..\..\inc\hash_functions.h" />
+    <ClInclude Include="..\..\..\inc\hash_map.h" />
+    <ClInclude Include="..\..\..\inc\list.h" />
+    <ClInclude Include="..\..\..\inc\mplite.h" />
     <ClInclude Include="..\..\..\inc\pthread_windows.h" />
     <ClInclude Include="..\..\..\inc\semaphore_windows.h" />
     <ClInclude Include="..\..\..\inc\strings.h" />

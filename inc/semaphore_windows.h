@@ -20,7 +20,7 @@
 	Modified by Daniel Tillett from libpthread <http://github.com/songdongsheng/libpthread>
 	Copyright (c) 2015, Daniel Tillett <daniel.tillett @ gmail.com>
 */
-
+#pragma once
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_   1
 

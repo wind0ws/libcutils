@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include "common_macro.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,7 +92,7 @@ list_node_t *list_begin(const list_t *list);
 // this function returns the value of an invalid iterator for the given list.
 // When an iterator has the same value as what's returned by this function, you
 // may no longer call |list_next| with the iterator. |list| may not be NULL.
-list_node_t *list_end(const list_t *list);
+list_node_t* list_end(UNUSED_ATTR const list_t* list);
 // Given a valid iterator |node|, this function returns the next value for the
 // iterator. If the returned value equals the value returned by |list_end|, the
 // iterator has reached the end of the list and may no longer be used for any

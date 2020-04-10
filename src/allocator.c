@@ -72,7 +72,8 @@ void *osi_calloc(size_t size) {
 }
 
 void osi_free(void *ptr) {
-  free(allocation_tracker_notify_free(alloc_allocator_id, ptr));
+    void* to_free = allocation_tracker_notify_free(alloc_allocator_id, ptr);
+    free(to_free);
 }
 
 void osi_free_and_reset(void **p_ptr)

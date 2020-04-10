@@ -34,7 +34,7 @@
 	@{
 */
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 
 #include <errno.h> /* Adding definition of EINVAL, ETIMEDOUT, ..., etc. */
 #include <fcntl.h> /* Adding O_CREAT definition. */
@@ -114,7 +114,7 @@ extern "C" {
 }
 #endif
 
-#endif // _MSC_VER
+#endif // _WIN32
 
 /** @} */
 

@@ -33,7 +33,7 @@ extern "C" {
     //#define xlog_config_target (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE)
     extern int xlog_config_target;
 
-#ifdef _MSC_VER //for MSC
+#ifdef _WIN32 //for _WIN32
 
 #include <windows.h>
 #include <sys/timeb.h>
@@ -66,7 +66,7 @@ extern "C" {
 
 #define CONSOLE_LOG_NO_NEW_LINE(level, ...) if(IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
 
-#endif // _MSC_VER
+#endif // _WIN32
 
 #define CONSOLE_LOGV_NO_NEW_LINE(...) CONSOLE_LOG_NO_NEW_LINE(LOG_LEVEL_VERBOSE, ##__VA_ARGS__)
 #define CONSOLE_LOGD_NO_NEW_LINE(...) CONSOLE_LOG_NO_NEW_LINE(LOG_LEVEL_DEBUG, ##__VA_ARGS__)

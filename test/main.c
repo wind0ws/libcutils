@@ -11,14 +11,16 @@ assert(ret == 0);\
 } while (0);
 
 extern int thread_wrapper_test();
+extern int basic_test();
 
 int main()
 {
-    LOGI("hello world");
+    LOGI("hello world\r\n");
 
-    RUN_TEST(thread_wrapper_test)
+    RUN_TEST(basic_test)
+    //RUN_TEST(thread_wrapper_test)
 
-    LOGI("bye bye...");
+    LOGI("\r\nbye bye...");
     return 0;
 }
 

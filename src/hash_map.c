@@ -69,6 +69,7 @@ hash_map_t* hash_map_new_internal(
 	}
 	return hash_map;
 }
+
 hash_map_t* hash_map_new(
 	size_t num_bucket,
 	hash_index_fn hash_fn,
@@ -77,6 +78,7 @@ hash_map_t* hash_map_new(
 	key_equality_fn equality_fn) {
 	return hash_map_new_internal(num_bucket, hash_fn, key_fn, data_fn, equality_fn, &allocator_calloc);
 }
+
 void hash_map_free(hash_map_t* hash_map) {
 	if (hash_map == NULL)
 		return;

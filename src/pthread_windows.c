@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "pthread_windows.h"
 
 static DWORD WINAPI WinThreadStart(LPVOID lpParam);
@@ -144,4 +144,4 @@ static DWORD WINAPI WinThreadStart(LPVOID lpParam)
 	return 0;
 }
 
-#endif // _MSC_VER
+#endif // _WIN32

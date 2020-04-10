@@ -57,6 +57,18 @@
     <ClCompile Include="..\..\..\src\mplite.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\array.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\ring_buf.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\test\basic_test.c">
+      <Filter>源文件\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\ringbuffer.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\pthread_windows.h">
@@ -93,6 +105,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\inc\mplite.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\array.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\ring_buf.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\ringbuffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

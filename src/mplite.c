@@ -26,7 +26,7 @@ struct mplite_link {
 #define MPLITE_CTRL_LOGSIZE  0x1f    /* Log2 Size of this block */
 #define MPLITE_CTRL_FREE     0x20    /* True if not checked out */
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(snprintf)
 #define snprintf(buf, buf_size, format, ...) \
         _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #endif /* #ifdef _WIN32 */

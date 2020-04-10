@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 #ifdef __cplusplus
@@ -29,14 +30,39 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
+#include <sal.h>
 #define UNUSED_ATTR 
 #else
 #define UNUSED_ATTR __attribute__((unused))
 #endif // _WIN32
 
+#ifndef __in
+#define __in
+#endif
+#ifndef __out
+#define __out
+#endif
+#ifndef __inout
+#define __inout
+#endif
+#ifndef __in_opt
+#define __in_opt
+#endif
+#ifndef __out_opt
+#define __out_opt
+#endif
+#ifndef __inout_opt
+#define __inout_opt
+#endif
+
+#ifndef FREE
+#define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
+#endif
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define INVALID_FD (-1)
 #define CONCAT(a, b) a##b
+#define STRING(a) #a
 
 // Use during compile time to check conditional values
 // NOTE: The the failures will present as a generic error
@@ -72,6 +98,20 @@ extern "C" {
 #define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i) ((void *) ((intptr_t) (i)))
+
+#ifdef _WIN32
+    static FILE* _fopen_safe(char const* _FileName, char const* _Mode)
+    {
+        FILE* _ftemp =  NULL;
+        fopen_s(&_ftemp, _FileName, _Mode);
+        return _ftemp;
+    }
+//to make MSC happy
+#define fopen _fopen_safe
+#define snprintf(buf, buf_size, format, ...) \
+        _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
+#endif
+#define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 #ifdef __cplusplus
 }

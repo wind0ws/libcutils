@@ -27,6 +27,7 @@
 #include "hash_map.h"
 #include "xlog.h"
 #include "common_macro.h"
+
 typedef struct {
   uint8_t allocator_id;
   void *ptr;
@@ -93,7 +94,7 @@ size_t allocation_tracker_expect_no_allocations(void) {
   pthread_mutex_unlock(&lock);
   return unfreed_memory_size;
 }
-void *allocation_tracker_notify_alloc(uint8_t allocator_id, void *ptr, size_t requested_size) {
+void *allocation_tracker_notify_alloc(allocator_id_t allocator_id, void *ptr, size_t requested_size) {
   if (!allocations || !ptr)
     return ptr;
   char *return_ptr = (char *)ptr;
@@ -116,7 +117,8 @@ void *allocation_tracker_notify_alloc(uint8_t allocator_id, void *ptr, size_t re
   memcpy(return_ptr + requested_size, canary, canary_size);
   return return_ptr;
 }
-void *allocation_tracker_notify_free(UNUSED_ATTR uint8_t allocator_id, void *ptr) {
+
+void *allocation_tracker_notify_free(allocator_id_t allocator_id, void *ptr) {
   if (!allocations || !ptr)
     return ptr;
   pthread_mutex_lock(&lock);

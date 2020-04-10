@@ -27,7 +27,7 @@
 	@brief Implementation Code of Semaphore Routines
 */
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 
 #include "semaphore_windows.h"
 
@@ -359,4 +359,4 @@ int sem_unlink(const char* name) {
 	return 0;
 }
 
-#endif // _MSC_VER
+#endif // _WIN32

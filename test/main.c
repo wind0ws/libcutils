@@ -12,13 +12,15 @@ assert(ret == 0);\
 
 extern int thread_wrapper_test();
 extern int basic_test();
+extern int autocover_buffer_test();
 
 int main()
 {
     LOGI("hello world\r\n");
 
-    RUN_TEST(basic_test)
+    //RUN_TEST(basic_test)
     //RUN_TEST(thread_wrapper_test)
+    RUN_TEST(autocover_buffer_test)
 
     LOGI("\r\nbye bye...");
     return 0;

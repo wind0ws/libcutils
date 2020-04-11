@@ -69,6 +69,12 @@
     <ClCompile Include="..\..\..\src\ringbuffer.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\autocover_buffer.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\test\autocover_buffer_test.c">
+      <Filter>源文件\Test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\pthread_windows.h">
@@ -114,6 +120,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\inc\ringbuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\autocover_buffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

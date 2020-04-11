@@ -5,3 +5,4 @@ cmake-build-release/
 target/vs/libcutils/.vs/
 target/vs/libcutils/Debug/
 target/vs/libcutils/Release/
+target/vs/libcutils/x64/

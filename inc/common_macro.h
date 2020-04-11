@@ -1,20 +1,3 @@
-/******************************************************************************
- *
- *  Copyright (C) 2016 Google, Inc.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at:
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- ******************************************************************************/
 #pragma once
 #ifndef __COMMON_MACRO_H__
 #define __COMMON_MACRO_H__
@@ -25,16 +8,33 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef _WIN32
 #include <sal.h>
 #define UNUSED_ATTR 
 #else
 #define UNUSED_ATTR __attribute__((unused))
+typedef void* HANDLE;
+typedef void* PVOID;
+typedef unsigned long       DWORD;
+typedef int                 BOOL;
+typedef unsigned char       BYTE;
+typedef unsigned short      WORD;
+typedef float               FLOAT;
 #endif // _WIN32
+
+#ifndef EXTERN_C
+#ifdef __cplusplus
+#define EXTERN_C       extern "C"
+#define EXTERN_C_START extern "C" {
+#define EXTERN_C_END   }
+#else
+#define EXTERN_C       extern
+#define EXTERN_C_START
+#define EXTERN_C_END
+#endif
+#endif // !EXTERN_C
+
+EXTERN_C_START
 
 #ifndef __in
 #define __in
@@ -113,7 +113,6 @@ extern "C" {
 #endif
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
+
 #endif //__COMMON_MACRO_H__

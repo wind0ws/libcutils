@@ -18,6 +18,7 @@ extern "C" {
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
+#define Sleep(millseconds) usleep((millseconds) * 1000)
 #endif /* #ifdef _WIN32 */
 
 // For gettid.

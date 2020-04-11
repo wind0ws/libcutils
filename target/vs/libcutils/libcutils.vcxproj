@@ -105,6 +105,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>${ProjectPath};../../../inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,6 +141,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>${ProjectPath};../../../inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,6 +154,7 @@
     <ClCompile Include="..\..\..\src\allocation_tracker.c" />
     <ClCompile Include="..\..\..\src\allocator.c" />
     <ClCompile Include="..\..\..\src\array.c" />
+    <ClCompile Include="..\..\..\src\autocover_buffer.c" />
     <ClCompile Include="..\..\..\src\hash_functions.c" />
     <ClCompile Include="..\..\..\src\hash_map.c" />
     <ClCompile Include="..\..\..\src\list.c" />
@@ -163,6 +166,7 @@
     <ClCompile Include="..\..\..\src\strings.c" />
     <ClCompile Include="..\..\..\src\thread_wrapper.c" />
     <ClCompile Include="..\..\..\src\xlog.c" />
+    <ClCompile Include="..\..\..\test\autocover_buffer_test.c" />
     <ClCompile Include="..\..\..\test\basic_test.c" />
     <ClCompile Include="..\..\..\test\main.c" />
     <ClCompile Include="..\..\..\test\thread_wrapper_test.c" />
@@ -171,6 +175,7 @@
     <ClInclude Include="..\..\..\inc\allocation_tracker.h" />
     <ClInclude Include="..\..\..\inc\allocator.h" />
     <ClInclude Include="..\..\..\inc\array.h" />
+    <ClInclude Include="..\..\..\inc\autocover_buffer.h" />
     <ClInclude Include="..\..\..\inc\common_macro.h" />
     <ClInclude Include="..\..\..\inc\hash_functions.h" />
     <ClInclude Include="..\..\..\inc\hash_map.h" />

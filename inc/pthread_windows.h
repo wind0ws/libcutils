@@ -2,11 +2,14 @@
 #ifndef _PTHREAD_WINDOWS_H
 #define _PTHREAD_WINDOWS_H
 
+//do not include this header directly, you should include "thread_wrapper.h" instead!
+#ifdef _WIN32
+
+#include <windows.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <windows.h>
 
 /*
 * pthread functions
@@ -66,5 +69,7 @@ int pthread_cond_broadcast(pthread_cond_t* cond);
 #ifdef __cplusplus
 };
 #endif // __cplusplus
+
+#endif // _WIN32
 
 #endif //_PTHREAD_WINDOWS_H

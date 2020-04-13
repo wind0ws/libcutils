@@ -33,6 +33,8 @@ extern "C" {
     //#define xlog_config_target (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE)
     extern int xlog_config_target;
 
+    void xlog_chars2hex(char* str, size_t str_capacity, const char* chars, size_t chars_len);
+
 #ifdef _WIN32 //for _WIN32
 
 #include <windows.h>
@@ -164,88 +166,92 @@ extern "C" {
 
 #endif // defined(__ANDROID__)
 
+#define  XLOG_IS_TARGET_ABLE(logTarget) (xlog_config_target & logTarget)
+#define XLOG_CONSOLE_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_CONSOLE)
+#define XLOG_ANDROID_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_ANDROID)
+
 #define LOGV(fmt, ...) do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGV(fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGV(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGV(fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGV(fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGD(fmt, ...) do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGD(fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGD(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGD(fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGD(fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGI(fmt, ...) do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGI(fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGI(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGI(fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGI(fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGW(fmt, ...) do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGW(fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGW(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGW(fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGW(fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGE(fmt, ...) do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGE(fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGE(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGE(fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGE(fmt, ##__VA_ARGS__);}\
 }while(0);
 
 #define LOGV_TRACE(fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGV_TRACE( fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGV_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGV_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGV_TRACE( fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGD_TRACE(fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGD_TRACE( fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGD_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGD_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGD_TRACE( fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGI_TRACE(fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGI_TRACE( fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGI_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGI_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGI_TRACE( fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGW_TRACE(fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGW_TRACE( fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGW_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGW_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGW_TRACE( fmt, ##__VA_ARGS__);}\
 }while(0);
 #define LOGE_TRACE(fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_LOGE_TRACE( fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_LOGE_TRACE(fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_LOGE_TRACE( fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_LOGE_TRACE(fmt, ##__VA_ARGS__);}\
 }while(0);
 
 #define TLOGV(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGV(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGV(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGV(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGV(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGD(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGD(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGD(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGD(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGD(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGI(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGI(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGI(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGI(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGI(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGW(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGW(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGW(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGW(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGW(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 
 #define TLOGV_TRACE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGV_TRACE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGV_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGV_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGV_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGD_TRACE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGD_TRACE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGD_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGD_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGD_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGI_TRACE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGI_TRACE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGI_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGI_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGI_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGW_TRACE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGW_TRACE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGW_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGW_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGW_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 #define TLOGE_TRACE(tag, fmt, ...)  do{ \
-    if(xlog_config_target & LOG_TARGET_CONSOLE){CONSOLE_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
-    if(xlog_config_target & LOG_TARGET_ANDROID){A_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
+    if(XLOG_ANDROID_ABLE){A_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 
 #ifdef __cplusplus

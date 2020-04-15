@@ -5,7 +5,7 @@
 
 typedef struct 
 {
-	auto_cover_buf cover_buf;
+	auto_cover_buf_handle cover_buf_p;
 	pthread_mutex_t mutex_coverbuf;
 	uint32_t data_in_counter;
 	bool exit_flag;
@@ -18,9 +18,14 @@ static void* thread_consumer(void* param)
 	char buffer[12];
 	while (!(data_p->exit_flag))
 	{
+		if (data_p->data_in_counter < 12)
+		{
+			Sleep(80);
+			continue;
+		}
 		memset(buffer, 0, 12);
 		uint32_t read_pos = data_p->data_in_counter - 12;
-		if (data_p->data_in_counter > 12 && auto_cover_buf_read(data_p->cover_buf, read_pos, buffer, 12) ==  12)
+		if (auto_cover_buf_read(data_p->cover_buf_p, read_pos, buffer, 12) ==  12)
 		{
 			if (buffer[0] != 0x01 || buffer[11] != 0x04)
 			{
@@ -28,7 +33,7 @@ static void* thread_consumer(void* param)
 			}
 			else
 			{
-				LOGI("~~~  read succeed! ~~~ read_pos=%u", read_pos);
+				LOGI("~~~ read succeed! ~~~ read_pos=%u", read_pos);
 			}
 			Sleep(150);
 		}
@@ -49,7 +54,7 @@ static void* thread_producer(void* param)
 	char buffer[4] = { 0x01, 0x02, 0x03, 0x04};
 	while (!(data_p->exit_flag))
 	{
-		if (auto_cover_buf_write(data_p->cover_buf, buffer, 4) == 4)
+		if (auto_cover_buf_write(data_p->cover_buf_p, buffer, 4) == 4)
 		{
 			data_p->data_in_counter += 4;
 		}
@@ -82,8 +87,13 @@ int autocover_buffer_test()
 	case_data.data_in_counter = 0;
 	case_data.exit_flag = false;
 	pthread_mutex_init(&case_data.mutex_coverbuf, NULL);
-	case_data.cover_buf = auto_cover_buf_create(16, autocover_buf_lock, autocover_buf_unlock, (void *)(&case_data));
-	ASSERT_ABORT(case_data.cover_buf);
+	auto_cover_buf_lock_t buf_lock = {
+	.acquire = autocover_buf_lock,
+	.release = autocover_buf_unlock,
+	.arg = &case_data
+	};
+	case_data.cover_buf_p = auto_cover_buf_create(16, &buf_lock);
+	ASSERT_ABORT(case_data.cover_buf_p);
 
 	pthread_t pthread_consumer;
 	pthread_t pthread_producer;
@@ -95,6 +105,8 @@ int autocover_buffer_test()
 	pthread_join(pthread_producer, NULL);
 	pthread_join(pthread_consumer, NULL);
 	pthread_mutex_destroy(&case_data.mutex_coverbuf);
+
+	auto_cover_buf_destroy(&case_data.cover_buf_p);
 	LOGD("autocover_buffer test finished.");
 	return 0;
 }

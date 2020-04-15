@@ -43,7 +43,7 @@ struct __ring_buffer_t {
 };
 
 //buf_size 应是2的n次幂
-ring_buf RingBuffer_create(uint32_t buf_size) {
+ring_buf_handle RingBuffer_create(uint32_t buf_size) {
 	if (buf_size == 0) {
 		return NULL;
 	}
@@ -52,7 +52,7 @@ ring_buf RingBuffer_create(uint32_t buf_size) {
 		buf_size = roundup_pow_of_two(buf_size);
 		LOGW("RingBuffer_create changed buf_size to %d ", buf_size);
 	}
-	ring_buf ring_buffer_p = calloc(1, sizeof(struct __ring_buffer_t));
+	ring_buf_handle ring_buffer_p = calloc(1, sizeof(struct __ring_buffer_t));
 	ring_buffer_p->buf = (char*)calloc(buf_size, 1);
 	if (!ring_buffer_p->buf) {
 		LOGE("can't malloc ring_buffer->buf. size=%d", buf_size);
@@ -65,10 +65,11 @@ ring_buf RingBuffer_create(uint32_t buf_size) {
 	return ring_buffer_p;
 }
 
-void RingBuffer_destroy(ring_buf ring_buffer_p) {
-	if (!ring_buffer_p) {
+void RingBuffer_destroy(ring_buf_handle* ring_buf_pp) {
+	if (ring_buf_pp == NULL || *ring_buf_pp == NULL) {
 		return;
 	}
+	ring_buf_handle ring_buffer_p = *ring_buf_pp;
 	ring_buffer_p->in = 0;
 	ring_buffer_p->out = 0;
 	ring_buffer_p->size = 0;
@@ -78,17 +79,18 @@ void RingBuffer_destroy(ring_buf ring_buffer_p) {
 		ring_buffer_p->buf = NULL;
 	}
 	free(ring_buffer_p);
+	*ring_buf_pp = NULL;
 }
 
-extern inline bool RingBuffer_is_empty(ring_buf ring_buf_p) {
+extern inline bool RingBuffer_is_empty(ring_buf_handle ring_buf_p) {
 	return RingBuffer_available_read(ring_buf_p) == 0;
 }
 
-extern inline bool RingBuffer_is_full(ring_buf ring_buf_p) {
+extern inline bool RingBuffer_is_full(ring_buf_handle ring_buf_p) {
 	return RingBuffer_available_write(ring_buf_p) == 0;
 }
 
-extern inline void RingBuffer_clear(ring_buf ring_buffer_p) {
+extern inline void RingBuffer_clear(ring_buf_handle ring_buffer_p) {
 	if (ring_buffer_p == NULL) {
 		return;
 	}
@@ -96,31 +98,28 @@ extern inline void RingBuffer_clear(ring_buf ring_buffer_p) {
 	ring_buffer_p->out = 0;
 }
 
-uint32_t RingBuffer_current_read_position(__in const ring_buf ring_buf_p)
-{
+uint32_t RingBuffer_current_read_position(__in const ring_buf_handle ring_buf_p){
 	return ring_buf_p->out;
 }
 
-uint32_t RingBuffer_current_write_position(__in const ring_buf ring_buf_p)
-{
+uint32_t RingBuffer_current_write_position(__in const ring_buf_handle ring_buf_p){
 	return ring_buf_p->in;
 }
 
-uint32_t RingBuffer_real_capacity(__in const ring_buf ring_buf_p)
-{
+uint32_t RingBuffer_real_capacity(__in const ring_buf_handle ring_buf_p){
 	return ring_buf_p->size;
 }
 
-extern inline uint32_t RingBuffer_available_read(ring_buf ring_buffer_p) {
+extern inline uint32_t RingBuffer_available_read(ring_buf_handle ring_buffer_p) {
 	return ring_buffer_p->in - ring_buffer_p->out;
 }
 
-extern inline uint32_t RingBuffer_available_write(ring_buf ring_buffer_p) {
+extern inline uint32_t RingBuffer_available_write(ring_buf_handle ring_buffer_p) {
 	return ring_buffer_p->size - RingBuffer_available_read(ring_buffer_p);
 }
 
-uint32_t RingBuffer_write(ring_buf ring_buf_p, const void* source, uint32_t size) {
-	if (ring_buf_p == NULL || source == NULL || size == 0) {
+uint32_t RingBuffer_write(ring_buf_handle ring_buf_p, const void* source, uint32_t size) {
+	if (ring_buf_p == NULL || source == NULL|| size == 0) {
 		return 0;
 	}
 	uint32_t start = 0, first_part_len = 0, rest_len = 0;
@@ -149,8 +148,8 @@ uint32_t RingBuffer_write(ring_buf ring_buf_p, const void* source, uint32_t size
 	return size;
 }
 
-static uint32_t RingBuffer_read_internal(ring_buf ring_buf_p, bool is_peek, void* target, uint32_t size) {
-	if (ring_buf_p == NULL) {
+static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_peek, void* target, uint32_t size) {
+	if (ring_buf_p == NULL || size == 0) {
 		return 0;
 	}
 	uint32_t start = 0, first_part_len = 0, rest_len = 0;
@@ -174,29 +173,24 @@ static uint32_t RingBuffer_read_internal(ring_buf ring_buf_p, bool is_peek, void
 	/* then get the rest_len (if any) from the beginning of the buffer */
 	if (target) {
 		rest_len = size - first_part_len;
-		if (rest_len)
-		{
+		if (rest_len){
 			memcpy((char*)target + first_part_len, ring_buf_p->buf, rest_len);
 		}
 	}
-	if (!is_peek)
-	{
+	if (!is_peek){
 		ring_buf_p->out += size;
 	}
 	return size;
 }
 
-uint32_t RingBuffer_read(__in ring_buf ring_buf_p, __out void* target, uint32_t size)
-{
-	return RingBuffer_read_internal(ring_buf_p, false, target, size);
+uint32_t RingBuffer_read(__in ring_buf_handle ring_buf_p, __out void* target, uint32_t size){
+	return target == NULL ? 0 : RingBuffer_read_internal(ring_buf_p, false, target, size);
 }
 
-uint32_t RingBuffer_peek(__in const ring_buf ring_buf_p, __out void* target, uint32_t size)
-{
+uint32_t RingBuffer_peek(__in const ring_buf_handle ring_buf_p, __out void* target, uint32_t size){
 	return RingBuffer_read_internal(ring_buf_p, true, target, size);
 }
 
-uint32_t RingBuffer_discard(__in const ring_buf ring_buf_p, uint32_t size)
-{
+uint32_t RingBuffer_discard(__in const ring_buf_handle ring_buf_p, uint32_t size){
 	return RingBuffer_read_internal(ring_buf_p, false, NULL, size);
 }

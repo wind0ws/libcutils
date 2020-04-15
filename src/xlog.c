@@ -1,5 +1,5 @@
 #include "xlog.h"
-#include <string.h>
+#include "strings.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -17,6 +17,7 @@ extern "C"
 	{
 		//char out_hex_str[sizeof(char) * chars_len * 3 + 1];
 		//char out_hex_str[1024] = { '\0' };
+		out_hex_str[0] = '\0';
 		if (chars_len * 3 > out_hex_str_capacity)
 		{
 			strcat(out_hex_str, "hex is truncated:");
@@ -29,7 +30,6 @@ extern "C"
 			//        printf(" %s",hex);
 			strcat(out_hex_str, hex);
 		}
-		//TLOGD(tag, "%s", out_hex_str);
 		//    printf("%s\n", out_hex_str);
 	}
 

@@ -26,7 +26,7 @@ extern "C" {
 #define LOG_TAG_DEFAULT "XTest"
 #define CONSOLE_LOG_CONFIG_METHOD printf
 #define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
-#define IS_LOGABLE(level) (xlog_config_level && level >= xlog_config_level)
+#define XLOG_INTERNAL_IS_LOGABLE(level) (xlog_config_level && level >= xlog_config_level)
 
     //#define xlog_config_level LOG_LEVEL_VERBOSE
     extern int xlog_config_level;
@@ -53,7 +53,7 @@ extern "C" {
 //#define F(x, ...) X = x and VA_ARGS = __VA_ARGS__
 //#define G(...) EXPAND_VA_ARGS( F(__VA_ARGS__) )
 
-#define CONSOLE_LOG_NO_NEW_LINE_HELPER(level, ...) if(IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
+#define CONSOLE_LOG_NO_NEW_LINE_HELPER(level, ...) if(XLOG_INTERNAL_IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
 #define CONSOLE_LOG_NO_NEW_LINE(level, ...) EXPAND_VA_ARGS( CONSOLE_LOG_NO_NEW_LINE_HELPER(level, __VA_ARGS__) )
 
 #else  //for unix console
@@ -66,7 +66,7 @@ extern "C" {
         return te.tv_sec * 1000LL + te.tv_usec / 1000;
     }
 
-#define CONSOLE_LOG_NO_NEW_LINE(level, ...) if(IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
+#define CONSOLE_LOG_NO_NEW_LINE(level, ...) if(XLOG_INTERNAL_IS_LOGABLE(level)) { CONSOLE_LOG_CONFIG_METHOD( __VA_ARGS__ ); }
 
 #endif // _WIN32
 
@@ -104,19 +104,19 @@ extern "C" {
 
 #include <android/log.h>
 
-#define A_TLOGV(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_VERBOSE)) {\
+#define A_TLOGV(tag, fmt, ...) if(XLOG_INTERNAL_IS_LOGABLE(LOG_LEVEL_VERBOSE)) {\
         __android_log_print(ANDROID_LOG_VERBOSE, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGD(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_DEBUG)) {\
+#define A_TLOGD(tag, fmt, ...) if(XLOG_INTERNAL_IS_LOGABLE(LOG_LEVEL_DEBUG)) {\
         __android_log_print(ANDROID_LOG_DEBUG, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGI(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_INFO)) {\
+#define A_TLOGI(tag, fmt, ...) if(XLOG_INTERNAL_IS_LOGABLE(LOG_LEVEL_INFO)) {\
         __android_log_print(ANDROID_LOG_INFO, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGW(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_WARN)) {\
+#define A_TLOGW(tag, fmt, ...) if(XLOG_INTERNAL_IS_LOGABLE(LOG_LEVEL_WARN)) {\
         __android_log_print(ANDROID_LOG_WARN, tag, fmt, ##__VA_ARGS__);\
     }
-#define A_TLOGE(tag, fmt, ...) if(IS_LOGABLE(LOG_LEVEL_ERROR)) {\
+#define A_TLOGE(tag, fmt, ...) if(XLOG_INTERNAL_IS_LOGABLE(LOG_LEVEL_ERROR)) {\
         __android_log_print(ANDROID_LOG_ERROR, tag, fmt, ##__VA_ARGS__);\
     }
 
@@ -253,6 +253,41 @@ extern "C" {
     if(XLOG_CONSOLE_ABLE){CONSOLE_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
     if(XLOG_ANDROID_ABLE){A_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
+
+#define XLOG_INTERNAL_HEX_HELPER(level, tag, chars, chars_len) do {\
+char hexs[1024];\
+xlog_chars2hex(hexs, 1024, chars, chars_len);\
+switch(level){\
+case LOG_LEVEL_VERBOSE:\
+    TLOGV(tag, "%s", hexs); \
+    break;\
+case LOG_LEVEL_DEBUG:\
+    TLOGD(tag, "%s", hexs); \
+    break;\
+case LOG_LEVEL_INFO:\
+	TLOGI(tag, "%s", hexs); \
+	break;\
+case LOG_LEVEL_WARN:\
+	TLOGW(tag, "%s", hexs); \
+	break;\
+default:\
+case LOG_LEVEL_ERROR:\
+	TLOGE(tag, "%s", hexs); \
+	break;\
+}\
+} while (0);
+
+#define TLOGV_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
+#define TLOGD_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_DEBUG, tag, chars, chars_len)
+#define TLOGI_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_INFO, tag, chars, chars_len)
+#define TLOGW_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_WARN, tag, chars, chars_len)
+#define TLOGE_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_ERROR, tag, chars, chars_len)
+
+#define LOGV_HEX(chars, chars_len) TLOGV_HEX(LOG_TAG_DEFAULT, chars, chars_len)
+#define LOGD_HEX(chars, chars_len) TLOGD_HEX(LOG_TAG_DEFAULT, chars, chars_len)
+#define LOGI_HEX(chars, chars_len) TLOGI_HEX(LOG_TAG_DEFAULT, chars, chars_len)
+#define LOGW_HEX(chars, chars_len) TLOGW_HEX(LOG_TAG_DEFAULT, chars, chars_len)
+#define LOGE_HEX(chars, chars_len) TLOGE_HEX(LOG_TAG_DEFAULT, chars, chars_len)
 
 #ifdef __cplusplus
 }

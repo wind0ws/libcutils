@@ -72,6 +72,10 @@ static void test_log()
 	TLOGW_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGW_TRACE")
 	TLOGE_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGE_TRACE")
 
+	char chars[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0xA0, 0xAF, 0xFD, 0xFE, 0xFF };
+	TLOGV_HEX(LOG_TAG_MAIN, chars, 16);
+	LOGI_HEX(chars, 16);
+
 	xlog_config_level = LOG_LEVEL_ERROR;
 	xlog_config_target = LOG_TARGET_ANDROID;
 	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR")

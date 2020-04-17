@@ -254,34 +254,16 @@ extern "C" {
     if(XLOG_ANDROID_ABLE){A_TLOGE_TRACE(tag, fmt, ##__VA_ARGS__);}\
 }while(0);
 
-#define XLOG_INTERNAL_HEX_HELPER(level, tag, chars, chars_len) do {\
-char hexs[1024];\
-xlog_chars2hex(hexs, 1024, chars, chars_len);\
-switch(level){\
-case LOG_LEVEL_VERBOSE:\
-    TLOGV(tag, "%s", hexs); \
-    break;\
-case LOG_LEVEL_DEBUG:\
-    TLOGD(tag, "%s", hexs); \
-    break;\
-case LOG_LEVEL_INFO:\
-	TLOGI(tag, "%s", hexs); \
-	break;\
-case LOG_LEVEL_WARN:\
-	TLOGW(tag, "%s", hexs); \
-	break;\
-default:\
-case LOG_LEVEL_ERROR:\
-	TLOGE(tag, "%s", hexs); \
-	break;\
-}\
-} while (0);
-
-#define TLOGV_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
-#define TLOGD_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_DEBUG, tag, chars, chars_len)
-#define TLOGI_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_INFO, tag, chars, chars_len)
-#define TLOGW_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_WARN, tag, chars, chars_len)
-#define TLOGE_HEX(tag, chars, chars_len) XLOG_INTERNAL_HEX_HELPER(LOG_LEVEL_ERROR, tag, chars, chars_len)
+/**
+ * do not use this function directly.
+ * USE TLOGX_HEX or LOGX_HEX macro instead.
+ */
+void  xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
+#define TLOGV_HEX(tag, chars, chars_len) xlog_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
+#define TLOGD_HEX(tag, chars, chars_len) xlog_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)
+#define TLOGI_HEX(tag, chars, chars_len) xlog_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_len)
+#define TLOGW_HEX(tag, chars, chars_len) xlog_hex_helper(LOG_LEVEL_WARN, tag, chars, chars_len)
+#define TLOGE_HEX(tag, chars, chars_len) xlog_hex_helper(LOG_LEVEL_ERROR, tag, chars, chars_len)
 
 #define LOGV_HEX(chars, chars_len) TLOGV_HEX(LOG_TAG_DEFAULT, chars, chars_len)
 #define LOGD_HEX(chars, chars_len) TLOGD_HEX(LOG_TAG_DEFAULT, chars, chars_len)

@@ -169,6 +169,7 @@
     <ClCompile Include="..\..\..\test\autocover_buffer_test.c" />
     <ClCompile Include="..\..\..\test\basic_test.c" />
     <ClCompile Include="..\..\..\test\main.c" />
+    <ClCompile Include="..\..\..\test\strings_test.c" />
     <ClCompile Include="..\..\..\test\thread_wrapper_test.c" />
   </ItemGroup>
   <ItemGroup>

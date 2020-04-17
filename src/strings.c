@@ -62,9 +62,10 @@ char* strreplace(char const* const original,
 		// allocate memory for the new string
 		size_t const retlen = orilen + patcnt * (replen - patlen);
 		char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
-
 		if (returned != NULL)
 		{
+			//memset(returned, '\0', sizeof(char) * (retlen + 1));
+			returned[0] = '\0';
 			// copy the original string, 
 			// replacing all the instances of the pattern
 			char* retptr = returned;
@@ -82,5 +83,22 @@ char* strreplace(char const* const original,
 			strcpy(retptr, oriptr);
 		}
 		return returned;
+	}
+}
+
+void strsplit(char* recv_splited_str[], int* p_splited_nums, const char src_str[], const char* delimiter)
+{
+	char* pToken = NULL;
+	char* pContext = NULL;
+	int recv_buffer_size = *p_splited_nums;
+	*p_splited_nums = 0;
+
+	pToken = strtok((char *)src_str, delimiter, &pContext);
+	while (pToken && *p_splited_nums < recv_buffer_size)
+	{
+		recv_splited_str[*p_splited_nums] = pToken;
+		(*p_splited_nums)++;
+
+		pToken = strtok(NULL, delimiter, &pContext);
 	}
 }

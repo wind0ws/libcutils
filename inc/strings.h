@@ -18,6 +18,10 @@
 #define strcpy(dest, source) strcpy_s(dest, strlen(source) + 1, source) 
 #define strncpy(dest, source, max_count) strncpy_s(dest, (max_count) + 1, source, max_count)
 #define strcat(dest, source) strcat_s(dest, strlen(dest) + strlen(source) + 1, source)
+#define strtok strtok_s
+#else
+//in Unix platform. use strtok_r instead
+#define strtok strtok_r
 #endif // _WIN32
 
 #ifdef __cplusplus
@@ -35,6 +39,16 @@ extern "C" {
 	 */
 	char* strreplace(char const* const original,
 		char const* const pattern, char const* const replacement);
+
+	/**
+	 * split string by delimiter
+	 * @param recv_splited_str the char * array.
+	 * @param p_splited_nums how many char * do you provide in rec_splited_str
+	 * @param src_str the origin str that you want to split
+	 * @param delimiter the string of delimiter
+	 */
+	void strsplit(char* recv_splited_str[], int* p_splited_nums, 
+		const char src_str[], const char* delimiter);
 
 #ifdef __cplusplus
 };

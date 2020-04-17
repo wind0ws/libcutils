@@ -33,6 +33,30 @@ extern "C"
 		//    printf("%s\n", out_hex_str);
 	}
 
+	void  xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
+	{
+		char hexs[1024];
+		xlog_chars2hex(hexs, 1024, chars, chars_len);
+		switch (level) {
+		case LOG_LEVEL_VERBOSE:
+			TLOGV(tag, "%s", hexs);
+			break;
+		case LOG_LEVEL_DEBUG:
+			TLOGD(tag, "%s", hexs);
+			break;
+		case LOG_LEVEL_INFO:
+			TLOGI(tag, "%s", hexs);
+			break;
+		case LOG_LEVEL_WARN:
+			TLOGW(tag, "%s", hexs);
+			break;
+		default:
+		case LOG_LEVEL_ERROR:
+			TLOGE(tag, "%s", hexs);
+			break;
+		}
+	}
+
 #ifdef __cplusplus
 };
 #endif // __cplusplus

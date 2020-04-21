@@ -173,6 +173,8 @@ MPLITE_API void *mplite_malloc(mplite_t *handle, const int nBytes);
  */
 MPLITE_API void mplite_free(mplite_t *handle, const void *pPrior);
 
+MPLITE_API void* mplite_calloc(mplite_t* handle, const int nBytes);
+
 /**
  * @brief Change the size of an existing memory allocation.
  * @param[in,out] handle Pointer to an initialized @ref mplite_t object

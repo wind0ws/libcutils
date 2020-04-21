@@ -25,6 +25,7 @@ extern int thread_wrapper_test();
 extern int basic_test();
 extern int autocover_buffer_test();
 extern int strings_test();
+extern int mplite_test();
 
 int main()
 {
@@ -35,9 +36,10 @@ int main()
     LOGI("hello world\r\n");
 
     //RUN_TEST(basic_test)
-    RUN_TEST(thread_wrapper_test)
+    //RUN_TEST(thread_wrapper_test)
     //RUN_TEST(autocover_buffer_test)
-    RUN_TEST(strings_test)
+    //RUN_TEST(strings_test)
+    RUN_TEST(mplite_test)
 
     LOGI("...bye bye...");
     return 0;

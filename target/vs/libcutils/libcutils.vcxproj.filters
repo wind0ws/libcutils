@@ -78,6 +78,9 @@
     <ClCompile Include="..\..\..\test\strings_test.c">
       <Filter>源文件\Test</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\test\mplite_test.c">
+      <Filter>源文件\Test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\pthread_windows.h">

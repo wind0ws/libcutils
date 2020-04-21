@@ -78,7 +78,7 @@ MPLITE_API int mplite_init(mplite_t *handle, const void *buf,
     /* The size of a mplite_link_t object must be a power of two.  Verify that
      ** this is case.
      */
-    ASSERT_RET_VALUE((sizeof (mplite_link_t)&(sizeof (mplite_link_t) - 1)) == 0, -1);
+    ASSERT_ABORT((sizeof (mplite_link_t)&(sizeof (mplite_link_t) - 1)) == 0);
 
     nByte = buf_size;
     zByte = (uint8_t*) buf;
@@ -105,7 +105,7 @@ MPLITE_API int mplite_init(mplite_t *handle, const void *buf,
             mplite_link(handle, iOffset, ii);
             iOffset += nAlloc;
         }
-        ASSERT_RET_VALUE((iOffset + nAlloc) > handle->nBlock, -2);
+        ASSERT_ABORT((iOffset + nAlloc) > handle->nBlock);
     }
 
     return MPLITE_OK;
@@ -137,6 +137,16 @@ MPLITE_API void mplite_free(mplite_t *handle, const void *pPrior)
     mplite_enter(handle);
     mplite_free_unsafe(handle, pPrior);
     mplite_leave(handle);
+}
+
+MPLITE_API void* mplite_calloc(mplite_t* handle, const int nBytes)
+{
+    void *p = mplite_malloc(handle, nBytes);
+    if (p)
+    {
+        memset(p, 0, nBytes);
+    }
+    return p;
 }
 
 MPLITE_API void *mplite_realloc(mplite_t *handle, const void *pPrior,
@@ -232,7 +242,6 @@ MPLITE_API int mplite_freemem(mplite_t *handle)
     mplite_leave(handle);
 
     return total * handle->szAtom;
-
     /* return handle->szAtom * handle->nBlock - handle->currentOut; */
 }
 
@@ -315,9 +324,9 @@ static int mplite_logarithm(const int iValue)
 static int mplite_size(const mplite_t *handle, const void *p)
 {
     int iSize, i;
-    ASSERT_RET_VALUE( p!=0 , -1);
+    ASSERT_ABORT( p!=0 );
     i = (int)((uint8_t *) p - handle->zPool) / handle->szAtom;
-    ASSERT_RET_VALUE(i >= 0 && i < handle->nBlock, -2);
+    ASSERT_ABORT(i >= 0 && i < handle->nBlock);
     iSize = handle->szAtom * (1 << (handle->aCtrl[i] & MPLITE_CTRL_LOGSIZE));
     return iSize;
 }
@@ -329,9 +338,9 @@ static int mplite_size(const mplite_t *handle, const void *p)
 static void mplite_link(mplite_t *handle, const int i, const int iLogsize)
 {
     int x;
-    ASSERT_RET_VOID(i >= 0 && i < handle->nBlock);
-    ASSERT_RET_VOID(iLogsize >= 0 && iLogsize <= MPLITE_LOGMAX);
-    ASSERT_RET_VOID((handle->aCtrl[i] & MPLITE_CTRL_LOGSIZE) == iLogsize);
+	ASSERT_RET_VOID(i >= 0 && i < handle->nBlock);
+	ASSERT_RET_VOID(iLogsize >= 0 && iLogsize <= MPLITE_LOGMAX);
+	ASSERT_RET_VOID((handle->aCtrl[i] & MPLITE_CTRL_LOGSIZE) == iLogsize);
 
     x = mplite_getlink(handle, i)->next = handle->aiFreelist[iLogsize];
     mplite_getlink(handle, i)->prev = -1;
@@ -365,7 +374,6 @@ static void mplite_unlink(mplite_t *handle, const int i, const int iLogsize)
         mplite_getlink(handle, next)->prev = prev;
     }
 }
-
 
 #ifdef _WIN32
 #pragma warning(push)

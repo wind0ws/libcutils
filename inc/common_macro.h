@@ -113,6 +113,18 @@ EXTERN_C_START
 #endif
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
+#ifdef _WIN32
+#include <io.h>
+#define F_OK (0)
+#define W_OK (2)
+#define R_OK (4)
+#define X_OK (6)
+//just to make MSC happy
+#define access _access
+#else
+#include <unistd.h>
+#endif
+
 EXTERN_C_END
 
 #endif //__COMMON_MACRO_H__

@@ -181,6 +181,7 @@
     <ClInclude Include="..\..\..\inc\common_macro.h" />
     <ClInclude Include="..\..\..\inc\hash_functions.h" />
     <ClInclude Include="..\..\..\inc\hash_map.h" />
+    <ClInclude Include="..\..\..\inc\rand.h" />
     <ClInclude Include="..\..\..\inc\list.h" />
     <ClInclude Include="..\..\..\inc\mplite.h" />
     <ClInclude Include="..\..\..\inc\pthread_windows.h" />

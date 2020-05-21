@@ -1,9 +1,7 @@
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "ringbuffer.h"
-#include "xlog.h"
 
 #ifndef TAKE_MIN
 /* take min value of a,b */
@@ -45,17 +43,18 @@ struct __ring_buffer_t {
 //buf_size 应是2的n次幂
 ring_buf_handle RingBuffer_create(uint32_t buf_size) {
 	if (buf_size == 0) {
+		RING_LOGE("buf_size=0");
 		return NULL;
 	}
 	if (!is_power_of_2(buf_size)) {
-		LOGW("RingBuffer_create buf_size=%d is not power of 2", buf_size);
+		RING_LOGW("RingBuffer_create buf_size=%u is not power of 2", buf_size);
 		buf_size = roundup_pow_of_two(buf_size);
-		LOGW("RingBuffer_create changed buf_size to %d ", buf_size);
+		RING_LOGW("RingBuffer_create changed buf_size to %u ", buf_size);
 	}
 	ring_buf_handle ring_buffer_p = calloc(1, sizeof(struct __ring_buffer_t));
 	ring_buffer_p->buf = (char*)calloc(buf_size, 1);
 	if (!ring_buffer_p->buf) {
-		LOGE("can't malloc ring_buffer->buf. size=%d", buf_size);
+		RING_LOGE("can't malloc ring_buffer->buf. size=%u", buf_size);
 		free(ring_buffer_p);
 		return NULL;
 	}

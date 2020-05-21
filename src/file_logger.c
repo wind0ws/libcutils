@@ -1,0 +1,170 @@
+#include "file_logger.h"
+#include "msg_queue_handler.h"
+#include <malloc.h>
+#include <sys/timeb.h>
+#include <time.h>
+#include "strings.h"
+#include "common_macro.h"
+//for mkdir
+#include "file_util.h"
+//for sleep 
+#include "thread_wrapper.h"
+
+typedef struct file_logger
+{
+	file_logger_cfg cfg;
+	queue_handler msg_queue;
+	size_t cur_log_file_size_counter;
+	FILE* cur_fp;
+}file_logger_t;
+
+#define MAX_FULL_PATH_BUFFER (256)
+#define TIME_STR_LEN (24)
+static inline void get_current_time(char str[TIME_STR_LEN]);
+static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
+
+file_logger_handle file_logger_init(file_logger_cfg cfg)
+{
+	if (strlen(cfg.log_folder_path) < 2)
+	{
+		return NULL;
+	}
+	char* log_folder_path_formatted = strreplace(cfg.log_folder_path, "\\", "/");
+	strlcpy(cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_LEN);
+	free(log_folder_path_formatted);
+	int log_folder_path_len = strlen(cfg.log_folder_path);
+	if (cfg.log_folder_path[log_folder_path_len - 1] != '/')
+	{
+		int slashLoc = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_LEN ?
+			log_folder_path_len : (log_folder_path_len - 1);
+		cfg.log_folder_path[slashLoc] = '/';
+		cfg.log_folder_path[slashLoc + 1] = '\0';
+	}
+	if (cfg.one_piece_file_max_len < 1024)
+	{
+		//0 that means won't auto create new log file.
+		cfg.one_piece_file_max_len = 0;
+	}
+	if (cfg.max_log_queue_size < 64)
+	{
+		cfg.max_log_queue_size = 64;
+	}
+	file_logger_handle handle = calloc(1, sizeof(file_logger_t));
+	if (NULL == handle)
+	{
+		return NULL;
+	}
+	handle->cfg = cfg;
+	handle->msg_queue = QueueHandler_create(cfg.max_log_queue_size, handle_log_queue_msg, handle);
+	if (NULL == handle->msg_queue)
+	{
+		free(handle);
+		handle = NULL;
+	}
+	return handle;
+}
+
+void file_logger_log(file_logger_handle handle, void* log_msg)
+{
+#define MAX_RETRY_LOG_TIMES (5)
+	queue_msg_t msg = { 0 };
+	strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY);
+	int status;
+	int retry_counter = 0;
+	do
+	{
+		if ((status = QueueHandler_send(handle->msg_queue, &msg)))
+		{
+			RING_LOGE("failed on send log to queue. maybe queue is full!!!");
+			if (handle->cfg.is_try_my_best_not_to_lose_log)
+			{
+				RING_LOGE("try again after 2ms");
+				retry_counter++;
+				usleep(2000);
+			}
+		}
+	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_not_to_lose_log);
+	//final safety
+	if (status != 0 && handle->cfg.is_try_my_best_not_to_lose_log)
+	{
+		char cur_time[TIME_STR_LEN];
+		get_current_time(cur_time);
+		char path_buffer[MAX_FULL_PATH_BUFFER];
+		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
+		FILE* f_lost = fopen(path_buffer, "wb");
+		fprintf(f_lost, "%s\r\n", (char *)log_msg);
+		fclose(f_lost);
+	}
+}
+
+void file_logger_deinit(file_logger_handle* handle_p)
+{
+	if (NULL == handle_p || NULL == *handle_p)
+	{
+		return;
+	}
+	file_logger_handle handle = *handle_p;
+	if (handle->msg_queue)
+	{
+		QueueHandler_destroy(handle->msg_queue);
+	}
+	if (handle->cur_fp)
+	{
+		fclose(handle->cur_fp);
+		handle->cur_fp = NULL;
+	}
+	free(handle);
+	*handle_p = NULL;
+}
+
+static inline void get_current_time(char str[TIME_STR_LEN])
+{
+	struct timeb tb;
+	struct tm* lt;
+	ftime(&tb);
+
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif // _WIN32
+	lt = localtime(&tb.time);
+#ifdef _WIN32
+#pragma warning(pop)
+#endif // _WIN32
+
+	str[strftime(str, TIME_STR_LEN, "%m-%d %H_%M_%S", lt)] = '\0';
+	snprintf(str, TIME_STR_LEN, "%s.%03d", str, tb.millitm);
+}
+
+static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
+{
+	file_logger_handle handle = (file_logger_handle)user_data;
+	if (!handle->cur_fp)
+	{
+		file_util_mkdirs(handle->cfg.log_folder_path);
+		char cur_time[TIME_STR_LEN];
+		get_current_time(cur_time);
+		char path_buffer[MAX_FULL_PATH_BUFFER];
+		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
+		handle->cur_fp = fopen(path_buffer, "wb");
+		handle->cur_log_file_size_counter = 0;
+	}
+	if (!handle->cur_fp)
+	{
+		return;
+	}
+	int log_msg_len = strlen(msg_p->obj.data);
+	if (log_msg_len <= 0)
+	{
+		return;
+	}
+	//fwrite(msg_p->obj.data, sizeof(char), log_msg_len, handle->cur_fp);
+	fprintf(handle->cur_fp, "%s\r\n", msg_p->obj.data);
+	handle->cur_log_file_size_counter += (log_msg_len + 2);
+	if (handle->cfg.one_piece_file_max_len &&
+		handle->cur_log_file_size_counter >= handle->cfg.one_piece_file_max_len)
+	{
+		fclose(handle->cur_fp);
+		handle->cur_fp = NULL;
+	}
+}

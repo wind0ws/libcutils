@@ -81,6 +81,18 @@
     <ClCompile Include="..\..\..\test\mplite_test.c">
       <Filter>源文件\Test</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\msg_queue_handler.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\ring_msg_queue.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\file_logger.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\file_util.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\pthread_windows.h">
@@ -132,6 +144,21 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\inc\rand.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\apicheck.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\ring_msg_queue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\msg_queue_handler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\file_logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\file_util.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

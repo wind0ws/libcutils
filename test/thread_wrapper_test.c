@@ -46,7 +46,7 @@ static int sem_test()
 
 static void test_log()
 {
-	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", LOG_LINE_STAR, xlog_config_level, xlog_config_target, LOG_LINE_STAR)
+	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", LOG_LINE_STAR, xlog_get_min_level(), xlog_get_target(), LOG_LINE_STAR)
 
 	LOGV("this log is printed by LOGV")
 	LOGD("this log is printed by LOGD")
@@ -76,19 +76,19 @@ static void test_log()
 	TLOGV_HEX(LOG_TAG_MAIN, chars, 16);
 	LOGI_HEX(chars, 16);
 
-	xlog_config_level = LOG_LEVEL_ERROR;
-	xlog_config_target = LOG_TARGET_ANDROID;
+	xlog_set_min_level(LOG_LEVEL_ERROR);
+	xlog_set_target(LOG_TARGET_ANDROID);
 	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR")
 	LOGE("this log only print on logcat because of xlog_config_target=LOG_TARGET_ANDROID")
 
-	xlog_config_target = LOG_TARGET_CONSOLE;
+	xlog_set_target(LOG_TARGET_CONSOLE);
 	LOGE_TRACE("this log only print on console because of xlog_config_target=LOG_TARGET_CONSOLE")
 
-	xlog_config_level = LOG_LEVEL_OFF;
+	xlog_set_min_level(LOG_LEVEL_OFF);
 	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF")
 
-	xlog_config_level = LOG_LEVEL_VERBOSE;
-	xlog_config_target = (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
+	xlog_set_min_level(LOG_LEVEL_VERBOSE);
+	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	LOGI("LOG test finished!!!")
 }
 
@@ -98,10 +98,10 @@ int thread_wrapper_test() {
 	//MYLOG("MYLOG, %d", 1111);
 	test_log();
 
-	LOGI("yes");
+	LOGI("test LOGI");
 	LOGW_TRACE("hello, %d, xx=%s", 1234, "WORLD");
-	TLOGE("MyTag", "ERROR");
-	TLOGD_TRACE("MyTag", "DEBUG");
+	TLOGE("MyTag", "test TLOGE");
+	TLOGD_TRACE("MyTag", "test LOGD_TRACE");
 
 	sem_test();
 

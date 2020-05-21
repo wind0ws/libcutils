@@ -79,6 +79,7 @@ EXTERN_C_START
 #ifndef COMPILE_ASSERT
 #define COMPILE_ASSERT(COND) typedef int failed_compile_assert[(COND) ? 1 : -1] __attribute__ ((unused))
 #endif  // !COMPILE_ASSERT
+
 #ifndef ASSERT_RET_VOID
 #define ASSERT_RET_VOID(condition) if((condition) == false) { assert(false); return; }
 #endif // !ASSERT_VOID
@@ -99,21 +100,9 @@ EXTERN_C_START
 #define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i) ((void *) ((intptr_t) (i)))
 
-#ifdef _WIN32
-    static FILE* _fopen_safe(char const* _FileName, char const* _Mode)
-    {
-        FILE* _ftemp =  NULL;
-        fopen_s(&_ftemp, _FileName, _Mode);
-        return _ftemp;
-    }
-//to make MSC happy
-#define fopen _fopen_safe
-#define snprintf(buf, buf_size, format, ...) \
-        _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
-#endif
-#define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 #ifdef _WIN32
+#include <direct.h>
 #include <io.h>
 #define F_OK (0)
 #define W_OK (2)
@@ -121,9 +110,22 @@ EXTERN_C_START
 #define X_OK (6)
 //just to make MSC happy
 #define access _access
+#define mkdir(path, mode) _mkdir(path)
+
+    static FILE* __fopen_safe(char const* _FileName, char const* _Mode)
+    {
+        FILE* _ftemp =  NULL;
+        fopen_s(&_ftemp, _FileName, _Mode);
+        return _ftemp;
+    }
+//to make MSC happy
+#define fopen __fopen_safe
 #else
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #endif
+#define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 EXTERN_C_END
 

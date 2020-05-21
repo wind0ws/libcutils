@@ -2,6 +2,7 @@
 #ifndef CRINGBUFFER_RINGBUFFER_H
 #define CRINGBUFFER_RINGBUFFER_H
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -17,6 +18,55 @@
 #ifndef __out_opt
 #define __out_opt
 #endif
+
+#define __RING_LOG_TAG "RingBuf_TAG"
+#ifdef _WIN32
+//msvc-doesnt-expand-va-args-correctly https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
+#define EXPAND_VA_ARGS( x ) x
+//#define F(x, ...) X = x and VA_ARGS = __VA_ARGS__
+//#define G(...) EXPAND_VA_ARGS( F(__VA_ARGS__) )
+
+#define __CONSOLE_LOG_NO_NEW_LINE_HELPER(level, ...)  { printf( __VA_ARGS__ ); }
+#define __CONSOLE_LOG_NO_NEW_LINE(level, ...)  EXPAND_VA_ARGS( __CONSOLE_LOG_NO_NEW_LINE_HELPER(level, __VA_ARGS__) )
+#define __CONSOLE_LOGV_NO_NEW_LINE(...) __CONSOLE_LOG_NO_NEW_LINE(1, ##__VA_ARGS__)
+#define __CONSOLE_LOGD_NO_NEW_LINE(...) __CONSOLE_LOG_NO_NEW_LINE(2, ##__VA_ARGS__)
+#define __CONSOLE_LOGI_NO_NEW_LINE(...) __CONSOLE_LOG_NO_NEW_LINE(3, ##__VA_ARGS__)
+#define __CONSOLE_LOGW_NO_NEW_LINE(...) __CONSOLE_LOG_NO_NEW_LINE(4, ##__VA_ARGS__)
+#define __CONSOLE_LOGE_NO_NEW_LINE(...) __CONSOLE_LOG_NO_NEW_LINE(5, ##__VA_ARGS__)
+
+#define __CONSOLE_TLOGV(tag, fmt, ...)  __CONSOLE_LOG_NO_NEW_LINE(1,"[V][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define __CONSOLE_TLOGD(tag, fmt, ...)  __CONSOLE_LOG_NO_NEW_LINE(2,"[D][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define __CONSOLE_TLOGI(tag, fmt, ...)  __CONSOLE_LOG_NO_NEW_LINE(3,"[I][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define __CONSOLE_TLOGW(tag, fmt, ...)  __CONSOLE_LOG_NO_NEW_LINE(4,"[W][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define __CONSOLE_TLOGE(tag, fmt, ...)  __CONSOLE_LOG_NO_NEW_LINE(5,"[E][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+
+#define __LOG_HELPER_V(fmt, ...) __CONSOLE_TLOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define __LOG_HELPER_D(fmt, ...) __CONSOLE_TLOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define __LOG_HELPER_I(fmt, ...) __CONSOLE_TLOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define __LOG_HELPER_W(fmt, ...) __CONSOLE_TLOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define __LOG_HELPER_E(fmt, ...) __CONSOLE_TLOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+
+#elif(defined(__ANDROID__)) //android
+#include <android/log.h>
+#define __LOG_HELPER_V(fmt,...) __android_log_print(ANDROID_LOG_VERBOSE, __RING_LOG_TAG, fmt, ##__VA_ARGS__);
+#define __LOG_HELPER_D(fmt,...) __android_log_print(ANDROID_LOG_DEBUG, __RING_LOG_TAG, fmt, ##__VA_ARGS__);
+#define __LOG_HELPER_I(fmt,...) __android_log_print(ANDROID_LOG_INFO, __RING_LOG_TAG, fmt, ##__VA_ARGS__);
+#define __LOG_HELPER_W(fmt,...) __android_log_print(ANDROID_LOG_WARN, __RING_LOG_TAG, fmt, ##__VA_ARGS__);
+#define __LOG_HELPER_E(fmt,...) __android_log_print(ANDROID_LOG_ERROR, __RING_LOG_TAG, fmt, ##__VA_ARGS__);
+#else //unix printf
+#define __LOG_HELPER(...) printf(__VA_ARGS__);
+#define __LOG_HELPER_V(fmt,...) __LOG_HELPER(__RING_LOG_TAG"[V]"fmt"\r\n", ##__VA_ARGS__)
+#define __LOG_HELPER_D(fmt,...) __LOG_HELPER(__RING_LOG_TAG"[D]"fmt"\r\n", ##__VA_ARGS__)
+#define __LOG_HELPER_I(fmt,...) __LOG_HELPER(__RING_LOG_TAG"[I]"fmt"\r\n", ##__VA_ARGS__)
+#define __LOG_HELPER_W(fmt,...) __LOG_HELPER(__RING_LOG_TAG"[W]"fmt"\r\n", ##__VA_ARGS__)
+#define __LOG_HELPER_E(fmt,...) __LOG_HELPER(__RING_LOG_TAG"[E]"fmt"\r\n", ##__VA_ARGS__)
+#endif
+
+#define RING_LOGV(fmt,...) __LOG_HELPER_V(fmt, ##__VA_ARGS__);
+#define RING_LOGD(fmt,...) __LOG_HELPER_D(fmt, ##__VA_ARGS__);
+#define RING_LOGI(fmt,...) __LOG_HELPER_I(fmt, ##__VA_ARGS__);
+#define RING_LOGW(fmt,...) __LOG_HELPER_W(fmt, ##__VA_ARGS__);
+#define RING_LOGE(fmt,...) __LOG_HELPER_E(fmt, ##__VA_ARGS__);
 
 #ifdef __cplusplus
 extern "C" {

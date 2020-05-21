@@ -16,15 +16,16 @@
  *
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  ******************************************************************************/
-#include <assert.h>
 #include "allocator.h"
 #include "hash_map.h"
 #include "list.h"
 #include "common_macro.h"
+
 struct hash_map_t;
 typedef struct hash_map_bucket_t {
 	list_t* list;
 } hash_map_bucket_t;
+
 typedef struct hash_map_t {
 	hash_map_bucket_t* bucket;
 	size_t num_bucket;
@@ -35,12 +36,13 @@ typedef struct hash_map_t {
 	const allocator_t* allocator;
 	key_equality_fn keys_are_equal;
 } hash_map_t;
+
 // Hidden constructor for list, only to be used by us.
 list_t* list_new_internal(list_free_cb callback, const allocator_t* zeroed_allocator);
 static void bucket_free_(void* data);
-static bool default_key_equality(const void* x, const void* y);
-static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,
-	const void* key);
+static inline bool default_key_equality(const void* x, const void* y);
+static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list, const void* key);
+
 // Hidden constructor, only to be used by the allocation tracker. Behaves the same as
 // |hash_map_new|, except you get to specify the allocator.
 hash_map_t* hash_map_new_internal(
@@ -86,18 +88,22 @@ void hash_map_free(hash_map_t* hash_map) {
 	hash_map->allocator->free(hash_map->bucket);
 	hash_map->allocator->free(hash_map);
 }
+
 bool hash_map_is_empty(const hash_map_t* hash_map) {
 	ASSERT_RET_VALUE(hash_map != NULL, false);
 	return (hash_map->hash_size == 0);
 }
+
 size_t hash_map_size(const hash_map_t* hash_map) {
 	ASSERT_RET_VALUE(hash_map != NULL, 0);
 	return hash_map->hash_size;
 }
+
 size_t hash_map_num_buckets(const hash_map_t* hash_map) {
 	ASSERT_RET_VALUE(hash_map != NULL, 0);
 	return hash_map->num_bucket;
 }
+
 bool hash_map_has_key(const hash_map_t* hash_map, const void* key) {
 	ASSERT_RET_VALUE(hash_map != NULL, false);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
@@ -105,6 +111,7 @@ bool hash_map_has_key(const hash_map_t* hash_map, const void* key) {
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
 	return (hash_map_entry != NULL);
 }
+
 bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) {
 	ASSERT_RET_VALUE(hash_map != NULL, false);
 	ASSERT_RET_VALUE(data != NULL, false);
@@ -132,6 +139,7 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) {
 	hash_map_entry->hash_map = hash_map;
 	return list_append(hash_bucket_list, hash_map_entry);
 }
+
 bool hash_map_erase(hash_map_t* hash_map, const void* key) {
 	ASSERT_RET_VALUE(hash_map != NULL, false);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
@@ -143,6 +151,7 @@ bool hash_map_erase(hash_map_t* hash_map, const void* key) {
 	hash_map->hash_size--;
 	return list_remove(hash_bucket_list, hash_map_entry);
 }
+
 void* hash_map_get(const hash_map_t* hash_map, const void* key) {
 	ASSERT_RET_VALUE(hash_map != NULL, NULL);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
@@ -152,6 +161,7 @@ void* hash_map_get(const hash_map_t* hash_map, const void* key) {
 		return hash_map_entry->data;
 	return NULL;
 }
+
 void hash_map_clear(hash_map_t* hash_map) {
 	ASSERT_RET_VOID(hash_map != NULL);
 	for (hash_index_t i = 0; i < hash_map->num_bucket; i++) {
@@ -161,6 +171,7 @@ void hash_map_clear(hash_map_t* hash_map) {
 		hash_map->bucket[i].list = NULL;
 	}
 }
+
 void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* context) {
 	ASSERT_RET_VOID(hash_map != NULL);
 	ASSERT_RET_VOID(callback != NULL);
@@ -176,6 +187,7 @@ void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* con
 		}
 	}
 }
+
 static void bucket_free_(void* data) {
 	ASSERT_RET_VOID(data != NULL);
 	hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)data;
@@ -186,6 +198,7 @@ static void bucket_free_(void* data) {
 		hash_map->data_fn(hash_map_entry->data);
 	hash_map->allocator->free(hash_map_entry);
 }
+
 static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,
 	const void* key) {
 	if (hash_bucket_list == NULL)
@@ -200,6 +213,7 @@ static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,
 	}
 	return NULL;
 }
-static bool default_key_equality(const void* x, const void* y) {
+
+static inline bool default_key_equality(const void* x, const void* y) {
 	return x == y;
 }

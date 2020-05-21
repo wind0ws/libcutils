@@ -155,13 +155,17 @@
     <ClCompile Include="..\..\..\src\allocator.c" />
     <ClCompile Include="..\..\..\src\array.c" />
     <ClCompile Include="..\..\..\src\autocover_buffer.c" />
+    <ClCompile Include="..\..\..\src\file_logger.c" />
+    <ClCompile Include="..\..\..\src\file_util.c" />
     <ClCompile Include="..\..\..\src\hash_functions.c" />
     <ClCompile Include="..\..\..\src\hash_map.c" />
     <ClCompile Include="..\..\..\src\list.c" />
     <ClCompile Include="..\..\..\src\mplite.c" />
+    <ClCompile Include="..\..\..\src\msg_queue_handler.c" />
     <ClCompile Include="..\..\..\src\pthread_windows.c" />
     <ClCompile Include="..\..\..\src\ringbuffer.c" />
     <ClCompile Include="..\..\..\src\ring_buf.c" />
+    <ClCompile Include="..\..\..\src\ring_msg_queue.c" />
     <ClCompile Include="..\..\..\src\semaphore_windows.c" />
     <ClCompile Include="..\..\..\src\strings.c" />
     <ClCompile Include="..\..\..\src\thread_wrapper.c" />
@@ -176,21 +180,26 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\allocation_tracker.h" />
     <ClInclude Include="..\..\..\inc\allocator.h" />
+    <ClInclude Include="..\..\..\inc\apicheck.h" />
     <ClInclude Include="..\..\..\inc\array.h" />
     <ClInclude Include="..\..\..\inc\autocover_buffer.h" />
     <ClInclude Include="..\..\..\inc\common_macro.h" />
+    <ClInclude Include="..\..\..\inc\file_util.h" />
     <ClInclude Include="..\..\..\inc\hash_functions.h" />
     <ClInclude Include="..\..\..\inc\hash_map.h" />
+    <ClInclude Include="..\..\..\inc\msg_queue_handler.h" />
     <ClInclude Include="..\..\..\inc\rand.h" />
     <ClInclude Include="..\..\..\inc\list.h" />
     <ClInclude Include="..\..\..\inc\mplite.h" />
     <ClInclude Include="..\..\..\inc\pthread_windows.h" />
     <ClInclude Include="..\..\..\inc\ringbuffer.h" />
     <ClInclude Include="..\..\..\inc\ring_buf.h" />
+    <ClInclude Include="..\..\..\inc\ring_msg_queue.h" />
     <ClInclude Include="..\..\..\inc\semaphore_windows.h" />
     <ClInclude Include="..\..\..\inc\strings.h" />
     <ClInclude Include="..\..\..\inc\thread_wrapper.h" />
     <ClInclude Include="..\..\..\inc\xlog.h" />
+    <ClInclude Include="..\..\..\inc\file_logger.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

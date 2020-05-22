@@ -10,6 +10,12 @@ extern "C" {
 
 	typedef struct file_logger * file_logger_handle;
 
+	typedef struct file_logger_lock {
+		void* arg; /**< Argument to be passed to acquire and release function pointers */
+		int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
+		int (*release)(void* arg); /**< Function pointer to release a lock */
+	} file_logger_lock_t;
+
 	typedef struct 
 	{
 #define MAX_LOG_FOLDER_PATH_LEN (128)
@@ -19,6 +25,7 @@ extern "C" {
 		size_t one_piece_file_max_len;
 		size_t max_log_queue_size;
 		bool is_try_my_best_not_to_lose_log;
+		file_logger_lock_t lock;
 	}file_logger_cfg;
 
 	file_logger_handle file_logger_init(file_logger_cfg cfg);

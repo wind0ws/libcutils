@@ -18,6 +18,15 @@ typedef struct file_logger
 	FILE* cur_fp;
 }file_logger_t;
 
+#define FILE_LOGGER_LOCK(logger_handle) 	if (logger_handle->cfg.lock.acquire)\
+{\
+	logger_handle->cfg.lock.acquire(logger_handle->cfg.lock.arg);\
+};
+#define FILE_LOGGER_UNLOCK(logger_handle) 	if (logger_handle->cfg.lock.release)\
+{\
+	logger_handle->cfg.lock.release(logger_handle->cfg.lock.arg);\
+};
+
 #define MAX_FULL_PATH_BUFFER (256)
 #define TIME_STR_LEN (24)
 static inline void get_current_time(char str[TIME_STR_LEN]);
@@ -35,10 +44,10 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 	int log_folder_path_len = strlen(cfg.log_folder_path);
 	if (cfg.log_folder_path[log_folder_path_len - 1] != '/')
 	{
-		int slashLoc = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_LEN ?
+		int slash_location = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_LEN ?
 			log_folder_path_len : (log_folder_path_len - 1);
-		cfg.log_folder_path[slashLoc] = '/';
-		cfg.log_folder_path[slashLoc + 1] = '\0';
+		cfg.log_folder_path[slash_location] = '/';
+		cfg.log_folder_path[slash_location + 1] = '\0';
 	}
 	if (cfg.one_piece_file_max_len < 1024)
 	{
@@ -71,6 +80,8 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 	strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY);
 	int status;
 	int retry_counter = 0;
+
+	FILE_LOGGER_LOCK(handle)
 	do
 	{
 		if ((status = QueueHandler_send(handle->msg_queue, &msg)))
@@ -92,9 +103,13 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		FILE* f_lost = fopen(path_buffer, "wb");
-		fprintf(f_lost, "%s\r\n", (char *)log_msg);
-		fclose(f_lost);
+		if (f_lost)
+		{
+			fprintf(f_lost, "%s\r\n", (char*)log_msg);
+			fclose(f_lost);
+		}
 	}
+	FILE_LOGGER_UNLOCK(handle)
 }
 
 void file_logger_deinit(file_logger_handle* handle_p)

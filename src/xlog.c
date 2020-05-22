@@ -168,7 +168,7 @@ LogLevel xlog_get_min_level()
 void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_line, char* fmt, ...)
 {
 	va_list args;
-	char buffer_log[1024] = { 0 };
+	char buffer_log[1024];
 	char str_time[TIME_STR_LEN];
 	int header_len;
 	int header_with_trace_fun_len;

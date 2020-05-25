@@ -172,6 +172,7 @@
     <ClCompile Include="..\..\..\src\xlog.c" />
     <ClCompile Include="..\..\..\test\autocover_buffer_test.c" />
     <ClCompile Include="..\..\..\test\basic_test.c" />
+    <ClCompile Include="..\..\..\test\file_util_test.c" />
     <ClCompile Include="..\..\..\test\main.c" />
     <ClCompile Include="..\..\..\test\mplite_test.c" />
     <ClCompile Include="..\..\..\test\strings_test.c" />

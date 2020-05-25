@@ -30,6 +30,7 @@ extern int basic_test();
 extern int autocover_buffer_test();
 extern int strings_test();
 extern int mplite_test();
+extern int file_util_test();
 
 static void xlog_custom_user_cb(void* log_msg, void* user_data);
 static void my_file_logger_lock(void *arg);
@@ -64,8 +65,9 @@ int main(int argc, char* argv[])
 	
 	LOGI("hello world\r\n");
 
+	RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
-	RUN_TEST(thread_wrapper_test);
+	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);

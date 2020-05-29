@@ -1,16 +1,21 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <sys/timeb.h>
-#include <time.h>
 #include "xlog.h"
 #include "strings.h"
+#include "time_util.h"
 
 #define LOG_LEVLE_CHAR_V ('V')
 #define LOG_LEVLE_CHAR_D ('D')
 #define LOG_LEVLE_CHAR_I ('I')
 #define LOG_LEVLE_CHAR_W ('W')
 #define LOG_LEVLE_CHAR_E ('E')
+
+#ifdef _WIN32
+#define STDOUT ("CON")
+#else
+#define STDOUT ("/dev/tty")
+#endif // _WIN32
 
 typedef struct xlog_cb_pack
 {
@@ -23,6 +28,10 @@ typedef struct xlog_config
 {
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	xlog_cb_pack_t cb_pack;
+	/* if level small than this, transform the current level to this */
+	LogLevel trigger_up_level;
+	FILE *fp_stdout;
+	/* min log level: only log if current level bigger or equal than this. */
 	LogLevel min_level;
 	LogTarget target;
 }xlog_config_t;
@@ -30,6 +39,8 @@ typedef struct xlog_config
 static xlog_config_t xlog_cfg = {
 	"XLog",
 	{NULL},
+	LOG_LEVEL_OFF,
+	NULL,
 	LOG_LEVEL_VERBOSE,
 #ifdef _WIN32
 	LOG_TARGET_CONSOLE
@@ -38,32 +49,12 @@ static xlog_config_t xlog_cfg = {
 #endif
 };
 
-#define  XLOG_IS_TARGET_ABLE(log_target) (xlog_cfg.target & log_target)
+#define XLOG_IS_TARGET_ABLE(log_target) (xlog_cfg.target & log_target)
 #define XLOG_IS_CONSOLE_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_CONSOLE)
 #define XLOG_IS_ANDROID_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_ANDROID)
 #define XLOG_IS_USER_CALLBACK_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_USER_CALLBACK)
 
 #define XLOG_IS_LOGABLE(level) (xlog_cfg.min_level && level >= xlog_cfg.min_level)
-
-#define TIME_STR_LEN (24)
-static inline void get_current_time(char str[TIME_STR_LEN])
-{
-	struct timeb tb;
-	struct tm* lt;
-	ftime(&tb);
-
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif // _WIN32
-	lt = localtime(&tb.time);
-#ifdef _WIN32
-#pragma warning(pop)
-#endif // _WIN32
-
-	str[strftime(str, TIME_STR_LEN, "%m-%d %H:%M:%S", lt)] = '\0';
-	snprintf(str, TIME_STR_LEN, "%s.%03d", str, tb.millitm);
-}
 
 static inline char get_log_level_char(int level)
 {
@@ -95,7 +86,7 @@ static inline char get_log_level_char(int level)
 
 #if defined(__ANDROID__)
 
-static int convert_to_android_log_level(int level)
+static inline int convert_to_android_log_level(int level)
 {
 	int androidLevel;
 	switch (level)
@@ -121,6 +112,50 @@ static int convert_to_android_log_level(int level)
 }
 
 #endif
+
+void xlog_auto_level_up(LogLevel trigger_level)
+{
+	xlog_cfg.trigger_up_level = trigger_level;
+}
+
+void xlog_stdout2file(char* file_path)
+{
+	if (NULL == file_path)
+	{
+		return;
+	}
+	if (xlog_cfg.fp_stdout)
+	{
+		fclose(xlog_cfg.fp_stdout);
+		xlog_cfg.fp_stdout = NULL;
+	}
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable:4996)
+#endif // _WIN32
+	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
+#ifdef _WIN32
+#pragma warning(pop)
+#endif // _WIN32
+}
+
+void xlog_back2stdout()
+{
+	if (NULL == xlog_cfg.fp_stdout)
+	{
+		return;
+	}
+	fclose(xlog_cfg.fp_stdout);
+	xlog_cfg.fp_stdout = NULL;
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable:4996)
+#endif // _WIN32
+	freopen(STDOUT, "w", stdout);
+#ifdef _WIN32
+#pragma warning(pop)
+#endif // _WIN32
+}
 
 void xlog_set_default_tag(char* tag)
 {
@@ -173,11 +208,14 @@ void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_li
 	int header_len;
 	int header_with_trace_fun_len;
 	bool isLogToConsole;
-	bool isLogToAndroid;
 	bool isLogToUserCb;
 	if (!XLOG_IS_LOGABLE(level))
 	{
 		return;
+	}
+	if (xlog_cfg.trigger_up_level && level < xlog_cfg.trigger_up_level)
+	{
+		level = xlog_cfg.trigger_up_level;
 	}
 	if (NULL == tag)
 	{
@@ -185,12 +223,11 @@ void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_li
 	}
 
 	isLogToConsole = XLOG_IS_CONSOLE_ABLE;
-	isLogToAndroid = XLOG_IS_ANDROID_ABLE;
 	isLogToUserCb = XLOG_IS_USER_CALLBACK_ABLE;
 	if (isLogToConsole || isLogToUserCb)
 	{
 		char level_char = get_log_level_char(level);
-		get_current_time(str_time);
+		time_util_get_current_time_str(str_time);
 		snprintf(buffer_log, sizeof(buffer_log), "[%s][%c][%s] ", str_time, level_char, tag);
 		header_len = strlen(buffer_log);
 	}
@@ -219,9 +256,9 @@ void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_li
 	}
 
 #if defined(__ANDROID__)
-	if (isLogToAndroid)
+	if (XLOG_IS_ANDROID_ABLE)
 	{
-		__android_log_print(convert_to_android_log_level(level), tag, buffer_log + header_len );
+		__android_log_print(convert_to_android_log_level(level), tag, "%s", buffer_log + header_len );
 	}
 #endif // __ANDROID__
 	if (xlog_cfg.cb_pack.cb && isLogToUserCb)

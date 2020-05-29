@@ -11,7 +11,7 @@ void file_util_append_slash_on_path_if_needed(char* folder_path, const size_t fo
  * check folder_path is exists.
  * @return 0 means the folder_path is exists. otherwise it is error code by access()
  */
-int file_util_dir_exists(const char* folder_path);
+int file_util_access(const char* folder_path);
 
 int file_util_mkdirs(const char* folder_path);
 

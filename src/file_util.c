@@ -14,11 +14,11 @@
 #define MAX_PATH_LEN (256)
 
 #ifdef WIN32
-#define ACCESS(fileName,accessMode) _access(fileName,accessMode)
+#define ACCESS(fileName, accessMode) _access(fileName, accessMode)
 #define MKDIR(path) _mkdir(path)
 #else
-#define ACCESS(fileName,accessMode) access(fileName,accessMode)
-#define MKDIR(path) mkdir(path,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
+#define ACCESS(fileName, accessMode) access(fileName, accessMode)
+#define MKDIR(path) mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 #endif
 
 void file_util_append_slash_on_path_if_needed(char *folder_path, const size_t folder_path_capacity) {
@@ -33,7 +33,7 @@ void file_util_append_slash_on_path_if_needed(char *folder_path, const size_t fo
 	}
 }
 
-int file_util_dir_exists(const char* dirs)
+int file_util_access(const char* dirs)
 {
 	return ACCESS(dirs, 0);
 }
@@ -54,7 +54,7 @@ int file_util_mkdirs(const char * directory_path)
 		return -2;
 	}
 	char tmp_dir_path[MAX_PATH_LEN] = { 0 };
-	for (int i = 0; i < dir_path_len; ++i)
+	for (size_t i = 0; i < dir_path_len; ++i)
 	{
 		tmp_dir_path[i] = directory_path[i];
 		if (tmp_dir_path[i] == '\\' || tmp_dir_path[i] == '/')

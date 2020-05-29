@@ -1,14 +1,14 @@
 #include "file_logger.h"
 #include "msg_queue_handler.h"
 #include <malloc.h>
-#include <sys/timeb.h>
-#include <time.h>
 #include "strings.h"
 #include "common_macro.h"
 //for mkdir
 #include "file_util.h"
 //for sleep 
 #include "thread_wrapper.h"
+//for timestamp file name
+#include "time_util.h"
 
 typedef struct file_logger
 {
@@ -28,8 +28,6 @@ typedef struct file_logger
 };
 
 #define MAX_FULL_PATH_BUFFER (256)
-#define TIME_STR_LEN (24)
-static inline void get_current_time(char str[TIME_STR_LEN]);
 static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg cfg)
@@ -99,7 +97,7 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 	if (status != 0 && handle->cfg.is_try_my_best_not_to_lose_log)
 	{
 		char cur_time[TIME_STR_LEN];
-		get_current_time(cur_time);
+		time_util_get_current_time_str_for_file_name(cur_time);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		FILE* f_lost = fopen(path_buffer, "wb");
@@ -132,25 +130,6 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	*handle_p = NULL;
 }
 
-static inline void get_current_time(char str[TIME_STR_LEN])
-{
-	struct timeb tb;
-	struct tm* lt;
-	ftime(&tb);
-
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif // _WIN32
-	lt = localtime(&tb.time);
-#ifdef _WIN32
-#pragma warning(pop)
-#endif // _WIN32
-
-	str[strftime(str, TIME_STR_LEN, "%m-%d %H_%M_%S", lt)] = '\0';
-	snprintf(str, TIME_STR_LEN, "%s.%03d", str, tb.millitm);
-}
-
 static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 {
 	file_logger_handle handle = (file_logger_handle)user_data;
@@ -158,7 +137,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	{
 		file_util_mkdirs(handle->cfg.log_folder_path);
 		char cur_time[TIME_STR_LEN];
-		get_current_time(cur_time);
+		time_util_get_current_time_str(cur_time);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");

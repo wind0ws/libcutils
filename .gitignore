@@ -2,7 +2,9 @@
 cmake-build-debug/
 cmake-build-release/
 .idea/
-target/vs/libcutils/.vs/
-target/vs/libcutils/Debug/
-target/vs/libcutils/Release/
-target/vs/libcutils/x64/
+build/vs/libcutils/.vs/
+build/vs/libcutils/Debug/
+build/vs/libcutils/Release/
+build/vs/libcutils/x64/
+build/build_v7a/
+build/output/

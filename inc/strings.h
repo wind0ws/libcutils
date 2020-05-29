@@ -37,7 +37,9 @@ extern "C" {
 	/**
 	 * replace the "pattern" value to "replacement" from "original".
 	 * warning: return value is malloced, need free after use!
-	 * @param original 
+	 * @param original: the str to replace
+	 * @param pattern: the replace pattern
+	 * @param replacement: replace pattern to this
 	 */
 	char* strreplace(char const* const original,
 		char const* const pattern, char const* const replacement);

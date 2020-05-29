@@ -20,7 +20,8 @@ extern "C" {
 		LOG_LEVEL_DEBUG = 2,
 		LOG_LEVEL_INFO = 3,
 		LOG_LEVEL_WARN = 4,
-		LOG_LEVEL_ERROR = 5
+		LOG_LEVEL_ERROR = 5,
+		LOG_LEVEL_UNKNOWN
 	} LogLevel;
 
 	typedef void (*xlog_user_callback)(void *log_msg, void *user_data);
@@ -36,6 +37,13 @@ extern "C" {
 #define CONSOLE_LOG_CONFIG_METHOD printf
 #define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
 
+	/**
+	 * auto increase log level if current log level below trigger_level
+	 * this is useful when some Android devices have restrictions on the log level below LOG_LEVEL_INFO.
+	 */
+	void xlog_auto_level_up(LogLevel trigger_level);
+	void xlog_stdout2file(char *file_path);
+	void xlog_back2stdout();
 	void xlog_set_default_tag(char *tag);
 	void xlog_set_user_callback(xlog_user_callback user_cb, void* user_data);
 	void xlog_set_target(LogTarget target);

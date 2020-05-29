@@ -96,6 +96,12 @@
     <ClCompile Include="..\..\..\test\file_util_test.c">
       <Filter>源文件\Test</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\test\file_logger_test.c">
+      <Filter>源文件\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\time_util.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\inc\pthread_windows.h">
@@ -162,6 +168,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\inc\file_util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\inc\time_util.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

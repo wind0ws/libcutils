@@ -169,9 +169,11 @@
     <ClCompile Include="..\..\..\src\semaphore_windows.c" />
     <ClCompile Include="..\..\..\src\strings.c" />
     <ClCompile Include="..\..\..\src\thread_wrapper.c" />
+    <ClCompile Include="..\..\..\src\time_util.c" />
     <ClCompile Include="..\..\..\src\xlog.c" />
     <ClCompile Include="..\..\..\test\autocover_buffer_test.c" />
     <ClCompile Include="..\..\..\test\basic_test.c" />
+    <ClCompile Include="..\..\..\test\file_logger_test.c" />
     <ClCompile Include="..\..\..\test\file_util_test.c" />
     <ClCompile Include="..\..\..\test\main.c" />
     <ClCompile Include="..\..\..\test\mplite_test.c" />
@@ -199,6 +201,7 @@
     <ClInclude Include="..\..\..\inc\semaphore_windows.h" />
     <ClInclude Include="..\..\..\inc\strings.h" />
     <ClInclude Include="..\..\..\inc\thread_wrapper.h" />
+    <ClInclude Include="..\..\..\inc\time_util.h" />
     <ClInclude Include="..\..\..\inc\xlog.h" />
     <ClInclude Include="..\..\..\inc\file_logger.h" />
   </ItemGroup>

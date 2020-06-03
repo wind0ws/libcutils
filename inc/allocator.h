@@ -17,8 +17,8 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/allocator.h
  ******************************************************************************/
 #pragma once
-#ifndef _ALLOCATOR_H
-#define _ALLOCATOR_H
+#ifndef __LCU_ALLOCATOR_H
+#define __LCU_ALLOCATOR_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -51,4 +51,4 @@ void osi_free_and_reset(void **p_ptr);
 }
 #endif
 
-#endif //_ALLOCATOR_H
+#endif //__LCU_ALLOCATOR_H

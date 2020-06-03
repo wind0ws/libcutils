@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __COMMON_MACRO_H__
-#define __COMMON_MACRO_H__
+#ifndef __LCU_COMMON_MACRO_H__
+#define __LCU_COMMON_MACRO_H__
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -104,10 +104,10 @@ EXTERN_C_START
 #ifdef _WIN32
 #include <direct.h>
 #include <io.h>
-#define F_OK (0)
-#define W_OK (2)
-#define R_OK (4)
-#define X_OK (6)
+#define F_OK 0
+#define X_OK 1
+#define W_OK 2
+#define R_OK 4
 //just to make MSC happy
 #define access _access
 #define mkdir(path, mode) _mkdir(path)
@@ -129,4 +129,4 @@ EXTERN_C_START
 
 EXTERN_C_END
 
-#endif //__COMMON_MACRO_H__
+#endif // __LCU_COMMON_MACRO_H__

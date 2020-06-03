@@ -24,18 +24,19 @@
 void file_util_append_slash_on_path_if_needed(char *folder_path, const size_t folder_path_capacity) {
     const size_t path_len = strnlen(folder_path, folder_path_capacity);
 	char slash_char = (NULL == strstr(folder_path, "/")) ? '\\' : '/';	
-	if (folder_path[path_len - 1] != slash_char)
+	if (folder_path[path_len - 1] == slash_char)
 	{
-		int slash_location = (path_len + 1) < folder_path_capacity ?
-			path_len : (path_len - 1);
-		folder_path[slash_location] = slash_char;
-		folder_path[slash_location + 1] = '\0';
+		return;
 	}
+	size_t slash_location = (path_len + 1) < folder_path_capacity ?
+		path_len : (path_len - 1);
+	folder_path[slash_location] = slash_char;
+	folder_path[slash_location + 1] = '\0';
 }
 
-int file_util_access(const char* dirs)
+int file_util_access(const char* path, int access_mode)
 {
-	return ACCESS(dirs, 0);
+	return ACCESS(path, access_mode);
 }
 
 // 从左到右依次判断文件夹是否存在,不存在就创建

@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.1)
 
+if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT" CACHE STRING "")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd" CACHE STRING "")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT" CACHE STRING "")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd" CACHE STRING "")
+endif ()
 
+project(libcutils VERSION 1.0 LANGUAGES C CXX)
 
-project(libcutils VERSION 0.0 LANGUAGES C CXX)
-
-set(CMAKE_C_STANDARD 99)
+#set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
 
@@ -22,33 +28,77 @@ MACRO(SCAN_HEADER_DIRECTORIES scan_dir return_list)
     SET(${return_list} ${dir_list})
 ENDMACRO()
 
-get_filename_component(SRC_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
-message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n SRC_DIR=${SRC_DIR}\n")
+message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
+#get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
+get_filename_component(LCU_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
+message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n LCU_ROOT_DIR=${LCU_ROOT_DIR}\n")
 
 #add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+#For compiler
+#add_compile_options("-DCURL_STATICLIB")
 
-include_directories(${SRC_DIR}/inc/)
+#add compile/optimize options for DEBUG/RELEASE
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -Wall" CACHE STRING "")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS_RELEASE} -Wall -std=c++11 -fexceptions" CACHE STRING "")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2" CACHE STRING "")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Og" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og" CACHE STRING "")
+
+if(WIN32)
+#supress "C4477" for VS
+add_definitions( /wd4477 )
+else()
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+# Android 5.0 以上需要在此处设置 PIE
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
+endif(WIN32)
+
+SCAN_HEADER_DIRECTORIES(${LCU_ROOT_DIR}/inc/ LCU_HEADERS)
+message(STATUS "LCU_HEADERS => \n ${LCU_HEADERS}")
+include_directories(${LCU_HEADERS})
+#include_directories(${LCU_ROOT_DIR}/inc/)
+#for publish library: copy header to output dir
+file(COPY ${LCU_ROOT_DIR}/inc/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #add_library(mplite ../../src/mplite.c)
 #target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)
 
-add_executable(libcutils_test
-		${SRC_DIR}/src/time_util.c
-		${SRC_DIR}/src/file_util.c
-		${SRC_DIR}/src/msg_queue_handler.c
-		${SRC_DIR}/src/ring_msg_queue.c
-		${SRC_DIR}/src/ringbuffer.c
-		${SRC_DIR}/src/file_logger.c
-        ${SRC_DIR}/src/xlog.c
-		${SRC_DIR}/src/ring_buf.c
-		${SRC_DIR}/src/pthread_windows.c
-        ${SRC_DIR}/src/thread_wrapper.c
-        ${SRC_DIR}/src/semaphore_windows.c
-		${SRC_DIR}/src/strings.c
-		${SRC_DIR}/test/file_util_test.c
-		${SRC_DIR}/test/file_logger_test.c
-		${SRC_DIR}/test/main.c)
+#collect src/*.c to "LCU_SRCS" 
+aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
+message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
+add_library(lcu_static
+			STATIC
+			${LCU_SRCS})
+add_library(lcu_shared
+			SHARED
+			${LCU_SRCS})
+# 指定库的输出名称
+set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
+# 使动态库和静态库同时存在
+set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+# 指定动态库版本
+# VERSION 动态库版本
+# SOVERSION API版本
+set_target_properties(lcu_shared PROPERTIES VERSION 1.0 SOVERSION 1)
+
+#set(LCU_TEST_SRCS
+#		${LCU_ROOT_DIR}/test/file_util_test.c
+#		${LCU_ROOT_DIR}/test/file_logger_test.c
+#		${LCU_ROOT_DIR}/test/main.c
+#)
+file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c")
+message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
+
+add_executable(libcutils_test
+		${LCU_TEST_SRCS}
+		)
+
+if(ANDROID)
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
 # default, you only need to specify the name of the public NDK library
@@ -68,13 +118,27 @@ find_library( # Sets the name of the path variable.
 #        # Specifies the name of the NDK library that
 #        # you want CMake to locate.
 #        z)
+else()
+set(log-lib "")
+endif(ANDROID)		
+
+target_link_libraries( # Specifies the target library.
+        lcu_static PUBLIC
+
+        ${log-lib}
+        )
 		
+target_link_libraries( # Specifies the target library.
+        lcu_shared PUBLIC
+
+        ${log-lib}
+        )		
 
 target_link_libraries( # Specifies the target library.
         libcutils_test
 
-        # Links the target library to the log library
-        # included in the NDK.
+		lcu_static
+
         ${log-lib}
         )		
 

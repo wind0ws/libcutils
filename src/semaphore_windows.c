@@ -44,7 +44,7 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 	char buffer[512];
 	UNUSED(mode);
 
-	if (value > (unsigned int)SEM_VALUE_MAX || (len = strlen(name)) > (int)sizeof(buffer) - 8 || len < 1) {
+	if (value > (unsigned int)SEM_VALUE_MAX || (len = (int)strlen(name)) > (int)sizeof(buffer) - 8 || len < 1) {
 		return lc_set_errno(EINVAL);
 	}
 

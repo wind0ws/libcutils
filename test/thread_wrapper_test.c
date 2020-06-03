@@ -8,7 +8,7 @@ static void* thread_func(void* args) {
 	int code;
 	LOGI("Hello pthread.");
 	sem_t* psem = args;
-	if (code = sem_wait(psem))
+	if ((code = sem_wait(psem)))
 	{
 		LOGE("error on sem_wait ,code=%d", code);
 	}
@@ -21,7 +21,7 @@ static int sem_test()
 	int code;
 	//sem_t* psem = sem_open("example_semaphore", O_CREAT | O_EXCL, 0, 0);
 
-	sem_t sem = { NULL };
+	sem_t sem = { 0 };
 	sem_t* psem = &sem;
 	sem_init(psem, 0, 0);
 
@@ -30,7 +30,7 @@ static int sem_test()
 
 	sleep(1);
 	LOGD("now sem_post...");
-	if (code = sem_post(psem))
+	if ((code = sem_post(psem)))
 	{
 		LOGE("error on sem_post. code=%d", code);
 	}

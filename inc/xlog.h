@@ -61,7 +61,7 @@ extern "C" {
 	 * Do not call this method directly.
 	 * USE macro LOGX or TLOGX instead.
 	 */
-    void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_line, char* fmt, ...);
+    void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...);
 
 #define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__);
 #define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__);

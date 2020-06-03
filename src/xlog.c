@@ -200,7 +200,7 @@ LogLevel xlog_get_min_level()
 	return xlog_cfg.min_level;
 }
 
-void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_line, char* fmt, ...)
+void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list args;
 	char buffer_log[1024];
@@ -229,7 +229,7 @@ void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_li
 		char level_char = get_log_level_char(level);
 		time_util_get_current_time_str(str_time);
 		snprintf(buffer_log, sizeof(buffer_log), "[%s][%c][%s] ", str_time, level_char, tag);
-		header_len = strlen(buffer_log);
+		header_len = (int)strlen(buffer_log);
 	}
 	else
 	{
@@ -239,7 +239,7 @@ void __xlog_internal_log(LogLevel level, char* tag, char* func_name, int file_li
 	if (func_name && file_line > 0)
 	{
 		snprintf(buffer_log, sizeof(buffer_log), "%s[%s:%d] ", buffer_log, func_name, file_line);
-		header_with_trace_fun_len = strlen(buffer_log);
+		header_with_trace_fun_len = (int)strlen(buffer_log);
 	}
 	else
 	{

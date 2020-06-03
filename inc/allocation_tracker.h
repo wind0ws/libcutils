@@ -16,8 +16,8 @@
  *
  ******************************************************************************/
 #pragma once
-#ifndef _ALLOCATION_TRACKER_H
-#define _ALLOCATION_TRACKER_H
+#ifndef __LCU_ALLOCATION_TRACKER_H
+#define __LCU_ALLOCATION_TRACKER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -63,4 +63,4 @@ size_t allocation_tracker_resize_for_canary(size_t size);
 }
 #endif
 
-#endif //_ALLOCATION_TRACKER_H
+#endif //__LCU_ALLOCATION_TRACKER_H

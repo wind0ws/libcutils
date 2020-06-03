@@ -30,7 +30,6 @@ static inline void get_current_time_str(char str[TIME_STR_LEN], const char *time
 #endif // _WIN32
 }
 
-
 void time_util_get_current_time_str(char str[TIME_STR_LEN])
 {
 	get_current_time_str(str, TIME_STAMP_FORMT);

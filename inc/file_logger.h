@@ -1,5 +1,6 @@
-#ifndef __FILE_LOGGER_H
-#define __FILE_LOGGER_H
+#pragma once
+#ifndef __LCU_FILE_LOGGER_H
+#define __LCU_FILE_LOGGER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -39,4 +40,4 @@ extern "C" {
 #endif // __cplusplus
 
 
-#endif // __FILE_LOGGER_H
+#endif // __LCU_FILE_LOGGER_H

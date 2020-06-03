@@ -37,7 +37,7 @@ static void *thread_fun_handle_msg(void *thread_context) {
         if (handler_msg.token >= handler_p->min_valid_token) {
             handler_p->callback(&handler_msg.out_msg, handler_p->callback_userdata);
         } else {
-            RING_LOGW("abandon msg, token=%d", handler_msg.token);
+            RING_LOGW("abandon msg, token=%zd", handler_msg.token);
         }
     }
     return NULL;
@@ -105,7 +105,7 @@ extern inline bool QueueHandler_is_full(__in queue_handler handler_p) {
 
 extern inline void QueueHandler_clear(__in queue_handler handler_p) {
     handler_p->min_valid_token = handler_p->token_counter;
-    RING_LOGD("QueueHandler_clear handler_p(%p) min_valid_token=%d", handler_p,
+    RING_LOGD("QueueHandler_clear handler_p(%p) min_valid_token=%zd", handler_p,
          handler_p->min_valid_token);
 }
 

@@ -15,7 +15,7 @@
  *  limitations under the License.
  *
  ******************************************************************************/
-#define LOG_TAG "bt_osi_allocation_tracker"
+#define LOG_TAG "allocation_tracker"
 #include "allocation_tracker.h"
 #include <assert.h>
 //#include <pthread.h>

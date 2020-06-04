@@ -18,10 +18,10 @@ static void* multithreaded_main(void* args)
 	param = (multithreaded_param_t*)args;
 
 	round_size = mplite_roundup(param->pool, param->req_size);
-	printf("index: %u requested size: %d round-up size: %d\n", param->index,
+	printf("index: %zu requested size: %d round-up size: %d\n", param->index,
 		param->req_size, round_size);
 	while ((buffer = mplite_malloc(param->pool, param->req_size)) != NULL) {
-		printf("index: %u address: %p size: %d\n", param->index, buffer,
+		printf("index: %zu address: %p size: %d\n", param->index, buffer,
 			param->req_size);
 		/* Sleep for 1 millisecond to give other threads to run */
 		usleep(1000);
@@ -56,22 +56,22 @@ int mplite_test()
 		printf("Memory pool testing using mplite API\n");
 		printf("Enter the total memory block size: ");
 
-		scanf_ret = scanf("%u", &buffer_size);
+		scanf_ret = scanf("%zu", &buffer_size);
 		printf("Enter the minimum memory allocation size: ");
-		scanf_ret = scanf("%u", &min_alloc);
+		scanf_ret = scanf("%zu", &min_alloc);
 		printf("Enter the number of threads to run for multi-threaded test: ");
-		scanf_ret = scanf("%u", &num_threads);
+		scanf_ret = scanf("%zu", &num_threads);
 		large_buffer = malloc(buffer_size);
 
-		printf("buffer = %p size = %u minimum alloc = %u\n", large_buffer,
-			buffer_size, min_alloc);
+		printf("buffer = %p size = %zu minimum alloc = %zu\n", 
+			large_buffer, buffer_size, min_alloc);
 
 		mplite_init(&mempool, large_buffer, (const int)buffer_size,
 			(const int)min_alloc, NULL);
 		printf("\nSingle-threaded test...\n");
 		alloc_counter = 1;
 		while ((alloc_ret = mplite_malloc(&mempool, (const int)min_alloc)) != NULL) {
-			printf("malloc = %p counter = %u\n", alloc_ret, alloc_counter);
+			printf("malloc = %p counter = %zu\n", alloc_ret, alloc_counter);
 			alloc_counter++;
 		}
 		mplite_print_stats(&mempool, puts);

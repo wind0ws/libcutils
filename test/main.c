@@ -5,6 +5,7 @@
 #include "strings.h"
 #include "xlog.h"
 #include "file_logger.h"
+#include "lcu_version.h"
 
 #ifdef _WIN32
 #define CRTDBG_MAP_ALLOC    
@@ -44,7 +45,7 @@ int main(int argc, char* argv[])
 
 	file_logger_test_begin();
 
-	LOGI("hello world\r\n");
+	LOGI("hello world: LCU_VER:%s \r\n", LCU_VERSION);
 
 	RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);

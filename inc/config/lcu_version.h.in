@@ -1,0 +1,10 @@
+#pragma once
+#ifndef __LCU_VERSION_H
+#define __LCU_VERSION_H
+
+#define _LCU_MAJOR "@LCU_MAJOR@"
+#define _LCU_BRANCH "@GIT_BRANCH@"
+#define _LCU_REVISION "@GIT_HASH@"
+#define LCU_VERSION _LCU_MAJOR"."_LCU_REVISION"@"_LCU_BRANCH
+
+#endif

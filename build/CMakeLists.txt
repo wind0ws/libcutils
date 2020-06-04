@@ -7,7 +7,13 @@ if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) 
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd" CACHE STRING "")
 endif ()
 
-project(libcutils VERSION 1.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.0.0 LANGUAGES C CXX)
+message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
+
+# 添加自定义cmake文件目录
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+# 使用utility.cmake
+include(utility)
 
 #set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD 11)
@@ -16,56 +22,78 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-#扫描指定scan_dir 目录及其子目录下的 .h 文件所在目录，存放到 return_list 中
-MACRO(SCAN_HEADER_DIRECTORIES scan_dir return_list)
-    FILE(GLOB_RECURSE new_list ${scan_dir}/*.h)
-    SET(dir_list "")
-    FOREACH (file_path ${new_list})
-        GET_FILENAME_COMPONENT(dir_path ${file_path} PATH)
-        SET(dir_list ${dir_list} ${dir_path})
-    ENDFOREACH ()
-    LIST(REMOVE_DUPLICATES dir_list)
-    SET(${return_list} ${dir_list})
-ENDMACRO()
-
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
 #get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
 get_filename_component(LCU_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
 message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n LCU_ROOT_DIR=${LCU_ROOT_DIR}\n")
 
+# 获取当前的GIT_HASH
+set(GIT_HASH "unknown")
+get_git_hash(GIT_HASH ${LCU_ROOT_DIR})
+message(STATUS "Git hash is ${GIT_HASH}")
+
+# 获取当前的分支
+set(GIT_BRANCH "unknown")
+get_git_branch(GIT_BRANCH ${LCU_ROOT_DIR})
+message(STATUS "Git branch is ${GIT_BRANCH}")
+
+set(LCU_MAJOR "${PROJECT_VERSION}")
+
+configure_file(
+  ${LCU_ROOT_DIR}/inc/config/lcu_version.h.in
+  ${CMAKE_BINARY_DIR}/generate/lcu_version.h
+  @ONLY)
+  
 #add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 #For compiler
 #add_compile_options("-DCURL_STATICLIB")
 
 #add compile/optimize options for DEBUG/RELEASE
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -Wall" CACHE STRING "")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS_RELEASE} -Wall -std=c++11 -fexceptions" CACHE STRING "")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall" CACHE STRING "")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -fexceptions" CACHE STRING "")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2" CACHE STRING "")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Og" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og" CACHE STRING "")
 
+# 小知识
+# add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，
+# 而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
+# add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
+# 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
+#
 if(WIN32)
-#supress "C4477" for VS
-add_definitions( /wd4477 )
+#supress warnings for VS
+add_compile_options( /wd4819 )
+#string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
 else()
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 # Android 5.0 以上需要在此处设置 PIE
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie" CACHE STRING "")
 endif(WIN32)
 
-SCAN_HEADER_DIRECTORIES(${LCU_ROOT_DIR}/inc/ LCU_HEADERS)
-message(STATUS "LCU_HEADERS => \n ${LCU_HEADERS}")
-include_directories(${LCU_HEADERS})
+#collect header(*.h) directories
+SCAN_HEADER_DIRECTORIES(${LCU_ROOT_DIR}/inc LCU_HEADERS)
+message(STATUS "LCU_HEADERS => \n ${LCU_HEADERS}\n")
+include_directories(${LCU_HEADERS}
+					${CMAKE_BINARY_DIR}/generate/)
 #include_directories(${LCU_ROOT_DIR}/inc/)
 #for publish library: copy header to output dir
-file(COPY ${LCU_ROOT_DIR}/inc/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
+#collect header files, exclude cmake configure_file(.h.in)
+file(GLOB_RECURSE HEADER_FILES "${LCU_ROOT_DIR}/inc/*.h" "${LCU_ROOT_DIR}/inc/*.hpp")
+file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
+#copy  inc  to  out/include
+#file(COPY ${LCU_ROOT_DIR}/inc/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
+#copy generate header to out/include
+file(COPY ${CMAKE_BINARY_DIR}/generate/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #add_library(mplite ../../src/mplite.c)
 #target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)
 
-#collect src/*.c to "LCU_SRCS" 
+#collect src to "LCU_SRCS" 
 aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
@@ -84,14 +112,14 @@ set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 # 指定动态库版本
 # VERSION 动态库版本
 # SOVERSION API版本
-set_target_properties(lcu_shared PROPERTIES VERSION 1.0 SOVERSION 1)
+set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
 
 #set(LCU_TEST_SRCS
 #		${LCU_ROOT_DIR}/test/file_util_test.c
 #		${LCU_ROOT_DIR}/test/file_logger_test.c
 #		${LCU_ROOT_DIR}/test/main.c
 #)
-file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c")
+file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp")
 message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
 
 add_executable(libcutils_test

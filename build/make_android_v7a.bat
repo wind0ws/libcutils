@@ -20,6 +20,8 @@ mkdir build_v7a
 %ninja_bin% -C .\build_v7a
 mkdir .\output\android\armeabi-v7a
 cp .\build_v7a\libcutils_test .\output\android\armeabi-v7a\
+cp .\build_v7a\liblcu.a .\output\android\armeabi-v7a\
+cp .\build_v7a\liblcu.so .\output\android\armeabi-v7a\
 
 ::mkdir build_android_x86
 ::%cmake_bin% -H.\ -B.\build_android_x86 "-GAndroid Gradle - Ninja" -DANDROID_ABI=x86 -DANDROID_NDK=%ANDROID_NDK% -DCMAKE_BUILD_TYPE=Relase -DCMAKE_MAKE_PROGRAM=%ninja_bin% -DCMAKE_TOOLCHAIN_FILE=%tool_chain_file% "-DCMAKE_C_FLAGS=-g -Og -Wall" "-DCMAKE_CXX_FLAGS=-std=c++11 -fexceptions" "-DANDROID_PLATFORM=android-19" "-DANDROID_STL=c++_static"

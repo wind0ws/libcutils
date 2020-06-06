@@ -2,6 +2,7 @@
 #include "common_macro.h"
 #include "xlog.h"
 #include "thread_wrapper.h"
+#include <string.h>
 
 typedef struct 
 {

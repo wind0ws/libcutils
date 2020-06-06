@@ -148,17 +148,28 @@ find_library( # Sets the name of the path variable.
 #        z)
 else()
 set(log-lib "")
-endif(ANDROID)		
+endif(ANDROID)
+
+if(UNIX)
+message(STATUS "Current system is unix!!!")
+find_package(Threads REQUIRED)
+set(pthread-lib ${CMAKE_THREAD_LIBS_INIT})
+#target_link_libraries(my_app Threads::Threads)
+else()
+set(pthread-lib "")
+endif(UNIX)		
 
 target_link_libraries( # Specifies the target library.
         lcu_static PUBLIC
 
+		${pthread-lib}
         ${log-lib}
         )
 		
 target_link_libraries( # Specifies the target library.
         lcu_shared PUBLIC
 
+		${pthread-lib}
         ${log-lib}
         )		
 
@@ -166,7 +177,5 @@ target_link_libraries( # Specifies the target library.
         libcutils_test
 
 		lcu_static
-
-        ${log-lib}
         )		
 

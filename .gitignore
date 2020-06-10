@@ -6,5 +6,10 @@ build/vs/libcutils/.vs/
 build/vs/libcutils/Debug/
 build/vs/libcutils/Release/
 build/vs/libcutils/x64/
-build/build_v7a/
+build/build_android_v7a/
+build/build_android_v8a/
+build/build_linux32/
+build/build_linux64/
+build/build_win32/
+build/build_win64/
 build/output/

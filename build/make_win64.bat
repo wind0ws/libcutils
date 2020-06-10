@@ -8,9 +8,9 @@ IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 14 2015 Win64" ..
 popd
 %cmake_bin% --build build_win64 --config Release
 mkdir .\output\windows\build_win64\
-cp .\build_win64\Release\libcutils_test.exe .\output\windows\build_win64\
-cp .\build_win64\Release\lcu.lib .\output\windows\build_win64\
-cp .\build_win64\Release\lcu.dll .\output\windows\build_win64\
+copy /Y .\build_win64\Release\libcutils_test.exe .\output\windows\build_win64\
+copy /Y .\build_win64\Release\lcu.lib .\output\windows\build_win64\
+copy /Y .\build_win64\Release\lcu.dll .\output\windows\build_win64\
 
 echo "compile complete\n Press any key to exit..."
 pause

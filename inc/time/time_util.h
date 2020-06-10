@@ -5,6 +5,13 @@
 #include <time.h>
 #ifdef _WIN32
 #include <sys/timeb.h>
+
+static struct tm* gmtime_r(const time_t* timep, struct tm* result)
+{
+	gmtime_s(result, timep);
+	return result;
+}
+
 #else
 #include <sys/time.h>
 #endif // _WIN32

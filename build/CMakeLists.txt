@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT" CACHE STRING "")
@@ -94,7 +94,8 @@ file(COPY ${CMAKE_BINARY_DIR}/generate/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/
 #target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)
 
 #collect src to "LCU_SRCS" 
-aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
+#aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
+file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp")
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
 add_library(lcu_static
@@ -103,7 +104,7 @@ add_library(lcu_static
 add_library(lcu_shared
 			SHARED
 			${LCU_SRCS})
-# 指定库的输出名称
+# 指定库的输出名称(静态库和动态库可以用相同的名称)
 set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu")
 set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
 # 使动态库和静态库同时存在
@@ -119,12 +120,20 @@ set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION
 #		${LCU_ROOT_DIR}/test/file_logger_test.c
 #		${LCU_ROOT_DIR}/test/main.c
 #)
-file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp")
+file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp" "${LCU_ROOT_DIR}/test/*.hpp")
 message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
 
 add_executable(libcutils_test
 		${LCU_TEST_SRCS}
 		)
+		
+# make Source tree as same as your folder structure.		
+# Reference: https://stackoverflow.com/a/56496104 		
+# Create the source groups for source tree with root at LCU_ROOT_DIR. 
+# Support from cmake 3.8
+source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_SRCS})
+source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
+
 
 if(ANDROID)
 # Searches for a specified prebuilt library and stores the path as a

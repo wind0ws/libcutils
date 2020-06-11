@@ -39,14 +39,11 @@ message(STATUS "Git branch is ${GIT_BRANCH}")
 
 set(LCU_MAJOR "${PROJECT_VERSION}")
 
+set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
 configure_file(
-  ${LCU_ROOT_DIR}/inc/config/lcu_version.h.in
+  ${LCU_HEADER_ROOT_DIR}/config/lcu_version.h.in
   ${CMAKE_BINARY_DIR}/generate/lcu_version.h
   @ONLY)
-  
-#add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-#For compiler
-#add_compile_options("-DCURL_STATICLIB")
 
 #add compile/optimize options for DEBUG/RELEASE
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall" CACHE STRING "")
@@ -62,6 +59,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og" CACHE STRING "")
 # add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
 # 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
 #
+#add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
+#add_definitions("-DCURL_STATICLIB")
 if(WIN32)
 #supress warnings for VS
 add_compile_options( /wd4819 )
@@ -76,19 +75,23 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie" CACHE STRING "
 endif(WIN32)
 
 #collect header(*.h) directories
-SCAN_HEADER_DIRECTORIES(${LCU_ROOT_DIR}/inc LCU_HEADERS)
+SCAN_HEADER_DIRECTORIES(${LCU_HEADER_ROOT_DIR} LCU_HEADERS)
 message(STATUS "LCU_HEADERS => \n ${LCU_HEADERS}\n")
 include_directories(${LCU_HEADERS}
 					${CMAKE_BINARY_DIR}/generate/)
 #include_directories(${LCU_ROOT_DIR}/inc/)
+
 #for publish library: copy header to output dir
+
+#method1: collect all header files, and copy to output dir. the flaw is that can't keep dir structure.
 #collect header files, exclude cmake configure_file(.h.in)
-file(GLOB_RECURSE HEADER_FILES "${LCU_ROOT_DIR}/inc/*.h" "${LCU_ROOT_DIR}/inc/*.hpp")
-file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
-#copy  inc  to  out/include
-#file(COPY ${LCU_ROOT_DIR}/inc/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
-#copy generate header to out/include
-file(COPY ${CMAKE_BINARY_DIR}/generate/  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
+#file(GLOB_RECURSE HEADER_FILES "${LCU_ROOT_DIR}/inc/*.h" "${LCU_ROOT_DIR}/inc/*.hpp")
+#file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
+
+#method2: copy header dir to output dir, and remove cmake configure_file, and copy generate configure_file.
+file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/)
+file(REMOVE ${CMAKE_CURRENT_LIST_DIR}/output/inc/config/lcu_version.h.in)
+file(COPY ${CMAKE_BINARY_DIR}/generate/lcu_version.h DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/inc/config/)
 
 #add_library(mplite ../../src/mplite.c)
 #target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)
@@ -122,7 +125,6 @@ set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION
 #)
 file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp" "${LCU_ROOT_DIR}/test/*.hpp")
 message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
-
 add_executable(libcutils_test
 		${LCU_TEST_SRCS}
 		)

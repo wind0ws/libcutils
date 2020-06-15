@@ -17,7 +17,7 @@
  * reference: https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/array.c
  *
  ******************************************************************************/
-#define LOG_TAG "bt_osi_array"
+#define LOG_TAG "lcu_array"
 #include "array.h"
 #include "common_macro.h"
 #include <stdlib.h>
@@ -37,7 +37,7 @@ static bool grow(array_t* array);
 static const size_t INTERNAL_ELEMENTS = 16;
 array_t* array_new(size_t element_size) {
     ASSERT_ABORT(element_size > 0);
-    array_t* array = osi_calloc(sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
+    array_t* array = lcu_calloc(sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
     array->element_size = element_size;
     array->capacity = INTERNAL_ELEMENTS;
     array->data = array->internal_storage;
@@ -49,7 +49,7 @@ void array_free(array_t* array) {
         return;
     if (array->data != array->internal_storage)
         free(array->data);
-    osi_free(array);
+    lcu_free(array);
 }
 
 void* array_ptr(const array_t* array) {

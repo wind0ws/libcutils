@@ -71,9 +71,7 @@ size_t strlcat(char* dst, const char* src, size_t size)
 	return(dlen + (s - src));       /* count does not include NUL */
 }
 
-
 #endif
-
 
 //https://github.com/ssllab/temper1/blob/722991add4a6a239271e1f029ebe4daaad719496/strreplace.c
 //warning: need free the return char pointer after use!
@@ -129,12 +127,12 @@ void strsplit(char* recv_splited_str[], int* p_splited_nums, const char src_str[
 	int recv_buffer_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
-	pToken = strtok((char *)src_str, delimiter, &pContext);
+	pToken = STRTOK((char *)src_str, delimiter, &pContext);
 	while (pToken && *p_splited_nums < recv_buffer_size)
 	{
 		recv_splited_str[*p_splited_nums] = pToken;
 		(*p_splited_nums)++;
 
-		pToken = strtok(NULL, delimiter, &pContext);
+		pToken = STRTOK(NULL, delimiter, &pContext);
 	}
 }

@@ -18,12 +18,12 @@
 #define strcpy(dest, source) strcpy_s(dest, strlen(source) + 1, source) 
 #define strncpy(dest, source, max_count) strncpy_s(dest, (max_count) + 1, source, max_count)
 #define strcat(dest, source) strcat_s(dest, strlen(dest) + strlen(source) + 1, source)
-#define strtok strtok_s
+#define STRTOK strtok_s
 //#define snprintf(buf, buf_size, format, ...) \
 //        _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
 //in Unix platform. use strtok_r instead
-#define strtok strtok_r
+#define STRTOK strtok_r
 #endif // _WIN32
 
 #ifdef __cplusplus

@@ -1,5 +1,6 @@
 #include "file_util.h"
 #include "strings.h"
+#include "xlog.h"
 
 int file_util_test()
 {
@@ -24,6 +25,17 @@ int file_util_test()
 	if (file_util_access(log_path, F_OK))
 	{
 		file_util_mkdirs(log_path);
+	}
+#define TEST_FILE "CMakeCache.txt"
+	if (file_util_access(TEST_FILE,F_OK) == 0)
+	{
+		FILE *fs = fopen(TEST_FILE, "rb");
+		if (fs)
+		{
+			long file_size = file_util_size(fs);
+			LOGD_TRACE(" \"%s\" file size=%d", TEST_FILE, file_size);
+			fclose(fs);
+		}
 	}
 	return 0;
 }

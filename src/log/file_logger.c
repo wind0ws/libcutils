@@ -119,7 +119,7 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	file_logger_handle handle = *handle_p;
 	if (handle->msg_queue)
 	{
-		QueueHandler_destroy(handle->msg_queue);
+		QueueHandler_destroy(&(handle->msg_queue));
 	}
 	if (handle->cur_fp)
 	{

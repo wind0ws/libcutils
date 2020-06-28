@@ -2,14 +2,24 @@
 #ifndef __COMMON_THREAD_WRAPPER_H
 #define __COMMON_THREAD_WRAPPER_H
 
+#include "lcu_build_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifdef _WIN32
 
-#include "pthread_windows.h"
-#include "semaphore_windows.h"
+#if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE    /* use native implement */
+  #include "pthread_win_simple.h"
+  #include "semaphore_win_simple.h"
+#elif _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB     /* use posix-win32 lib */
+  #include "pthread_win_lib.h"
+  #include "sched_win_lib.h"
+  #include "semaphore_win_lib.h"
+#else
+  #error "unknow _LCU_CFG_WIN32_PTHREAD_MODE \n"
+#endif
 
 #define usleep(micro_seconds)    Sleep((micro_seconds) / 1000)
 #define sleep(seconds) Sleep((seconds) * 1000)
@@ -44,8 +54,6 @@ extern "C" {
 #endif
 	pid_t gettid();
 #endif  // __ANDROID__
-
-	unsigned int pthread_id(pthread_t* pth);
 
 #ifdef __cplusplus
 };

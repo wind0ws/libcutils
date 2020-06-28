@@ -2,6 +2,7 @@
 #include "apicheck.h"
 #include "common_macro.h"
 #include "thread_wrapper.h"
+#include "dlfcn_wrapper.h"
 #include "strings.h"
 #include "xlog.h"
 #include "file_logger.h"
@@ -43,18 +44,18 @@ int main(int argc, char* argv[])
 	EnableMemLeakCheck();
 #endif // _WIN32
 
-	file_logger_test_begin();
+	//file_logger_test_begin();
 
 	LOGI("hello world: LCU_VER:%s \r\n", LCU_VERSION);
 
-	RUN_TEST(file_util_test);
+	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
-	//RUN_TEST(thread_wrapper_test);
+	RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
 
-	file_logger_test_end();
+	//file_logger_test_end();
 	
 	LOGI("...bye bye...");
 	return 0;

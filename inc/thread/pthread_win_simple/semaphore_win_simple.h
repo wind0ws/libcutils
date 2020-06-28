@@ -34,7 +34,8 @@
 	@{
 */
 
-#ifdef _WIN32
+#include "lcu_build_config.h"
+#if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
 #include <errno.h> /* Adding definition of EINVAL, ETIMEDOUT, ..., etc. */
 #include <fcntl.h> /* Adding O_CREAT definition. */
@@ -114,7 +115,7 @@ extern "C" {
 }
 #endif
 
-#endif // _WIN32
+#endif 
 
 /** @} */
 

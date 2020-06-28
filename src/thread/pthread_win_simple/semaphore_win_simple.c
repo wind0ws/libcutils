@@ -27,9 +27,8 @@
 	@brief Implementation Code of Semaphore Routines
 */
 
-#ifdef _WIN32
-
-#include "semaphore_windows.h"
+#include "semaphore_win_simple.h"
+#if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
 static int lc_set_errno(int result) {
 	if (result != 0) {
@@ -359,4 +358,4 @@ int sem_unlink(const char* name) {
 	return 0;
 }
 
-#endif // _WIN32
+#endif 

@@ -38,7 +38,7 @@ macro(get_git_branch _git_branch _work_dir)
 endmacro()
 
 #扫描指定scan_dir 目录及其子目录下的 .h 文件所在目录，存放到 return_list 中
-MACRO(SCAN_HEADER_DIRECTORIES scan_dir return_list)
+MACRO(scan_header_dirs scan_dir return_list)
     FILE(GLOB_RECURSE new_list ${scan_dir}/*.h)
     SET(dir_list "")
     FOREACH (file_path ${new_list})
@@ -49,6 +49,45 @@ MACRO(SCAN_HEADER_DIRECTORIES scan_dir return_list)
     SET(${return_list} ${dir_list})
 ENDMACRO()
 
+#这里src_files是外部变量名，而不是其引用值，foreach会进行二次解引用
+MACRO(copy_file_on_post_build target src_files)
+	FOREACH (file_path ${${src_files}})
+		message(STATUS "current copy_file_on_post_build file_path => ${file_path}")
+		add_custom_command(TARGET ${target} POST_BUILD        				# Adds a post-build event to MyTest
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different  						# which executes "cmake -E copy_if_different..."
+				 ${file_path}      											# <--this is in-file
+				 $<TARGET_FILE_DIR:${target}>)        				     	# <--this is out-file path
+	ENDFOREACH(file_path)
+ENDMACRO()
+
+#注意这里调用这个macro时，src_files这里传入的应该是list的变量名，而不是其引用值，因为接下来在另一个macro foreach list会对其二次解引用。
+MACRO(copy_file_on_post_build_to_all_targets src_files)
+    get_property(_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+	#FOREACH (file_path ${${src_files}})
+	#	message(STATUS "current copy_file_on_post_build file_path => ${file_path}")   
+	#ENDFOREACH(file_path)
+	message(STATUS "copy_file_on_post_build_to_all_targets => src_files=${src_files}")
+    foreach(_target ${_targets})
+		message(STATUS "current target ==> ${_target}")
+		copy_file_on_post_build(${_target} ${src_files})
+    endforeach(_target)
+ENDMACRO()
+
+macro(source_group_by_dir source_files)
+    if(MSVC)
+        set(sgbd_cur_dir ${CMAKE_CURRENT_SOURCE_DIR})
+        foreach(sgbd_file ${${source_files}})
+            string(REGEX REPLACE ${sgbd_cur_dir}/\(.*\) \\1 sgbd_fpath ${sgbd_file})
+            string(REGEX REPLACE "\(.*\)/.*" \\1 sgbd_group_name ${sgbd_fpath})
+            string(COMPARE EQUAL ${sgbd_fpath} ${sgbd_group_name} sgbd_nogroup)
+            string(REPLACE "/" "\\" sgbd_group_name ${sgbd_group_name})
+            if(sgbd_nogroup)
+                set(sgbd_group_name "\\")
+            endif(sgbd_nogroup)
+            source_group(${sgbd_group_name} FILES ${sgbd_file})
+        endforeach(sgbd_file)
+    endif(MSVC)
+endmacro(source_group_by_dir)
 
 #Reference:  https://stackoverflow.com/questions/28344564/cmake-remove-a-compile-flag-for-a-single-translation-unit
 #

@@ -6,7 +6,7 @@
 
 static void* thread_func(void* args) {
 	int code;
-	LOGI("Hello pthread.");
+	LOGI("Hello pthread. id:%d", gettid());
 	sem_t* psem = args;
 	if ((code = sem_wait(psem)))
 	{
@@ -93,8 +93,9 @@ static void test_log()
 }
 
 //#define MYLOG(...) EXPAND_VA_ARGS(LOGD(__VA_ARGS__))
-int thread_wrapper_test() {
-	//LOGD("Hello World");
+int thread_wrapper_test() 
+{
+	LOGD("Hello World, thread id: %d  %u", gettid(), (unsigned int)GetCurrentThreadId());
 	//MYLOG("MYLOG, %d", 1111);
 	test_log();
 

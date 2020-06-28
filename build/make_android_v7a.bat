@@ -7,6 +7,7 @@ set cmake_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 set ninja_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set tool_chain_file=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 
+rmdir /S /Q build_android_v7a >nul
 mkdir build_android_v7a
 %cmake_bin% -H.\ -B.\build_android_v7a ^
 			"-GNinja" ^

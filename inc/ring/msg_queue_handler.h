@@ -89,7 +89,7 @@ void QueueHandler_clear(__in queue_handler handler_p);
  * destroy queue handler
  * @param handler_p queue handler ptr
  */
-void QueueHandler_destroy(__in queue_handler handler_p);
+void QueueHandler_destroy(__inout queue_handler *handler_pp);
 
 #ifdef __cplusplus
 }

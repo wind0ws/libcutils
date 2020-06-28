@@ -2,8 +2,10 @@
 #ifndef _PTHREAD_WINDOWS_H
 #define _PTHREAD_WINDOWS_H
 
+#include "lcu_build_config.h"
+
 //do not include this header directly, you should include "thread_wrapper.h" instead!
-#ifdef _WIN32
+#if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
 #include <windows.h>
 
@@ -70,6 +72,6 @@ int pthread_cond_broadcast(pthread_cond_t* cond);
 };
 #endif // __cplusplus
 
-#endif // _WIN32
+#endif 
 
 #endif //_PTHREAD_WINDOWS_H

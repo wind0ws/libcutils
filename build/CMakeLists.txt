@@ -228,6 +228,7 @@ ELSEIF(WIN32)
 	 #set(dll_files "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll" "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadGC2.dll")
 	 set(dll_files "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll")
 	 message(STATUS "dll_files=>${dll_files}")
+	 #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
 	 copy_file_on_post_build_to_all_targets(dll_files)
   else()
      set(pthread-lib "")

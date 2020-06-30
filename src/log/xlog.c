@@ -30,7 +30,7 @@ typedef struct xlog_config
 	xlog_cb_pack_t cb_pack;
 	/* if level small than this, transform the current level to this */
 	LogLevel trigger_up_level;
-	FILE *fp_stdout;
+	FILE* fp_stdout;
 	/* min log level: only log if current level bigger or equal than this. */
 	LogLevel min_level;
 	LogTarget target;
@@ -203,12 +203,12 @@ LogLevel xlog_get_min_level()
 void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list args;
-	char buffer_log[1024];
+	char buffer_log[2048];
 	char str_time[TIME_STR_LEN];
 	int header_len;
 	int header_with_trace_fun_len;
-	bool isLogToConsole;
-	bool isLogToUserCb;
+	bool is_log2console;
+	bool is_log2usercb;
 	if (!XLOG_IS_LOGABLE(level))
 	{
 		return;
@@ -222,9 +222,9 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		tag = xlog_cfg.default_tag;
 	}
 
-	isLogToConsole = XLOG_IS_CONSOLE_ABLE;
-	isLogToUserCb = XLOG_IS_USER_CALLBACK_ABLE;
-	if (isLogToConsole || isLogToUserCb)
+	is_log2console = XLOG_IS_CONSOLE_ABLE;
+	is_log2usercb = XLOG_IS_USER_CALLBACK_ABLE;
+	if (is_log2console || is_log2usercb)
 	{
 		char level_char = get_log_level_char(level);
 		time_util_get_current_time_str(str_time);
@@ -235,22 +235,22 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	{
 		header_len = 0;
 	}
-	
+
 	if (func_name && file_line > 0)
 	{
-		snprintf(buffer_log, sizeof(buffer_log), "%s[%s:%d] ", buffer_log, func_name, file_line);
+		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "[%s:%d] ", func_name, file_line);
 		header_with_trace_fun_len = (int)strlen(buffer_log);
 	}
 	else
 	{
 		header_with_trace_fun_len = header_len;
 	}
-	
+
 	va_start(args, fmt);
 	vsnprintf(buffer_log + header_with_trace_fun_len, sizeof(buffer_log) - header_with_trace_fun_len, fmt, args);
 	va_end(args);
 
-	if (isLogToConsole)
+	if (is_log2console)
 	{
 		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
 	}
@@ -258,10 +258,10 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 #if defined(__ANDROID__)
 	if (XLOG_IS_ANDROID_ABLE)
 	{
-		__android_log_print(convert_to_android_log_level(level), tag, "%s", buffer_log + header_len );
+		__android_log_print(convert_to_android_log_level(level), tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
-	if (xlog_cfg.cb_pack.cb && isLogToUserCb)
+	if (xlog_cfg.cb_pack.cb && is_log2usercb)
 	{
 		xlog_cfg.cb_pack.cb(buffer_log, xlog_cfg.cb_pack.cb_user_data);
 	}

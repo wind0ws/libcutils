@@ -1,7 +1,4 @@
-//
-// Created by Administrator on 2019/5/7.
-//
-
+#pragma once
 #ifndef CRINGBUFFER_MSG_QUEUE_HANDLER_H
 #define CRINGBUFFER_MSG_QUEUE_HANDLER_H
 
@@ -11,7 +8,7 @@ extern "C" {
 
 #include "ring_msg_queue.h"
 
-#define MSG_OBJ_MAX_CAPACITY 1024
+#define MSG_OBJ_MAX_CAPACITY (2048)
 typedef char MSG_OBJ_DATA_TYPE;
 
 /**

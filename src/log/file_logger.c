@@ -32,6 +32,11 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg cfg)
 {
+	file_logger_handle handle = calloc(1, sizeof(file_logger_t));
+	if (NULL == handle)
+	{
+		return NULL;
+	}
 	if (strlen(cfg.log_folder_path) < 2)
 	{
 		return NULL;
@@ -56,11 +61,6 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 	{
 		cfg.max_log_queue_size = 64;
 	}
-	file_logger_handle handle = calloc(1, sizeof(file_logger_t));
-	if (NULL == handle)
-	{
-		return NULL;
-	}
 	handle->cfg = cfg;
 	handle->msg_queue = QueueHandler_create((uint32_t)cfg.max_log_queue_size, handle_log_queue_msg, handle);
 	if (NULL == handle->msg_queue)
@@ -82,15 +82,16 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 	FILE_LOGGER_LOCK(handle)
 	do
 	{
-		if ((status = QueueHandler_send(handle->msg_queue, &msg)))
+		if ((status = QueueHandler_send(handle->msg_queue, &msg)) == 0)
 		{
-			RING_LOGE("failed on send log to queue. maybe queue is full!!!");
-			if (handle->cfg.is_try_my_best_not_to_lose_log)
-			{
-				RING_LOGE("try again after 2ms");
-				retry_counter++;
-				usleep(2000);
-			}
+			break;
+		}
+		RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
+		if (handle->cfg.is_try_my_best_not_to_lose_log)
+		{
+			RING_LOGE("try again after 2ms");
+			retry_counter++;
+			usleep(2000);
 		}
 	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_not_to_lose_log);
 	//final safety
@@ -147,13 +148,14 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	{
 		return;
 	}
-	size_t log_msg_len = strlen(msg_p->obj.data);
-	if (log_msg_len <= 0)
+	size_t log_msg_len = strnlen(msg_p->obj.data, MSG_OBJ_MAX_CAPACITY);//strlen(msg_p->obj.data);
+	if (log_msg_len == 0 || log_msg_len > MSG_OBJ_MAX_CAPACITY - 1)
 	{
+		//message is invalid or corrupted!
 		return;
 	}
 	//fwrite(msg_p->obj.data, sizeof(char), log_msg_len, handle->cur_fp);
-	fprintf(handle->cur_fp, "%s\r\n", msg_p->obj.data);
+	fprintf(handle->cur_fp, "%.*s\r\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
 	handle->cur_log_file_size_counter += (log_msg_len + 2);
 	if (handle->cfg.one_piece_file_max_len &&
 		handle->cur_log_file_size_counter >= handle->cfg.one_piece_file_max_len)

@@ -27,6 +27,7 @@ LOGD("\r\n <-- %s() run result=%d\r\n%s\r\n", #func_name, ret, LOG_LINE_STAR);\
 api_check_return_val(ret == 0, -1);\
 } while (0)
 
+#define TEST_FILE_LOGGER (1)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
 
@@ -44,7 +45,9 @@ int main(int argc, char* argv[])
 	EnableMemLeakCheck();
 #endif // _WIN32
 
-	//file_logger_test_begin();
+#if TEST_FILE_LOGGER
+	file_logger_test_begin();
+#endif
 
 	LOGI("hello world: LCU_VER:%s \r\n", LCU_VERSION);
 
@@ -55,7 +58,9 @@ int main(int argc, char* argv[])
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
 
-	//file_logger_test_end();
+#if TEST_FILE_LOGGER
+	file_logger_test_end();
+#endif
 	
 	LOGI("...bye bye...");
 	return 0;

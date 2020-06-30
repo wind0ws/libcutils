@@ -1,7 +1,4 @@
-//
-// Created by Threshold on 2019/5/7.
-//
-
+#pragma once
 #ifndef CRINGBUFFER_RING_MSG_QUEUE_H
 #define CRINGBUFFER_RING_MSG_QUEUE_H
 

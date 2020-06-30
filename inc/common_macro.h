@@ -55,6 +55,29 @@ EXTERN_C_START
 #define __inout_opt
 #endif
 
+#ifdef _WIN32
+#ifdef _WIN64
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef unsigned __int64    size_t;
+#endif // !_SIZE_T_DEFINED
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+typedef __int64             ssize_t;
+#endif // !_SSIZE_T_DEFINED
+#else
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef unsigned int     size_t;
+#endif // !_SIZE_T_DEFINED
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+typedef int              ssize_t;
+#endif // !_SSIZE_T_DEFINED
+#endif // _WIN64
+#endif // _WIN32
+
+
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
 #endif
@@ -111,6 +134,8 @@ EXTERN_C_START
 //just to make MSC happy
 #define access _access
 #define mkdir(path, mode) _mkdir(path)
+#define read _read
+#define write _write
 
     static FILE* __fopen_safe(char const* _FileName, char const* _Mode)
     {

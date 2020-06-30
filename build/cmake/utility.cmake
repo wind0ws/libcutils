@@ -52,11 +52,12 @@ ENDMACRO()
 #这里src_files是外部变量名，而不是其引用值，foreach会进行二次解引用
 MACRO(copy_file_on_post_build target src_files)
 	FOREACH (file_path ${${src_files}})
-		message(STATUS "current copy_file_on_post_build file_path => ${file_path}")
-		add_custom_command(TARGET ${target} POST_BUILD        				# Adds a post-build event to MyTest
+		#message(STATUS "current copy_file_on_post_build file_path => ${file_path}")
+		add_custom_command(TARGET ${target} POST_BUILD        				# Adds a post-build event to target
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different  						# which executes "cmake -E copy_if_different..."
 				 ${file_path}      											# <--this is in-file
-				 $<TARGET_FILE_DIR:${target}>)        				     	# <--this is out-file path
+				 $<TARGET_FILE_DIR:${target}>                               # <--this is out-file path
+		COMMENT "copy ${file_path} for ${target}")        				     	
 	ENDFOREACH(file_path)
 ENDMACRO()
 
@@ -66,9 +67,9 @@ MACRO(copy_file_on_post_build_to_all_targets src_files)
 	#FOREACH (file_path ${${src_files}})
 	#	message(STATUS "current copy_file_on_post_build file_path => ${file_path}")   
 	#ENDFOREACH(file_path)
-	message(STATUS "copy_file_on_post_build_to_all_targets => src_files=${src_files}")
+	#message(STATUS "copy_file_on_post_build_to_all_targets => src_files=${src_files}")
     foreach(_target ${_targets})
-		message(STATUS "current target ==> ${_target}")
+		#message(STATUS "current target ==> ${_target}")
 		copy_file_on_post_build(${_target} ${src_files})
     endforeach(_target)
 ENDMACRO()

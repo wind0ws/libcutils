@@ -95,7 +95,7 @@ static void test_log()
 //#define MYLOG(...) EXPAND_VA_ARGS(LOGD(__VA_ARGS__))
 int thread_wrapper_test() 
 {
-	LOGD("Hello World, thread id: %d  %u", gettid(), (unsigned int)GetCurrentThreadId());
+	LOGD("Hello World, thread id: %d", gettid());
 	//MYLOG("MYLOG, %d", 1111);
 	test_log();
 

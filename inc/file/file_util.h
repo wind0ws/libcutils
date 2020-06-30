@@ -29,6 +29,16 @@ int file_util_mkdirs(__in const char* folder_path);
  */
 long file_util_size(__in FILE* fs);
 
+/**
+ * read on file_handle. if you read a file, use fread instead.
+ */
+int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count);
+
+/**
+ * write on file_handle. if you write a file, use fwrite instead.
+ */
+int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count);
+
 EXTERN_C_END
 
 #endif // __LCU_FILE_UTIL_H

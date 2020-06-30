@@ -21,14 +21,18 @@
 #define MKDIR(path) mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 #endif
 
-int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_capacity) 
+typedef ssize_t(*pfunc_rw)(int file_handle, void* buffer, size_t max_char_count);
+
+static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, pfunc_rw target_func);
+
+int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_capacity)
 {
 	if (!folder_path || folder_path_capacity < 3)
 	{
 		return -1;
 	}
-    const size_t path_len = strnlen(folder_path, folder_path_capacity);
-	char slash_char = (strstr(folder_path, "/")) ?  '/': '\\';
+	const size_t path_len = strnlen(folder_path, folder_path_capacity);
+	char slash_char = (strstr(folder_path, "/")) ? '/' : '\\';
 	if (folder_path[path_len - 1] == slash_char)
 	{
 		return 0;
@@ -90,7 +94,7 @@ long file_util_size(__in FILE* fs)
 	{
 		return -1;
 	}
-	if (fseek(fs, 0, SEEK_END)) 
+	if (fseek(fs, 0, SEEK_END))
 	{
 		return -2;
 	}
@@ -100,4 +104,30 @@ long file_util_size(__in FILE* fs)
 		return -3;
 	}
 	return total_file_size;
+}
+
+int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count)
+{
+	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&read);
+}
+
+int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count)
+{
+	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&write);
+}
+
+static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, pfunc_rw target_func)
+{
+	int cur_char_count = 0;
+	do
+	{
+		int once_op_size = target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
+		if (once_op_size < 1)
+		{
+			//error occurred
+			break;
+		}
+		cur_char_count += once_op_size;
+	} while (cur_char_count != max_char_count);
+	return cur_char_count;
 }

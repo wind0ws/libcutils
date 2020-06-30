@@ -12,11 +12,17 @@
 #ifndef __out
 #define __out
 #endif
+#ifndef __inout
+#define __inout
+#endif
 #ifndef __in_opt
 #define __in_opt
 #endif
 #ifndef __out_opt
 #define __out_opt
+#endif
+#ifndef __inout_opt
+#define __inout_opt
 #endif
 
 #define __RING_LOG_TAG "RingBuf_TAG"

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef __LCU_ASSERTION_H__
+#define __LCU_ASSERTION_H__
 #include <assert.h>
 
 #ifdef __cplusplus
@@ -15,3 +17,5 @@ extern "C" {
 #ifdef __cplusplus
 };
 #endif
+
+#endif //__LCU_ASSERTION_H__

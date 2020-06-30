@@ -1,3 +1,4 @@
+@ECHO OFF&PUSHD %~DP0 &TITLE android_v8a &color 0A
 set ANDROID_SDK=D:\Android\android-sdk
 set ANDROID_NDK=D:\Android\android-sdk\ndk\20.0.5594570
 ::for /f %%a in ('dir /a:d /b %ANDROID_SDK%\cmake\') do set cmake_version=%%a
@@ -7,6 +8,7 @@ set cmake_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 set ninja_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set tool_chain_file=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 
+rmdir /S /Q build_android_v8a 2>nul
 mkdir build_android_v8a
 %cmake_bin% -H.\ -B.\build_android_v8a ^
 			"-GNinja" ^
@@ -24,5 +26,6 @@ copy /Y .\build_android_v8a\libcutils_test .\output\android\arm64-v8a\
 copy /Y .\build_android_v8a\liblcu.a .\output\android\arm64-v8a\
 copy /Y .\build_android_v8a\liblcu.so .\output\android\arm64-v8a\
 
-echo "compile complete\n Press any key to exit..."
-pause
+@echo "compile complete. Press any key to exit..."
+@pause>nul
+color 0F

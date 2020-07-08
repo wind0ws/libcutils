@@ -27,9 +27,7 @@ IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 14 2015 Win32" .. -DARG_LCU_
 popd
 %cmake_bin% --build build_win32 --config Release
 mkdir .\output\windows\build_win32\
-copy /Y .\build_win32\Release\libcutils_test.exe .\output\windows\build_win32\
-copy /Y .\build_win32\Release\lcu.lib .\output\windows\build_win32\
-copy /Y .\build_win32\Release\lcu.dll .\output\windows\build_win32\
+copy /Y .\build_win32\Release\* .\output\windows\build_win32\
 
 @echo "compile complete. Press any key to exit..."
 @pause>nul

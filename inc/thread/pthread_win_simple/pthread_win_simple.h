@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _PTHREAD_WINDOWS_H
-#define _PTHREAD_WINDOWS_H
+#ifndef __PTHREAD_WINDOWS_H
+#define __PTHREAD_WINDOWS_H
 
 #include "lcu_build_config.h"
 
@@ -74,4 +74,4 @@ int pthread_cond_broadcast(pthread_cond_t* cond);
 
 #endif 
 
-#endif //_PTHREAD_WINDOWS_H
+#endif //__PTHREAD_WINDOWS_H

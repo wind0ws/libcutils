@@ -21,8 +21,8 @@
 	Copyright (c) 2015, Daniel Tillett <daniel.tillett @ gmail.com>
 */
 #pragma once
-#ifndef _SEMAPHORE_H_
-#define _SEMAPHORE_H_   1
+#ifndef __SEMAPHORE_H
+#define __SEMAPHORE_H   1
 
 /**
 	@file semaphore.h
@@ -119,4 +119,4 @@ extern "C" {
 
 /** @} */
 
-#endif /* _SEMAPHORE_H_ */
+#endif /* __SEMAPHORE_H */

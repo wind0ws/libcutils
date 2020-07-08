@@ -17,8 +17,8 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/hash_functions.h
  ******************************************************************************/
 #pragma once
-#ifndef _HASHMAP_FUNCTIONS_H
-#define _HASHMAP_FUNCTIONS_H
+#ifndef __HASHMAP_FUNCTIONS_H
+#define __HASHMAP_FUNCTIONS_H
 
 #include "hash_map.h"
 
@@ -27,13 +27,16 @@ extern "C" {
 #endif // __cplusplus
 
 hash_index_t hash_function_naive(const void *key);
+
 hash_index_t hash_function_integer(const void *key);
+
 // Hashes a pointer based only on its address value
 hash_index_t hash_function_pointer(const void *key);
+
 hash_index_t hash_function_string(const void *key);
 
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
-#endif //_HASHMAP_FUNCTIONS_H
+#endif //__HASHMAP_FUNCTIONS_H

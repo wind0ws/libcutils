@@ -199,8 +199,7 @@ static void bucket_free_(void* data) {
 	hash_map->allocator->free(hash_map_entry);
 }
 
-static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,
-	const void* key) {
+static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,	const void* key) {
 	if (hash_bucket_list == NULL)
 		return NULL;
 	for (const list_node_t* iter = list_begin(hash_bucket_list);

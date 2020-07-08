@@ -34,19 +34,29 @@ typedef struct {
   alloc_fn alloc;
   free_fn  free;
 } allocator_t;
-// allocator_t abstractions for the osi_*alloc and osi_free functions
+
+// allocator_t abstractions for the lcu_*alloc and lcu_free functions
 extern const allocator_t allocator_malloc;
 extern const allocator_t allocator_calloc;
+
 char *lcu_strdup(const char *str);
+
 char *lcu_strndup(const char *str, size_t len);
+
 void *lcu_malloc(size_t size);
-void *lcu_calloc(size_t size);
+
+void *lcu_calloc(size_t item_count, size_t item_size);
+
+void* lcu_realloc(void* ptr, size_t size);
+
 void lcu_free(void *ptr);
-// Free a buffer that was previously allocated with function |osi_malloc|
-// or |osi_calloc| and reset the pointer to that buffer to NULL.
+
+// Free a buffer that was previously allocated with function |lcu_malloc|
+// or |lcu_calloc| and reset the pointer to that buffer to NULL.
 // |p_ptr| is a pointer to the buffer pointer to be reset.
 // |p_ptr| cannot be NULL.
 void lcu_free_and_reset(void **p_ptr);
+
 #ifdef __cplusplus
 }
 #endif

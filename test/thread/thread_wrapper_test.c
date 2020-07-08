@@ -1,5 +1,4 @@
-#ifndef __MIXED_PLATFORM_TEST_H
-#define __MIXED_PLATFORM_TEST_H
+#pragma once
 
 #include "thread_wrapper.h"
 #include "xlog.h"
@@ -110,5 +109,3 @@ int thread_wrapper_test()
 	return 0;
 }
 
-
-#endif /* #ifndef __MIXED_PLATFORM_TEST_H */

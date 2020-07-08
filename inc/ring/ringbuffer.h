@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRINGBUFFER_RINGBUFFER_H
-#define CRINGBUFFER_RINGBUFFER_H
+#ifndef __LCU_RINGBUFFER_H
+#define __LCU_RINGBUFFER_H
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -194,4 +194,4 @@ extern "C" {
 }
 #endif
 
-#endif //CRINGBUFFER_RINGBUFFER_H
+#endif //__LCU_RINGBUFFER_H

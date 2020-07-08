@@ -3,7 +3,9 @@
 #define __LCU_COMMON_MACRO_H__
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -31,7 +33,7 @@ typedef float               FLOAT;
 #define EXTERN_C       extern
 #define EXTERN_C_START
 #define EXTERN_C_END
-#endif
+#endif // __cplusplus
 #endif // !EXTERN_C
 
 EXTERN_C_START
@@ -55,6 +57,7 @@ EXTERN_C_START
 #define __inout_opt
 #endif
 
+//for size_t ssize_t
 #ifdef _WIN32
 #ifdef _WIN64
 #ifndef _SIZE_T_DEFINED
@@ -77,6 +80,13 @@ typedef int              ssize_t;
 #endif // _WIN64
 #endif // _WIN32
 
+// Minimum and maximum macros
+#ifndef __max
+#define __max(a,b) (((a) > (b)) ? (a) : (b))
+#endif // !__max
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif // !__min
 
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
@@ -137,7 +147,7 @@ typedef int              ssize_t;
 #define read _read
 #define write _write
 
-    static FILE* __fopen_safe(char const* _FileName, char const* _Mode)
+    static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
     {
         FILE* _ftemp =  NULL;
         fopen_s(&_ftemp, _FileName, _Mode);

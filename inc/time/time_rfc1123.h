@@ -1,9 +1,6 @@
-//
-// Created by Administrator on 2019/9/6.
-//
-
-#ifndef C11STUDY_TIME_RFC1123_H
-#define C11STUDY_TIME_RFC1123_H
+#pragma once
+#ifndef __LCU_TIME_RFC1123_H
+#define __LCU_TIME_RFC1123_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,4 +16,4 @@ int time_now_rfc1123(char *out_time_str, size_t out_time_str_len);
 };
 #endif
 
-#endif //C11STUDY_TIME_RFC1123_H
+#endif //__LCU_TIME_RFC1123_H

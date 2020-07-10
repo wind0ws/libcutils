@@ -75,10 +75,10 @@ extern "C" {
 #define LOGW_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
 #define LOGE_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
 
-#define TLOGV(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGD(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGI(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGW(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
+#define TLOGV(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__);
+#define TLOGD(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__);
+#define TLOGI(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, NULL, 0, fmt, ##__VA_ARGS__);
+#define TLOGW(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__);
 #define TLOGE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
 
 #define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);

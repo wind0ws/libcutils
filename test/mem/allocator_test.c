@@ -28,7 +28,7 @@ int allocator_test()
 	char *str1 = lcu_malloc(16);
 	strcpy(str1, "This is str1.");
 	TLOGD(LOG_TAG_ALLOC_TEST,"str1 => %s", str1);
-	lcu_free_and_reset(&str1);
+	lcu_free_and_reset((void **)&str1);
 	allocation_tracker_expect_no_allocations(report_leak_memory);
 	
 	char* str2 = lcu_calloc(1, 32);

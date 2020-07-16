@@ -16,14 +16,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 //#include <pthread.h>
-#include "thread_wrapper.h"
+#include "thread/thread_wrapper.h"
 #include <errno.h>
 #include <time.h>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
 
-#include "thpool.h"
+#include "thread/thpool.h"
 
 #ifndef SIGUSR1
 #define SIGUSR1 10

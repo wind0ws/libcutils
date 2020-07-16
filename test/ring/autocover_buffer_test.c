@@ -1,7 +1,7 @@
-#include "autocover_buffer.h"
+#include "ring/autocover_buffer.h"
 #include "common_macro.h"
-#include "xlog.h"
-#include "thread_wrapper.h"
+#include "log/xlog.h"
+#include "thread/thread_wrapper.h"
 #include <string.h>
 
 typedef struct 

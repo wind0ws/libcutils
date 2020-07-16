@@ -1,5 +1,5 @@
 #include "common_macro.h"
-#include "strings.h"
+#include "mem/strings.h"
 
 int basic_test()
 {

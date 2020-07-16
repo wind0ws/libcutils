@@ -1,6 +1,6 @@
-#include "file_util.h"
-#include "strings.h"
-#include "xlog.h"
+#include "file/file_util.h"
+#include "mem/strings.h"
+#include "log/xlog.h"
 
 int file_util_test()
 {

@@ -18,8 +18,8 @@
  ******************************************************************************/
 #include <stdlib.h>
 #include <string.h>
-#include "allocator.h"
-#include "allocation_tracker.h"
+#include "mem/allocator.h"
+#include "mem/allocation_tracker.h"
 #include "common_macro.h"
 
 static const allocator_id_t alloc_allocator_id = 42;

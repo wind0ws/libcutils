@@ -1,6 +1,6 @@
 //#include <assert.h>
-#include "allocator.h"
-#include "list.h"
+#include "mem/allocator.h"
+#include "data/list.h"
 
 /*
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/list.c

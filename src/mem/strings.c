@@ -1,4 +1,4 @@
-#include "strings.h"
+#include "mem/strings.h"
 #include <malloc.h>
 
 #if defined(__GLIBC__) || defined(_WIN32)

@@ -1,5 +1,5 @@
-#include "file_util.h"
-#include "strings.h"
+#include "file/file_util.h"
+#include "mem/strings.h"
 #include "common_macro.h"
 
 #ifdef WIN32

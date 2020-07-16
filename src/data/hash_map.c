@@ -16,9 +16,9 @@
  *
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  ******************************************************************************/
-#include "allocator.h"
-#include "hash_map.h"
-#include "list.h"
+#include "mem/allocator.h"
+#include "data/hash_map.h"
+#include "data/list.h"
 #include "common_macro.h"
 
 struct hash_map_t;

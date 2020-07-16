@@ -1,5 +1,5 @@
-#include "time_util.h"
-#include "time_rfc2822.h"
+#include "time/time_util.h"
+#include "time/time_rfc2822.h"
 
 static void time_now_strf(char* out_time_str, size_t out_time_str_len, const char* timeFmt) {
 	struct tm tm_time;

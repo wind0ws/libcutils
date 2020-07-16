@@ -1,5 +1,5 @@
-#include "autocover_buffer.h"
-#include "ringbuffer.h"
+#include "ring/autocover_buffer.h"
+#include "ring/ringbuffer.h"
 #include "common_macro.h"
 #include <malloc.h>
 #include <string.h>

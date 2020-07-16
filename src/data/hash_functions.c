@@ -17,7 +17,7 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_functions.c
  ******************************************************************************/
 #include <string.h>
-#include "hash_functions.h"
+#include "data/hash_functions.h"
 
 hash_index_t hash_function_naive(const void *key)
 {

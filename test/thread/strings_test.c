@@ -1,5 +1,5 @@
-#include "strings.h"
-#include "xlog.h"
+#include "mem/strings.h"
+#include "log/xlog.h"
 #include <malloc.h>
 
 static int test_strsplit()

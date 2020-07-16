@@ -18,12 +18,12 @@
  *
  ******************************************************************************/
 #define LOG_TAG "lcu_array"
-#include "array.h"
+#include "data/array.h"
 #include "common_macro.h"
 #include <stdlib.h>
 #include <string.h>
-#include "allocator.h"
-#include "xlog.h"
+#include "mem/allocator.h"
+#include "log/xlog.h"
 
 struct array_t {
     size_t element_size;

@@ -10,12 +10,12 @@ extern "C" {
 
 #ifdef _WIN32
 	#if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB     /* use posix-win32 lib */
-	  #include "pthread_win_lib.h"
-	  #include "sched_win_lib.h"
-	  #include "semaphore_win_lib.h"
+	  #include "thread/pthread_win_lib/pthread_win_lib.h"
+	  #include "thread/pthread_win_lib/sched_win_lib.h"
+	  #include "thread/pthread_win_lib/semaphore_win_lib.h"
 	#elif _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE    /* use windows native implement */
-	  #include "pthread_win_simple.h"
-	  #include "semaphore_win_simple.h"
+	  #include "thread/pthread_win_simple/pthread_win_simple.h"
+	  #include "thread/pthread_win_simple/semaphore_win_simple.h"
 	#else
 	  #error "unknow _LCU_CFG_WIN32_PTHREAD_MODE "
 	#endif // LCU_WIN_PTHREAD_MODE

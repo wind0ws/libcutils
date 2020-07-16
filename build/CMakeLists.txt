@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.1.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.2.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -31,12 +31,6 @@ message(STATUS "Git branch is ${GIT_BRANCH}")
 # 设置版本号，供下面的lcu.version.h.in使用
 set(LCU_VER_MAJOR "${PROJECT_VERSION}")
 
-set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
-configure_file(
-  ${LCU_HEADER_ROOT_DIR}/config/lcu_version.h.in
-  ${CMAKE_BINARY_DIR}/generate/lcu_version.h
-  @ONLY)
-
 if(WIN32)
 	set(LCU_WIN_PTHREAD_MODE 0)
 	if(ARG_LCU_WIN_PTHREAD_MODE)
@@ -52,11 +46,7 @@ if(WIN32)
 	
 	message(STATUS "LCU_WIN_PTHREAD_MODE => ${LCU_WIN_PTHREAD_MODE}")
 endif(WIN32)  
-  
-configure_file(
-  ${LCU_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
-  ${CMAKE_BINARY_DIR}/generate/lcu_build_config.h
-  @ONLY)
+
 
 #add compile/optimize options for DEBUG/RELEASE
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall" CACHE STRING "")
@@ -101,12 +91,23 @@ ELSE()
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie" CACHE STRING "")
 ENDIF(WIN32)
 
+
+set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
+configure_file(
+  ${LCU_HEADER_ROOT_DIR}/config/lcu_version.h.in
+  ${CMAKE_BINARY_DIR}/generate/lcu_version.h
+  @ONLY)
+
+configure_file(
+  ${LCU_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
+  ${CMAKE_BINARY_DIR}/generate/lcu_build_config.h
+  @ONLY)
+
 #collect header(*.h) directories
-scan_header_dirs(${LCU_HEADER_ROOT_DIR} LCU_HEADER_DIRS)
-message(STATUS "LCU_HEADER_DIRS => \n ${LCU_HEADER_DIRS}\n")
-include_directories(${LCU_HEADER_DIRS}
+#scan_header_dirs(${LCU_HEADER_ROOT_DIR} LCU_HEADER_DIRS)
+#message(STATUS "LCU_HEADER_DIRS => \n ${LCU_HEADER_DIRS}\n")
+include_directories(${LCU_HEADER_ROOT_DIR}
 					${CMAKE_BINARY_DIR}/generate/)
-#include_directories(${LCU_ROOT_DIR}/inc/)
 
 #for publish library: copy header to output dir
 
@@ -138,14 +139,12 @@ add_library(lcu_shared
 			SHARED
 			${LCU_SRCS})
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu_a")
 set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
-# 使动态库和静态库同时存在
-set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-# 指定动态库版本
-# VERSION 动态库版本
-# SOVERSION API版本
+# 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
+#set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+# 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
 set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
 
 #set(LCU_TEST_SRCS
@@ -242,7 +241,6 @@ message(STATUS "pthread-lib now is: ${pthread-lib}")
 target_link_libraries( # Specifies the target library.
         lcu_static PUBLIC
 
-		#pthread_win_lib
 		${pthread-lib}
         ${log-lib}
         )
@@ -250,7 +248,6 @@ target_link_libraries( # Specifies the target library.
 target_link_libraries( # Specifies the target library.
         lcu_shared PUBLIC
 
-		#pthread_win_lib
 		${pthread-lib}
         ${log-lib}
         )		

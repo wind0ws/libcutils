@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include "xlog.h"
-#include "strings.h"
-#include "time_util.h"
+#include "log/xlog.h"
+#include "mem/strings.h"
+#include "time/time_util.h"
 
 #define LOG_LEVLE_CHAR_V ('V')
 #define LOG_LEVLE_CHAR_D ('D')

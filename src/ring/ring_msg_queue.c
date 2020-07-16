@@ -1,8 +1,5 @@
-//
-// Created by Threshold on 2019/5/7.
-//
 #include <malloc.h>
-#include "ring_msg_queue.h"
+#include "ring/ring_msg_queue.h"
 
 struct __ring_msg_queue {
     ring_buf_handle ring_buf_p;

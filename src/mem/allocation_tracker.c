@@ -16,16 +16,16 @@
  *
  ******************************************************************************/
 #define LOG_TAG "allocation_tracker"
-#include "allocation_tracker.h"
+#include "mem/allocation_tracker.h"
  //#include <assert.h>
  //#include <pthread.h>
-#include "thread_wrapper.h"
+#include "thread/thread_wrapper.h"
 #include <stdlib.h>
 #include <string.h>
-#include "allocator.h"
-#include "hash_functions.h"
-#include "hash_map.h"
-#include "xlog.h"
+#include "mem/allocator.h"
+#include "data/hash_functions.h"
+#include "data/hash_map.h"
+#include "log/xlog.h"
 #include "common_macro.h"
 
 typedef struct {

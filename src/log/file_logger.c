@@ -1,14 +1,14 @@
-#include "file_logger.h"
-#include "msg_queue_handler.h"
 #include <malloc.h>
-#include "strings.h"
+#include "log/file_logger.h"
+#include "ring/msg_queue_handler.h"
+#include "mem/strings.h"
 #include "common_macro.h"
 //for mkdir
-#include "file_util.h"
+#include "file/file_util.h"
 //for sleep 
-#include "thread_wrapper.h"
+#include "thread/thread_wrapper.h"
 //for timestamp file name
-#include "time_util.h"
+#include "time/time_util.h"
 
 typedef struct file_logger
 {

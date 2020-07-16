@@ -1,11 +1,11 @@
 #include <malloc.h>
 #include "apicheck.h"
 #include "common_macro.h"
-#include "thread_wrapper.h"
-#include "dlfcn_wrapper.h"
-#include "strings.h"
-#include "xlog.h"
-#include "file_logger.h"
+#include "thread/thread_wrapper.h"
+#include "sys/dlfcn_wrapper.h"
+#include "mem/strings.h"
+#include "log/xlog.h"
+#include "log/file_logger.h"
 #include "lcu_version.h"
 
 #ifdef _WIN32

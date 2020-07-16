@@ -1,9 +1,6 @@
-//
-// Created by Administrator on 2019/5/8.
-//
 #include <malloc.h>
-#include "thread_wrapper.h"
-#include "msg_queue_handler.h"
+#include "thread/thread_wrapper.h"
+#include "ring/msg_queue_handler.h"
 
 typedef struct
 {

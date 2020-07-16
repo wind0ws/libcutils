@@ -1,8 +1,8 @@
 #include "common_macro.h"
-#include "allocation_tracker.h"
-#include "allocator.h"
-#include "xlog.h"
-#include "strings.h"
+#include "mem/allocation_tracker.h"
+#include "mem/allocator.h"
+#include "log/xlog.h"
+#include "mem/strings.h"
 
 #define LOG_TAG_ALLOC_TEST "alloc_test"
 

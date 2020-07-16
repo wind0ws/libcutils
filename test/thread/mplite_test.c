@@ -1,7 +1,7 @@
-#include "mplite.h"
+#include "mem/mplite.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "thread_wrapper.h"
+#include "thread/thread_wrapper.h"
 
 typedef struct multithreaded_param {
 	size_t index;

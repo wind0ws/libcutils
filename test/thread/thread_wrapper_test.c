@@ -1,5 +1,5 @@
-#include "thread_wrapper.h"
-#include "xlog.h"
+#include "thread/thread_wrapper.h"
+#include "log/xlog.h"
 
 static void* thread_func(void* args) {
 	int code;

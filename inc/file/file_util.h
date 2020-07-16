@@ -7,7 +7,7 @@
 EXTERN_C_START
 
 /**
- * append slash("/") if "folder_path" NOT end with slash("/")
+ * append slash("/" or "\\") if "folder_path" NOT end with slash("/" or "\\")
  */
 int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_capacity);
 
@@ -19,7 +19,7 @@ int file_util_access(__in const char* path, __in const int access_mode);
 
 /**
  * mkdirs on "folder_path", if it not exists.
- * "folder_path" should end with slash("/").
+ * "folder_path" should end with slash("/" or "\\").
  * @return 0 means create succeed, otherwise fail.
  */
 int file_util_mkdirs(__in const char* folder_path);

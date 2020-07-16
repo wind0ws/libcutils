@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRINGBUFFER_RING_MSG_QUEUE_H
-#define CRINGBUFFER_RING_MSG_QUEUE_H
+#ifndef __LCU_RING_MSG_QUEUE_H
+#define __LCU_RING_MSG_QUEUE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,4 +81,4 @@ void RingMsgQueue_destroy(__in ring_msg_queue *ring_msg_queue_pp);
 }
 #endif
 
-#endif //CRINGBUFFER_RING_MSG_QUEUE_H
+#endif //__LCU_RING_MSG_QUEUE_H

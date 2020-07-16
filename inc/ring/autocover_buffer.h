@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_AUTOCOVER_BUFFER_H__
-#define __LCU_AUTOCOVER_BUFFER_H__
+#ifndef __LCU_AUTOCOVER_BUFFER_H
+#define __LCU_AUTOCOVER_BUFFER_H
 
 #include <stdint.h>
 
@@ -72,4 +72,4 @@ extern "C" {
 }
 #endif
 
-#endif // __LCU_AUTOCOVER_BUFFER_H__
+#endif // __LCU_AUTOCOVER_BUFFER_H

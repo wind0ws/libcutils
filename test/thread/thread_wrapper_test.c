@@ -1,8 +1,5 @@
-#ifndef __MIXED_PLATFORM_TEST_H
-#define __MIXED_PLATFORM_TEST_H
-
-#include "thread_wrapper.h"
-#include "xlog.h"
+#include "thread/thread_wrapper.h"
+#include "log/xlog.h"
 
 static void* thread_func(void* args) {
 	int code;
@@ -110,5 +107,3 @@ int thread_wrapper_test()
 	return 0;
 }
 
-
-#endif /* #ifndef __MIXED_PLATFORM_TEST_H */

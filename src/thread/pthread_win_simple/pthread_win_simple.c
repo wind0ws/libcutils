@@ -1,4 +1,4 @@
-#include "pthread_win_simple.h"
+#include "thread/pthread_win_simple/pthread_win_simple.h"
 
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 static DWORD WINAPI WinThreadStart(LPVOID lpParam);

@@ -1,4 +1,4 @@
-#include "thread_wrapper.h"
+#include "thread/thread_wrapper.h"
 #include "lcu_build_config.h"
 
 #ifndef __ANDROID__ // Android just pick up bionic's copy.

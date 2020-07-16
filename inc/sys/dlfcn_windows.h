@@ -18,8 +18,8 @@
  * Reference: https://github.com/dlfcn-win32/dlfcn-win32
  */
 #pragma once
-#ifndef LCU_DLFCN_WINDOWS_H
-#define LCU_DLFCN_WINDOWS_H
+#ifndef __LCU_DLFCN_WINDOWS_H
+#define __LCU_DLFCN_WINDOWS_H
 
 //do not include this header directly, you should include "dlfcn_wrapper.h" instead!
 #ifdef _WIN32
@@ -77,4 +77,4 @@ DLFCN_EXPORT char *dlerror(void);
 
 #endif // _WIN32
 
-#endif /* LCU_DLFCN_WINDOWS_H */
+#endif /* __LCU_DLFCN_WINDOWS_H */

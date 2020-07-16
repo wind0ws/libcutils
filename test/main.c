@@ -1,11 +1,11 @@
 #include <malloc.h>
 #include "apicheck.h"
 #include "common_macro.h"
-#include "thread_wrapper.h"
-#include "dlfcn_wrapper.h"
-#include "strings.h"
-#include "xlog.h"
-#include "file_logger.h"
+#include "thread/thread_wrapper.h"
+#include "sys/dlfcn_wrapper.h"
+#include "mem/strings.h"
+#include "log/xlog.h"
+#include "log/file_logger.h"
 #include "lcu_version.h"
 
 #ifdef _WIN32
@@ -27,7 +27,12 @@ LOGD("\r\n <-- %s() run result=%d\r\n%s\r\n", #func_name, ret, LOG_LINE_STAR);\
 api_check_return_val(ret == 0, -1);\
 } while (0)
 
-#define TEST_FILE_LOGGER (1)
+#define TEST_ALLOCATOR (1)
+extern int allocator_test_begin();
+extern int allocator_test_end();
+extern int allocator_test();
+
+#define TEST_FILE_LOGGER (0)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
 
@@ -37,6 +42,7 @@ extern int autocover_buffer_test();
 extern int strings_test();
 extern int mplite_test();
 extern int file_util_test();
+extern int thpool_test();
 
 int main(int argc, char* argv[])
 {
@@ -45,24 +51,34 @@ int main(int argc, char* argv[])
 	EnableMemLeakCheck();
 #endif // _WIN32
 
+#if TEST_ALLOCATOR
+	allocator_test_begin();
+#endif
+
 #if TEST_FILE_LOGGER
 	file_logger_test_begin();
 #endif
 
 	LOGI("hello world: LCU_VER:%s \r\n", LCU_VERSION);
 
+	//RUN_TEST(allocator_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
-	RUN_TEST(thread_wrapper_test);
+	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
+	RUN_TEST(thpool_test);
 
 #if TEST_FILE_LOGGER
 	file_logger_test_end();
 #endif
 	
 	LOGI("...bye bye...");
+
+#if TEST_ALLOCATOR
+	allocator_test_end();
+#endif
 	return 0;
 }
 

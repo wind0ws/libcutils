@@ -1,7 +1,7 @@
-#include "file_logger.h"
-#include "thread_wrapper.h"
-#include "xlog.h"
-#include "strings.h"
+#include "log/file_logger.h"
+#include "thread/thread_wrapper.h"
+#include "log/xlog.h"
+#include "mem/strings.h"
 
 static void xlog_custom_user_cb(void* log_msg, void* user_data);
 static void my_file_logger_lock(void* arg);

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __RAND_H
-#define __RAND_H
+#ifndef __LCU_RAND_H
+#define __LCU_RAND_H
 
 #include <stdlib.h>
 #include <time.h>
@@ -24,4 +24,4 @@ extern "C" {
 };
 #endif // __cplusplus
 
-#endif // !__LC_RAND_H
+#endif // !__LCU_RAND_H

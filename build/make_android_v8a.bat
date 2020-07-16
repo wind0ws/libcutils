@@ -23,7 +23,7 @@ mkdir build_android_v8a
 %ninja_bin% -C .\build_android_v8a
 mkdir .\output\android\arm64-v8a
 copy /Y .\build_android_v8a\libcutils_test .\output\android\arm64-v8a\
-copy /Y .\build_android_v8a\liblcu.a .\output\android\arm64-v8a\
+copy /Y .\build_android_v8a\liblcu_a.a .\output\android\arm64-v8a\
 copy /Y .\build_android_v8a\liblcu.so .\output\android\arm64-v8a\
 
 @echo "compile complete. Press any key to exit..."

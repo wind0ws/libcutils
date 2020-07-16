@@ -18,12 +18,12 @@
  *
  ******************************************************************************/
 #define LOG_TAG "lcu_array"
-#include "array.h"
+#include "data/array.h"
 #include "common_macro.h"
 #include <stdlib.h>
 #include <string.h>
-#include "allocator.h"
-#include "xlog.h"
+#include "mem/allocator.h"
+#include "log/xlog.h"
 
 struct array_t {
     size_t element_size;
@@ -35,9 +35,10 @@ struct array_t {
 
 static bool grow(array_t* array);
 static const size_t INTERNAL_ELEMENTS = 16;
+
 array_t* array_new(size_t element_size) {
     ASSERT_ABORT(element_size > 0);
-    array_t* array = lcu_calloc(sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
+    array_t* array = lcu_calloc(1, sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
     array->element_size = element_size;
     array->capacity = INTERNAL_ELEMENTS;
     array->data = array->internal_storage;

@@ -18,8 +18,8 @@
  ******************************************************************************/
 #include <stdlib.h>
 #include <string.h>
-#include "allocator.h"
-#include "allocation_tracker.h"
+#include "mem/allocator.h"
+#include "mem/allocation_tracker.h"
 #include "common_macro.h"
 
 static const allocator_id_t alloc_allocator_id = 42;
@@ -67,12 +67,48 @@ void* lcu_malloc(size_t size)
 	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, size);
 }
 
-void* lcu_calloc(size_t size)
+void* lcu_calloc(size_t item_count, size_t item_size)
 {
-	size_t real_size = allocation_tracker_resize_for_canary(size);
+	size_t request_size = item_count * item_size;
+	size_t real_size = allocation_tracker_resize_for_canary(request_size);
 	void* ptr = calloc(1, real_size);
 	ASSERT_ABORT(ptr != NULL);
-	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, size);
+	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, request_size);
+}
+
+//Hidden method for allocator_t.
+void* lcu_calloc1(size_t size)
+{
+	return lcu_calloc(1, size);
+}
+
+void* lcu_realloc(void* ptr, size_t size)
+{
+	if (!size)
+	{
+		//if size == 0, free the ptr, return NULL
+		if (ptr)
+		{
+			lcu_free(ptr);
+		}
+		return NULL;
+	}
+	if (!ptr)
+	{
+		return lcu_malloc(size);
+	}
+	size_t cur_ptr_size = allocation_tracker_ptr_size(alloc_allocator_id, ptr);
+	if (!cur_ptr_size || size <= cur_ptr_size)
+	{
+		//current size if enough, no need alloc new memory.
+		return ptr;
+	}
+
+	void* new_ptr = lcu_malloc(size);
+	ASSERT_ABORT(new_ptr != NULL);
+	memcpy(new_ptr, ptr, cur_ptr_size);
+	lcu_free(ptr);
+	return new_ptr;
 }
 
 void lcu_free(void* ptr)
@@ -93,7 +129,7 @@ void lcu_free_and_reset(void** p_ptr)
 
 const allocator_t allocator_calloc =
 {
-  lcu_calloc,
+  lcu_calloc1,
   lcu_free
 };
 

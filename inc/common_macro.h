@@ -1,9 +1,11 @@
 #pragma once
-#ifndef __LCU_COMMON_MACRO_H__
-#define __LCU_COMMON_MACRO_H__
+#ifndef __LCU_COMMON_MACRO_H
+#define __LCU_COMMON_MACRO_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -31,7 +33,7 @@ typedef float               FLOAT;
 #define EXTERN_C       extern
 #define EXTERN_C_START
 #define EXTERN_C_END
-#endif
+#endif // __cplusplus
 #endif // !EXTERN_C
 
 EXTERN_C_START
@@ -55,28 +57,38 @@ EXTERN_C_START
 #define __inout_opt
 #endif
 
+//for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 #ifdef _WIN32
-#ifdef _WIN64
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef unsigned __int64    size_t;
-#endif // !_SIZE_T_DEFINED
-#ifndef _SSIZE_T_DEFINED
-#define _SSIZE_T_DEFINED
-typedef __int64             ssize_t;
-#endif // !_SSIZE_T_DEFINED
-#else
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef unsigned int     size_t;
-#endif // !_SIZE_T_DEFINED
-#ifndef _SSIZE_T_DEFINED
-#define _SSIZE_T_DEFINED
-typedef int              ssize_t;
-#endif // !_SSIZE_T_DEFINED
-#endif // _WIN64
+#if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
+typedef intptr_t ssize_t;
+# define SSIZE_MAX INTPTR_MAX
+# define _SSIZE_T_
+# define _SSIZE_T_DEFINED
+#endif
 #endif // _WIN32
 
+#if(defined(_MSC_VER) && _MSC_VER < 1800)
+/* __LP64__ is defined by compiler. If set to 1 means this is 64bit build system */
+#ifdef __LP64__
+#define SIZE_T_FORMAT "%lu"
+#define SSIZE_T_FORMAT "%ld"
+#else
+#define SIZE_T_FORMAT "%u"
+#define SSIZE_T_FORMAT "%d"
+#endif
+#else
+#define SIZE_T_FORMAT "%zu"
+#define SSIZE_T_FORMAT "%zd"
+#endif // _MSC_VER
+
+
+// Minimum and maximum macros
+#ifndef __max
+#define __max(a,b) (((a) > (b)) ? (a) : (b))
+#endif // !__max
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif // !__min
 
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
@@ -137,21 +149,21 @@ typedef int              ssize_t;
 #define read _read
 #define write _write
 
-    static FILE* __fopen_safe(char const* _FileName, char const* _Mode)
-    {
-        FILE* _ftemp =  NULL;
-        fopen_s(&_ftemp, _FileName, _Mode);
-        return _ftemp;
-    }
+static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
+{
+	FILE* _ftemp = NULL;
+	fopen_s(&_ftemp, _FileName, _Mode);
+	return _ftemp;
+}
 //to make MSC happy
 #define fopen __fopen_safe
 #else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
+#endif // _WIN32
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 EXTERN_C_END
 
-#endif // __LCU_COMMON_MACRO_H__
+#endif // __LCU_COMMON_MACRO_H

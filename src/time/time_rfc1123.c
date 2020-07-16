@@ -1,6 +1,6 @@
-#include "time_util.h"
+#include "time/time_util.h"
 #include <string.h>
-#include "time_rfc1123.h"
+#include "time/time_rfc1123.h"
 
 static const char *DAY_NAMES[] =
         {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};

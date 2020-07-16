@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRINGBUFFER_MSG_QUEUE_HANDLER_H
-#define CRINGBUFFER_MSG_QUEUE_HANDLER_H
+#ifndef __LCU_MSG_QUEUE_HANDLER_H
+#define __LCU_MSG_QUEUE_HANDLER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,4 +92,4 @@ void QueueHandler_destroy(__inout queue_handler *handler_pp);
 }
 #endif
 
-#endif //CRINGBUFFER_MSG_QUEUE_HANDLER_H
+#endif //__LCU_MSG_QUEUE_HANDLER_H

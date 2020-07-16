@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ringbuffer.h"
+#include "ring/ringbuffer.h"
 
 #ifndef TAKE_MIN
 /* take min value of a,b */

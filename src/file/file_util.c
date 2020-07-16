@@ -1,5 +1,5 @@
-#include "file_util.h"
-#include "strings.h"
+#include "file/file_util.h"
+#include "mem/strings.h"
 #include "common_macro.h"
 
 #ifdef WIN32
@@ -9,8 +9,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #endif
-#include <stdint.h>
-#include <string.h>
+
 #define MAX_FOLDER_PATH_LEN (256)
 
 #ifdef WIN32
@@ -121,7 +120,7 @@ static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_cou
 	int cur_char_count = 0;
 	do
 	{
-		int once_op_size = target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
+		int once_op_size = (int)target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
 		if (once_op_size < 1)
 		{
 			//error occurred

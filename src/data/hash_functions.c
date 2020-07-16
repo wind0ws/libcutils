@@ -17,17 +17,25 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_functions.c
  ******************************************************************************/
 #include <string.h>
-#include "hash_functions.h"
-hash_index_t hash_function_naive(const void *key) {
+#include "data/hash_functions.h"
+
+hash_index_t hash_function_naive(const void *key)
+{
   return (hash_index_t)key;
 }
-hash_index_t hash_function_integer(const void *key) {
+
+hash_index_t hash_function_integer(const void *key)
+{
   return ((hash_index_t)key) * 2654435761;
 }
-hash_index_t hash_function_pointer(const void *key) {
+
+hash_index_t hash_function_pointer(const void *key)
+{
   return ((hash_index_t)key) * 2654435761;
 }
-hash_index_t hash_function_string(const void *key) {
+
+hash_index_t hash_function_string(const void *key)
+{
   hash_index_t hash = 5381;
   const char *name = (const char *)key;
   size_t string_len = strlen(name);

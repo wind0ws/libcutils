@@ -24,20 +24,6 @@ typedef unsigned short      WORD;
 typedef float               FLOAT;
 #endif // _WIN32
 
-#ifndef EXTERN_C
-#ifdef __cplusplus
-#define EXTERN_C       extern "C"
-#define EXTERN_C_START extern "C" {
-#define EXTERN_C_END   }
-#else
-#define EXTERN_C       extern
-#define EXTERN_C_START
-#define EXTERN_C_END
-#endif // __cplusplus
-#endif // !EXTERN_C
-
-EXTERN_C_START
-
 #ifndef __in
 #define __in
 #endif
@@ -56,6 +42,25 @@ EXTERN_C_START
 #ifndef __inout_opt
 #define __inout_opt
 #endif
+
+#ifndef EXTERN_C
+#ifdef __cplusplus
+#define EXTERN_C       extern "C"
+#else
+#define EXTERN_C       extern
+#endif // __cplusplus
+#endif // !EXTERN_C
+#ifndef EXTERN_C_START
+#ifdef __cplusplus
+#define EXTERN_C_START extern "C" {
+#define EXTERN_C_END   }
+#else
+#define EXTERN_C_START
+#define EXTERN_C_END
+#endif // __cplusplus
+#endif // !EXTERN_C_START
+
+EXTERN_C_START
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 #ifdef _WIN32
@@ -81,7 +86,6 @@ typedef intptr_t ssize_t;
 #define SSIZE_T_FORMAT "%zd"
 #endif // _MSC_VER
 
-
 // Minimum and maximum macros
 #ifndef __max
 #define __max(a,b) (((a) > (b)) ? (a) : (b))
@@ -94,10 +98,18 @@ typedef intptr_t ssize_t;
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
 #endif
 
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif // !ARRAY_SIZE
+#ifndef INVALID_FD
 #define INVALID_FD (-1)
+#endif // !INVALID_FD
+#ifndef CONCAT
 #define CONCAT(a, b) a##b
+#endif // !CONCAT
+#ifndef STRING
 #define STRING(a) #a
+#endif // !STRING
 
 // Use during compile time to check conditional values
 // NOTE: The the failures will present as a generic error
@@ -134,7 +146,6 @@ typedef intptr_t ssize_t;
 #define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i) ((void *) ((intptr_t) (i)))
-
 
 #ifdef _WIN32
 #include <direct.h>

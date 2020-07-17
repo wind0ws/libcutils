@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.2.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.2.1 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -95,12 +95,12 @@ ENDIF(WIN32)
 set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
 configure_file(
   ${LCU_HEADER_ROOT_DIR}/config/lcu_version.h.in
-  ${CMAKE_BINARY_DIR}/generate/lcu_version.h
+  ${CMAKE_BINARY_DIR}/generate/config/lcu_version.h
   @ONLY)
 
 configure_file(
   ${LCU_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
-  ${CMAKE_BINARY_DIR}/generate/lcu_build_config.h
+  ${CMAKE_BINARY_DIR}/generate/config/lcu_build_config.h
   @ONLY)
 
 #collect header(*.h) directories

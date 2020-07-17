@@ -34,7 +34,7 @@
 	@{
 */
 
-#include "lcu_build_config.h"
+#include "config/lcu_build_config.h"
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
 #include <errno.h> /* Adding definition of EINVAL, ETIMEDOUT, ..., etc. */

@@ -6,7 +6,7 @@
 #include "mem/strings.h"
 #include "log/xlog.h"
 #include "log/file_logger.h"
-#include "lcu_version.h"
+#include "config/lcu_version.h"
 
 #ifdef _WIN32
 #define CRTDBG_MAP_ALLOC    

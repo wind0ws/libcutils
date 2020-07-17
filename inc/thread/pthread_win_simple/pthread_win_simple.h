@@ -2,7 +2,7 @@
 #ifndef __PTHREAD_WINDOWS_H
 #define __PTHREAD_WINDOWS_H
 
-#include "lcu_build_config.h"
+#include "config/lcu_build_config.h"
 
 //do not include this header directly, you should include "thread_wrapper.h" instead!
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)

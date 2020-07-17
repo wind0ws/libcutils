@@ -1,5 +1,5 @@
 #include "libcutils.h"
-#include "lcu_version.h"
+#include "config/lcu_version.h"
 
 char *libcutils_get_version()
 {

@@ -2,7 +2,7 @@
 #ifndef __LCU_THREAD_WRAPPER_H
 #define __LCU_THREAD_WRAPPER_H
 
-#include "lcu_build_config.h"
+#include "config/lcu_build_config.h"
 
 #ifdef __cplusplus
 extern "C" {

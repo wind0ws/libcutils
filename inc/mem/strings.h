@@ -7,6 +7,7 @@
 #include <string.h>
 
 #ifdef _WIN32
+#define strcasecmp stricmp
 //to make MSC happy
 #define stricmp _stricmp
 /**
@@ -24,6 +25,7 @@
 #else
 //in Unix platform. use strtok_r instead
 #define STRTOK strtok_r
+#define stricmp strcasecmp
 #endif // _WIN32
 
 #ifdef __cplusplus

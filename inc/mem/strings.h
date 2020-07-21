@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __STRINGS_HEADER__
-#define __STRINGS_HEADER__
+#ifndef __LCU_STRINGS_HEADER
+#define __LCU_STRINGS_HEADER
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -59,4 +59,4 @@ extern "C" {
 };
 #endif // __cplusplus
 
-#endif //__STRINGS_HEADER__
+#endif // __LCU_STRINGS_HEADER

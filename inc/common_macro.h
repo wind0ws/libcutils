@@ -43,6 +43,21 @@ typedef float               FLOAT;
 #define __inout_opt
 #endif
 
+#if defined(_MSC_VER)
+//  Microsoft 
+#define API_EXPORT __declspec(dllexport)
+#define API_IMPORT __declspec(dllimport)
+#elif defined(__GNUC__)
+//  GCC
+#define API_EXPORT __attribute__((visibility("default")))
+#define API_IMPORT
+#else
+//  do nothing and hope for the best?
+#define API_EXPORT
+#define API_IMPORT
+#pragma warning Unknown dynamic link import/export semantics.
+#endif
+
 #ifndef EXTERN_C
 #ifdef __cplusplus
 #define EXTERN_C       extern "C"

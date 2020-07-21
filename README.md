@@ -8,7 +8,7 @@
 > both work on windows/unix(linux).
 
 ### how to build
-> go to **build** folder, and edit bat or sh first(to make sure cmake and NDK position), then double click bat or sh to build it.
+> go to **build** folder, and edit bat or sh first(to make sure cmake and NDK location), then double click bat or sh to build it.
 
 ### how to use
 > just copy header and lib to your project, and link it.

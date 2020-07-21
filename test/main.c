@@ -43,6 +43,7 @@ extern int strings_test();
 extern int mplite_test();
 extern int file_util_test();
 extern int thpool_test();
+extern int stringbuilder_test();
 
 int main(int argc, char* argv[])
 {
@@ -68,7 +69,8 @@ int main(int argc, char* argv[])
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
-	RUN_TEST(thpool_test);
+	//RUN_TEST(thpool_test);
+	RUN_TEST(stringbuilder_test);
 
 #if TEST_FILE_LOGGER
 	file_logger_test_end();

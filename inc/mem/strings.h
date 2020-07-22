@@ -3,13 +3,15 @@
 #define __LCU_STRINGS_HEADER
 
 #include <stdint.h>
-#include <sys/types.h>
 #include <string.h>
 
 #ifdef _WIN32
 #define strcasecmp stricmp
+#define strncasecmp strnicmp
 //to make MSC happy
 #define stricmp _stricmp
+#define strnicmp _strnicmp
+
 /**
  * to make MSC happy
  * origin strcpy_s(dest, destSize, source)
@@ -23,9 +25,11 @@
 //#define snprintf(buf, buf_size, format, ...) \
 //        _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
-//in Unix platform. use strtok_r instead
+//in Unix platform. use strtok_r
 #define STRTOK strtok_r
+//stricmp is windows function.
 #define stricmp strcasecmp
+#define strnicmp strncasecmp
 #endif // _WIN32
 
 #ifdef __cplusplus
@@ -38,8 +42,8 @@ extern "C" {
 	size_t strlcat(char* dst, const char* src, size_t size);
 #endif
 	/**
-	 * replace the "pattern" value to "replacement" from "original".
-	 * warning: return value is malloced, need free after use!
+	 * replace the "pattern" to "replacement" from "original".
+	 * warning: return string is malloced, need free after use!
 	 * @param original: the str to replace
 	 * @param pattern: the replace pattern
 	 * @param replacement: replace pattern to this
@@ -49,10 +53,11 @@ extern "C" {
 
 	/**
 	 * split string by delimiter
-	 * @param recv_splited_str the char * array.
-	 * @param p_splited_nums how many char * do you provide in rec_splited_str
-	 * @param src_str the origin str that you want to split
-	 * @param delimiter the string of delimiter
+	 * @param recv_splited_str: the pointer you want to receive spited string.
+	 * @param p_splited_nums: how many char * do you provide in rec_splited_str, 
+	 *                        this value will rewrite to real split numbers after return.
+	 * @param src_str: the origin str that you want to split
+	 * @param delimiter: the string of delimiter
 	 */
 	void strsplit(char* recv_splited_str[], int* p_splited_nums, 
 		const char src_str[], const char* delimiter);

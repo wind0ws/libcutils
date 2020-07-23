@@ -7,11 +7,13 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <time.h>
 #include <stdio.h>
 #include <assert.h>
 
 #ifdef _WIN32
 #include <sal.h>
+#include <crtdbg.h>
 #define UNUSED_ATTR 
 #else
 #define UNUSED_ATTR __attribute__((unused))
@@ -134,23 +136,19 @@ typedef intptr_t ssize_t;
 #define DUMMY_COUNTER(c) CONCAT(__osi_dummy_, c)
 #define DUMMY_PTR DUMMY_COUNTER(__COUNTER__)
 
-// base/macros.h defines a COMPILE_ASSERT macro to the C++11 keyword
-// "static_assert" (it undef's COMPILE_ASSERT before redefining it).
-// C++ code that includes base and osi/include/osi.h can thus easily default to
-// the definition from libbase but we should check here to avoid compile errors.
-#ifndef COMPILE_ASSERT
-#define COMPILE_ASSERT(COND) typedef int failed_compile_assert[(COND) ? 1 : -1] __attribute__ ((unused))
-#endif  // !COMPILE_ASSERT
 
-#ifndef ASSERT_RET_VOID
-#define ASSERT_RET_VOID(condition) if((condition) == false) { assert(false); return; }
-#endif // !ASSERT_VOID
-#ifndef ASSERT_RET_VALUE
-#define ASSERT_RET_VALUE(condition, ret) if((condition) == false) { assert(false); return ret; }
-#endif // !ASSERT_RETURN
-#ifndef ASSERT_ABORT
-#define ASSERT_ABORT(condition) if ((condition) == false) { abort(); }
-#endif //!ASSERT_ABORT
+#ifndef STATIC_ASSERT
+#define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char static_assertion_##msg[2*(!!(expr))-1]
+#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, _)
+#endif  // !STATIC_ASSERT
+
+#ifndef ASSERT
+#ifdef _WIN32
+#define ASSERT(expr) _ASSERT_AND_INVOKE_WATSON(expr)
+#else
+#define ASSERT(expr) assert(expr)
+#endif
+#endif // !ASSERT
 
 // Macros for safe integer to pointer conversion. In the C language, data is
 // commonly cast to opaque pointer containers and back for generic parameter
@@ -189,6 +187,17 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #include <sys/stat.h>
 #endif // _WIN32
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
+
+	static inline int rand_range(int a, int b)
+	{
+		//b should bigger than a, or we just return 0.
+		if (a >= b)
+		{
+			return 0;
+		}
+		srand((unsigned)time(NULL));
+		return rand() % (b - a) + a;
+	}
 
 EXTERN_C_END
 

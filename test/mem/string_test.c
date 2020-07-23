@@ -48,7 +48,7 @@ static int stringsplit_test()
 	char chars[64];
 	strlcpy(chars, str, 64);
 #define RECEIVE_SPLIT_PTRS (6)
-	int receive_split_ptr_nums = RECEIVE_SPLIT_PTRS;
+	size_t receive_split_ptr_nums = RECEIVE_SPLIT_PTRS;
 	char *receive_splited_str_ptrs[RECEIVE_SPLIT_PTRS];
 	strsplit(receive_splited_str_ptrs, &receive_split_ptr_nums, chars, ",");
 	for (size_t i = 0; i < receive_split_ptr_nums; i++)

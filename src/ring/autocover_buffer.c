@@ -27,14 +27,14 @@ struct __auto_cover_buf
 auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_buf_lock_t *buf_lock_p)
 {
 	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)malloc(sizeof(struct __auto_cover_buf));
-	ASSERT_RET_VALUE(buf_handle, NULL);
+	ASSERT(buf_handle);
 	memset(buf_handle, 0, sizeof(struct __auto_cover_buf));
 	if (buf_lock_p)
 	{
 		memcpy(&buf_handle->buf_lock, buf_lock_p, sizeof(auto_cover_buf_lock_t));
 	}
 	buf_handle->ring = RingBuffer_create(capacity_size);
-	ASSERT_ABORT(buf_handle->ring);
+	ASSERT(buf_handle->ring);
 	buf_handle->ring_buffer_size = RingBuffer_real_capacity(buf_handle->ring);
 	return buf_handle;
 }
@@ -45,7 +45,7 @@ auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_b
  */
 static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, uint32_t read_pos, char* target, uint32_t request_read_len)
 {
-	ASSERT_RET_VALUE(buf_handle, AUTO_COVER_BUF_ERR_INVALID_HANDLE);
+	ASSERT(buf_handle);
 	AUTOCOVER_LOCK(buf_handle);
 
 	//default status is the data you want to read is been covered.
@@ -86,7 +86,7 @@ static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, 
 			}
 		} while (0);
 	}
-	ASSERT_ABORT(real_can_read_len <= (int)ring_available_data);
+	ASSERT(real_can_read_len <= (int)ring_available_data);
 
 	if (target && real_can_read_len >= (int)request_read_len)
 	{
@@ -97,7 +97,7 @@ static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, 
 			RingBuffer_discard(buf_handle->ring, should_discard_len);
 		}
 		uint32_t real_read_out_len = RingBuffer_read(buf_handle->ring, target, request_read_len);
-		ASSERT_ABORT(real_read_out_len == request_read_len);
+		ASSERT(real_read_out_len == request_read_len);
 	}
 
 	AUTOCOVER_UNLOCK(buf_handle);
@@ -111,8 +111,8 @@ int auto_cover_buf_available_read(const auto_cover_buf_handle buf_handle, uint32
 
 int auto_cover_buf_read(const auto_cover_buf_handle buf_handle, uint32_t read_pos, char* target, uint32_t req_read_len)
 {
-	ASSERT_RET_VALUE(target, AUTO_COVER_BUF_ERR_INVALID_HANDLE);
-	ASSERT_RET_VALUE(req_read_len, AUTO_COVER_BUF_ERR_INVALID_PARAM);
+	ASSERT(target);
+	ASSERT(req_read_len);
 	int available_read_data = auto_cover_buf_internal_read(buf_handle, read_pos, target, req_read_len);
 	if (available_read_data < 0)
 	{
@@ -135,8 +135,8 @@ int auto_cover_buf_read(const auto_cover_buf_handle buf_handle, uint32_t read_po
 
 int auto_cover_buf_write(const auto_cover_buf_handle buf_handle, char* source, uint32_t write_len)
 {
-	ASSERT_RET_VALUE(buf_handle, AUTO_COVER_BUF_ERR_INVALID_HANDLE);
-	ASSERT_RET_VALUE(source, AUTO_COVER_BUF_ERR_INVALID_HANDLE);
+	ASSERT(buf_handle);
+	ASSERT(source);
 	AUTOCOVER_LOCK(buf_handle);
 
 	uint32_t ring_available_write = RingBuffer_available_write(buf_handle->ring);
@@ -145,7 +145,7 @@ int auto_cover_buf_write(const auto_cover_buf_handle buf_handle, char* source, u
 		RingBuffer_discard(buf_handle->ring, write_len - ring_available_write);
 	}
 	uint32_t real_write_len = RingBuffer_write(buf_handle->ring, source, write_len);
-	ASSERT_ABORT(real_write_len == write_len);
+	ASSERT(real_write_len == write_len);
 
 	AUTOCOVER_UNLOCK(buf_handle);
 	return (int)real_write_len;

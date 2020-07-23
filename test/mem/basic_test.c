@@ -3,10 +3,9 @@
 
 int basic_test()
 {
-	FILE* fTest = NULL;
-	fTest = fopen("basic_test.txt","wb");
-	ASSERT_RET_VALUE(fTest, -1);
-	const char *str = "abcdefghijklmn";
+	FILE* fTest = fopen("basic_test.txt","wb");
+	ASSERT(fTest);
+	const char *str = "1234567890abcdefghijklmn";
 	fwrite(str, 1, strlen(str), fTest);
 	fclose(fTest);
 	return 0;

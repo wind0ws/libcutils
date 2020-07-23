@@ -52,9 +52,9 @@ hash_map_t* hash_map_new_internal(
 	data_free_fn data_fn,
 	key_equality_fn equality_fn,
 	const allocator_t* zeroed_allocator) {
-	ASSERT_RET_VALUE(hash_fn != NULL, NULL);
-	ASSERT_RET_VALUE(num_bucket > 0, NULL);
-	ASSERT_RET_VALUE(zeroed_allocator != NULL, NULL);
+	ASSERT(hash_fn != NULL);
+	ASSERT(num_bucket > 0);
+	ASSERT(zeroed_allocator != NULL);
 	hash_map_t* hash_map = zeroed_allocator->alloc(sizeof(hash_map_t));
 	if (hash_map == NULL)
 		return NULL;
@@ -90,22 +90,22 @@ void hash_map_free(hash_map_t* hash_map) {
 }
 
 bool hash_map_is_empty(const hash_map_t* hash_map) {
-	ASSERT_RET_VALUE(hash_map != NULL, false);
+	ASSERT(hash_map != NULL);
 	return (hash_map->hash_size == 0);
 }
 
 size_t hash_map_size(const hash_map_t* hash_map) {
-	ASSERT_RET_VALUE(hash_map != NULL, 0);
+	ASSERT(hash_map != NULL);
 	return hash_map->hash_size;
 }
 
 size_t hash_map_num_buckets(const hash_map_t* hash_map) {
-	ASSERT_RET_VALUE(hash_map != NULL, 0);
+	ASSERT(hash_map != NULL);
 	return hash_map->num_bucket;
 }
 
 bool hash_map_has_key(const hash_map_t* hash_map, const void* key) {
-	ASSERT_RET_VALUE(hash_map != NULL, false);
+	ASSERT(hash_map != NULL);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -113,8 +113,8 @@ bool hash_map_has_key(const hash_map_t* hash_map, const void* key) {
 }
 
 bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) {
-	ASSERT_RET_VALUE(hash_map != NULL, false);
-	ASSERT_RET_VALUE(data != NULL, false);
+	ASSERT(hash_map != NULL);
+	ASSERT(data != NULL);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	if (hash_map->bucket[hash_key].list == NULL) {
 		hash_map->bucket[hash_key].list = list_new_internal(bucket_free_, hash_map->allocator);
@@ -126,7 +126,7 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) {
 	if (hash_map_entry) {
 		// Calls hash_map callback to delete the hash_map_entry.
 		UNUSED_ATTR bool rc = list_remove(hash_bucket_list, hash_map_entry);
-		ASSERT_RET_VALUE(rc == true, false);
+		ASSERT(rc == true);
 	}
 	else {
 		hash_map->hash_size++;
@@ -141,7 +141,7 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) {
 }
 
 bool hash_map_erase(hash_map_t* hash_map, const void* key) {
-	ASSERT_RET_VALUE(hash_map != NULL, false);
+	ASSERT(hash_map != NULL);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -153,7 +153,7 @@ bool hash_map_erase(hash_map_t* hash_map, const void* key) {
 }
 
 void* hash_map_get(const hash_map_t* hash_map, const void* key) {
-	ASSERT_RET_VALUE(hash_map != NULL, NULL);
+	ASSERT(hash_map != NULL);
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -163,7 +163,7 @@ void* hash_map_get(const hash_map_t* hash_map, const void* key) {
 }
 
 void hash_map_clear(hash_map_t* hash_map) {
-	ASSERT_RET_VOID(hash_map != NULL);
+	ASSERT(hash_map != NULL);
 	for (hash_index_t i = 0; i < hash_map->num_bucket; i++) {
 		if (hash_map->bucket[i].list == NULL)
 			continue;
@@ -173,8 +173,8 @@ void hash_map_clear(hash_map_t* hash_map) {
 }
 
 void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* context) {
-	ASSERT_RET_VOID(hash_map != NULL);
-	ASSERT_RET_VOID(callback != NULL);
+	ASSERT(hash_map != NULL);
+	ASSERT(callback != NULL);
 	for (hash_index_t i = 0; i < hash_map->num_bucket; ++i) {
 		if (hash_map->bucket[i].list == NULL)
 			continue;
@@ -189,7 +189,7 @@ void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* con
 }
 
 static void bucket_free_(void* data) {
-	ASSERT_RET_VOID(data != NULL);
+	ASSERT(data != NULL);
 	hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)data;
 	const hash_map_t* hash_map = hash_map_entry->hash_map;
 	if (hash_map->key_fn)

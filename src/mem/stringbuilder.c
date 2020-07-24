@@ -34,7 +34,6 @@ stringbuilder_t* stringbuilder_create(size_t init_buf_size)
 	sb->buffer[0] = '\0';
 	sb->allocated = init_buf_size;
 	sb->length = 0;
-
 	return sb;
 }
 

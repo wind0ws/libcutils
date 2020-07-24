@@ -19,7 +19,7 @@
 
 typedef struct xlog_cb_pack
 {
-	xlog_user_callback cb;
+	xlog_user_callback_fn cb;
 	void* cb_user_data;
 }xlog_cb_pack_t;
 
@@ -58,60 +58,58 @@ static xlog_config_t xlog_cfg = {
 
 static inline char get_log_level_char(int level)
 {
-	char levelChar;
+	char log_level_char;
 	switch (level)
 	{
 	case LOG_LEVEL_VERBOSE:
-		levelChar = LOG_LEVLE_CHAR_V;
+		log_level_char = LOG_LEVLE_CHAR_V;
 		break;
 	case LOG_LEVEL_DEBUG:
-		levelChar = LOG_LEVLE_CHAR_D;
+		log_level_char = LOG_LEVLE_CHAR_D;
 		break;
 	case LOG_LEVEL_INFO:
-		levelChar = LOG_LEVLE_CHAR_I;
+		log_level_char = LOG_LEVLE_CHAR_I;
 		break;
 	case LOG_LEVEL_WARN:
-		levelChar = LOG_LEVLE_CHAR_W;
+		log_level_char = LOG_LEVLE_CHAR_W;
 		break;
 	case LOG_LEVEL_ERROR:
-		levelChar = LOG_LEVLE_CHAR_E;
+		log_level_char = LOG_LEVLE_CHAR_E;
 		break;
 	default:
 	case LOG_LEVEL_OFF:
-		levelChar = 'U';
+		log_level_char = 'U';
 		break;
 	}
-	return levelChar;
+	return log_level_char;
 }
 
 #if defined(__ANDROID__)
-
 static inline int convert_to_android_log_level(int level)
 {
-	int androidLevel;
+	int android_log_level;
 	switch (level)
 	{
 	case LOG_LEVEL_VERBOSE:
-		androidLevel = ANDROID_LOG_VERBOSE;
+		android_log_level = ANDROID_LOG_VERBOSE;
 		break;
 	case LOG_LEVEL_DEBUG:
-		androidLevel = ANDROID_LOG_DEBUG;
+		android_log_level = ANDROID_LOG_DEBUG;
 		break;
 	case LOG_LEVEL_INFO:
-		androidLevel = ANDROID_LOG_INFO;
+		android_log_level = ANDROID_LOG_INFO;
 		break;
 	case LOG_LEVEL_WARN:
-		androidLevel = ANDROID_LOG_WARN;
+		android_log_level = ANDROID_LOG_WARN;
 		break;
 	default:
 	case LOG_LEVEL_ERROR:
-		androidLevel = ANDROID_LOG_ERROR;
+		android_log_level = ANDROID_LOG_ERROR;
 		break;
 	}
-	return androidLevel;
+	return android_log_level;
 }
-
-#endif
+#endif // __ANDROID__
 
 void xlog_auto_level_up(LogLevel trigger_level)
 {
@@ -166,7 +164,7 @@ void xlog_set_default_tag(char* tag)
 	strlcpy(xlog_cfg.default_tag, tag, XLOG_DEFAULT_TAG_MAX_SIZE);
 }
 
-void xlog_set_user_callback(xlog_user_callback user_cb, void* user_data)
+void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 {
 	xlog_cfg.cb_pack.cb = user_cb;
 	xlog_cfg.cb_pack.cb_user_data = user_data;
@@ -203,7 +201,7 @@ LogLevel xlog_get_min_level()
 void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list args;
-	char buffer_log[2048];
+	char buffer_log[1024];
 	char str_time[TIME_STR_LEN];
 	int header_len;
 	int header_with_trace_fun_len;

@@ -94,7 +94,7 @@ int autocover_buffer_test()
 	.arg = &case_data
 	};
 	case_data.cover_buf_p = auto_cover_buf_create(16, &buf_lock);
-	ASSERT_ABORT(case_data.cover_buf_p);
+	ASSERT(case_data.cover_buf_p);
 
 	pthread_t pthread_consumer;
 	pthread_t pthread_producer;

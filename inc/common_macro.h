@@ -11,6 +11,7 @@
 #include <assert.h>
 
 #ifdef _WIN32
+#include <crtdbg.h>
 #include <sal.h>
 #define UNUSED_ATTR 
 #else
@@ -41,6 +42,19 @@ typedef float               FLOAT;
 #endif
 #ifndef __inout_opt
 #define __inout_opt
+#endif
+
+#if defined(_MSC_VER) //  Microsoft 
+#define API_EXPORT __declspec(dllexport)
+#define API_IMPORT __declspec(dllimport)
+#elif defined(__GNUC__) //  GCC
+#define API_EXPORT __attribute__((visibility("default")))
+#define API_IMPORT
+#else
+//  do nothing and hope for the best?
+#define API_EXPORT
+#define API_IMPORT
+#pragma warning Unknown dynamic link import/export semantics.
 #endif
 
 #ifndef EXTERN_C
@@ -86,7 +100,7 @@ typedef intptr_t ssize_t;
 #define SSIZE_T_FORMAT "%zd"
 #endif // _MSC_VER
 
-// Minimum and maximum macros
+// Minimum and maximum macros. Be ware of double compute effects!
 #ifndef __max
 #define __max(a,b) (((a) > (b)) ? (a) : (b))
 #endif // !__max
@@ -119,23 +133,18 @@ typedef intptr_t ssize_t;
 #define DUMMY_COUNTER(c) CONCAT(__osi_dummy_, c)
 #define DUMMY_PTR DUMMY_COUNTER(__COUNTER__)
 
-// base/macros.h defines a COMPILE_ASSERT macro to the C++11 keyword
-// "static_assert" (it undef's COMPILE_ASSERT before redefining it).
-// C++ code that includes base and osi/include/osi.h can thus easily default to
-// the definition from libbase but we should check here to avoid compile errors.
-#ifndef COMPILE_ASSERT
-#define COMPILE_ASSERT(COND) typedef int failed_compile_assert[(COND) ? 1 : -1] __attribute__ ((unused))
-#endif  // !COMPILE_ASSERT
+#ifndef STATIC_ASSERT
+#define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char __static_assert_t_##msg[(expr) != 0]
+#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, _)
+#endif  // !STATIC_ASSERT
 
-#ifndef ASSERT_RET_VOID
-#define ASSERT_RET_VOID(condition) if((condition) == false) { assert(false); return; }
-#endif // !ASSERT_VOID
-#ifndef ASSERT_RET_VALUE
-#define ASSERT_RET_VALUE(condition, ret) if((condition) == false) { assert(false); return ret; }
-#endif // !ASSERT_RETURN
-#ifndef ASSERT_ABORT
-#define ASSERT_ABORT(condition) if ((condition) == false) { abort(); }
-#endif //!ASSERT_ABORT
+#ifndef ASSERT
+#ifdef _WIN32
+#define ASSERT(expr) _ASSERT_AND_INVOKE_WATSON(expr)
+#else
+#define ASSERT(expr) assert(expr)
+#endif
+#endif // !ASSERT
 
 // Macros for safe integer to pointer conversion. In the C language, data is
 // commonly cast to opaque pointer containers and back for generic parameter
@@ -174,6 +183,7 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #include <sys/stat.h>
 #endif // _WIN32
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
+
 
 EXTERN_C_END
 

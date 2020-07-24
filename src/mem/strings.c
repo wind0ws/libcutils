@@ -74,7 +74,7 @@ size_t strlcat(char* dst, const char* src, size_t size)
 #endif
 
 //https://github.com/ssllab/temper1/blob/722991add4a6a239271e1f029ebe4daaad719496/strreplace.c
-//warning: need free the return char pointer after use!
+//warning: need free the return pointer after use!
 char* strreplace(char const* const original,
 	char const* const pattern, char const* const replacement)
 {

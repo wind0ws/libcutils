@@ -37,7 +37,7 @@ static bool grow(array_t* array);
 static const size_t INTERNAL_ELEMENTS = 16;
 
 array_t* array_new(size_t element_size) {
-    ASSERT_ABORT(element_size > 0);
+    ASSERT(element_size > 0);
     array_t* array = lcu_calloc(1, sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
     array->element_size = element_size;
     array->capacity = INTERNAL_ELEMENTS;
@@ -58,13 +58,13 @@ void* array_ptr(const array_t* array) {
 }
 
 void* array_at(const array_t* array, size_t index) {
-    ASSERT_ABORT(array != NULL);
-    ASSERT_ABORT(index < array->length);
+    ASSERT(array != NULL);
+    ASSERT(index < array->length);
     return array->data + (index * array->element_size);
 }
 
 size_t array_length(const array_t* array) {
-    ASSERT_ABORT(array != NULL);
+    ASSERT(array != NULL);
     return array->length;
 }
 
@@ -73,8 +73,8 @@ bool array_append_value(array_t* array, uint32_t value) {
 }
 
 bool array_append_ptr(array_t* array, void* data) {
-    ASSERT_ABORT(array != NULL);
-    ASSERT_ABORT(data != NULL);
+    ASSERT(array != NULL);
+    ASSERT(data != NULL);
     if (array->length == array->capacity && !grow(array)) {
         TLOGE(LOG_TAG, "%s unable to grow array past current capacity of %zu elements of size %zu.", __func__, array->capacity, array->element_size);
         return false;

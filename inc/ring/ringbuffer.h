@@ -25,7 +25,7 @@
 #define __inout_opt
 #endif
 
-#define __RING_LOG_TAG "RingBuf_TAG"
+#define __RING_LOG_TAG "Ring_LOG"
 #ifdef _WIN32
 //msvc-doesnt-expand-va-args-correctly https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
 #define EXPAND_VA_ARGS( x ) x

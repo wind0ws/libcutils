@@ -24,7 +24,7 @@ extern "C" {
 		LOG_LEVEL_UNKNOWN
 	} LogLevel;
 
-	typedef void (*xlog_user_callback)(void *log_msg, void *user_data);
+	typedef void (*xlog_user_callback_fn)(void *log_msg, void *user_data);
 
 	typedef enum {
 		LOG_TARGET_NONE = 0,
@@ -42,10 +42,23 @@ extern "C" {
 	 * this is useful when some Android devices have restrictions on the log level below LOG_LEVEL_INFO.
 	 */
 	void xlog_auto_level_up(LogLevel trigger_level);
+	/**
+	 * redirect log output from stdout to file.
+	 */
 	void xlog_stdout2file(char *file_path);
+	/**
+	 * log output set to stdout.
+	 */
 	void xlog_back2stdout();
 	void xlog_set_default_tag(char *tag);
-	void xlog_set_user_callback(xlog_user_callback user_cb, void* user_data);
+	/**
+	 * set user callback when log called.
+	 * note: log target should include LOG_TARGET_USER_CALLBACK
+	 */
+	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
+	/**
+	 * set log target which you want to output.
+	 */
 	void xlog_set_target(LogTarget target);
 	LogTarget xlog_get_target();
 	void xlog_set_min_level(LogLevel min_level);
@@ -58,7 +71,7 @@ extern "C" {
     void xlog_chars2hex(char* str, size_t str_capacity, const char* chars, size_t chars_len);
 
 	/**
-	 * Do not call this method directly.
+	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE macro LOGX or TLOGX instead.
 	 */
     void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...);

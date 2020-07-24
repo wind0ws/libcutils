@@ -29,7 +29,7 @@ char* lcu_strdup(const char* str)
 	size_t size = strlen(str) + 1;  // + 1 for the null terminator
 	size_t real_size = allocation_tracker_resize_for_canary(size);
 	void* ptr = malloc(real_size);
-	ASSERT_ABORT(ptr != NULL);
+	ASSERT(ptr != NULL);
 	char* new_string = allocation_tracker_notify_alloc(
 		alloc_allocator_id,
 		ptr,
@@ -47,7 +47,7 @@ char* lcu_strndup(const char* str, size_t len)
 		size = len;
 	size_t real_size = allocation_tracker_resize_for_canary(size + 1);
 	void* ptr = malloc(real_size);
-	ASSERT_ABORT(ptr);
+	ASSERT(ptr);
 	char* new_string = allocation_tracker_notify_alloc(
 		alloc_allocator_id,
 		ptr,
@@ -63,7 +63,7 @@ void* lcu_malloc(size_t size)
 {
 	size_t real_size = allocation_tracker_resize_for_canary(size);
 	void* ptr = malloc(real_size);
-	ASSERT_ABORT(ptr != NULL);
+	ASSERT(ptr != NULL);
 	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, size);
 }
 
@@ -72,7 +72,7 @@ void* lcu_calloc(size_t item_count, size_t item_size)
 	size_t request_size = item_count * item_size;
 	size_t real_size = allocation_tracker_resize_for_canary(request_size);
 	void* ptr = calloc(1, real_size);
-	ASSERT_ABORT(ptr != NULL);
+	ASSERT(ptr != NULL);
 	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, request_size);
 }
 
@@ -105,7 +105,7 @@ void* lcu_realloc(void* ptr, size_t size)
 	}
 
 	void* new_ptr = lcu_malloc(size);
-	ASSERT_ABORT(new_ptr != NULL);
+	ASSERT(new_ptr != NULL);
 	memcpy(new_ptr, ptr, cur_ptr_size);
 	lcu_free(ptr);
 	return new_ptr;
@@ -122,7 +122,10 @@ void lcu_free(void* ptr)
 
 void lcu_free_and_reset(void** p_ptr)
 {
-	ASSERT_ABORT(p_ptr != NULL);
+	if (NULL == p_ptr || NULL  == *p_ptr)
+	{
+		return;
+	}
 	lcu_free(*p_ptr);
 	*p_ptr = NULL;
 }

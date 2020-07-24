@@ -120,7 +120,7 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, return_ptr);
 	if (allocation) {
-		ASSERT_ABORT(allocation->freed); // Must have been freed before
+		ASSERT(allocation->freed); // Must have been freed before
 	}
 	else {
 		allocation = (allocation_t*)calloc(1, sizeof(allocation_t));
@@ -142,15 +142,15 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr) {
 		return ptr;
 	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, ptr);
-	ASSERT_ABORT(allocation);                               // Must have been tracked before
-	ASSERT_ABORT(!allocation->freed);                       // Must not be a double free
-	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
+	ASSERT(allocation);                               // Must have been tracked before
+	ASSERT(!allocation->freed);                       // Must not be a double free
+	ASSERT(allocation->allocator_id == allocator_id); // Must be from the same allocator
 	allocation->freed = true;
 	UNUSED_ATTR const char* beginning_canary = ((char*)ptr) - canary_size;
 	UNUSED_ATTR const char* end_canary = ((char*)ptr) + allocation->size;
 	for (size_t i = 0; i < canary_size; i++) {
-		ASSERT_ABORT(beginning_canary[i] == canary[i]);
-		ASSERT_ABORT(end_canary[i] == canary[i]);
+		ASSERT(beginning_canary[i] == canary[i]);
+		ASSERT(end_canary[i] == canary[i]);
 	}
 	// Free the hash map entry to avoid unlimited memory usage growth.
 	// Double-free of memory is detected with "assert(allocation)" above
@@ -166,8 +166,8 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr) {
 	size_t ptr_size = 0;
 	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, ptr);
-	ASSERT_ABORT(allocation);                               // Must have been tracked before
-	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
+	ASSERT(allocation);                               // Must have been tracked before
+	ASSERT(allocation->allocator_id == allocator_id); // Must be from the same allocator
 	ptr_size = allocation->size;
 	pthread_mutex_unlock(&lock);
 	return ptr_size;

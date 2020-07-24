@@ -1,12 +1,11 @@
 #include <malloc.h>
-#include "apicheck.h"
 #include "common_macro.h"
 #include "thread/thread_wrapper.h"
 #include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
 #include "log/xlog.h"
 #include "log/file_logger.h"
-#include "config/lcu_version.h"
+#include "libcutils.h"
 
 #ifdef _WIN32
 #define CRTDBG_MAP_ALLOC    
@@ -21,10 +20,11 @@ static inline void EnableMemLeakCheck()
 
 #define RUN_TEST(func_name) do \
 {\
-LOGD("\r\n%s\r\nNow run --> %s()",LOG_LINE_STAR, #func_name);\
+LOGD("\r\n%s\r\nNow run --> %s()\r\n",LOG_LINE_STAR, #func_name);\
 int ret = func_name(); \
-LOGD("\r\n <-- %s() run result=%d\r\n%s\r\n", #func_name, ret, LOG_LINE_STAR);\
-api_check_return_val(ret == 0, -1);\
+printf("\r\n"); \
+LOGD("<-- %s() run result=%d\r\n%s\r\n", #func_name, ret, LOG_LINE_STAR);\
+ASSERT(ret == 0);\
 } while (0)
 
 #define TEST_ALLOCATOR (1)
@@ -43,6 +43,7 @@ extern int strings_test();
 extern int mplite_test();
 extern int file_util_test();
 extern int thpool_test();
+extern int string_test();
 
 int main(int argc, char* argv[])
 {
@@ -59,7 +60,7 @@ int main(int argc, char* argv[])
 	file_logger_test_begin();
 #endif
 
-	LOGI("hello world: LCU_VER:%s \r\n", LCU_VERSION);
+	LOGI("hello world: LCU_VER:%s \r\n", libcutils_get_version());
 
 	//RUN_TEST(allocator_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
@@ -68,7 +69,8 @@ int main(int argc, char* argv[])
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
-	RUN_TEST(thpool_test);
+	//RUN_TEST(thpool_test);
+	RUN_TEST(string_test);
 
 #if TEST_FILE_LOGGER
 	file_logger_test_end();

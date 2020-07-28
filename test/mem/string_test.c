@@ -58,6 +58,15 @@ static int stringsplit_test()
 	return 0;
 }
 
+static int count_utf8str_words_test()
+{
+	const char nihao[] = { 0xE4,0xBD,0xA0,0xE5,0xA5,0xBD,0xE5,0x91,0x80,0xEF,0xBC,0x81,0x00 };//你好呀！
+	size_t bytes_len = strlen(nihao);
+	size_t words_count = strnutf8len(nihao, bytes_len);
+	LOGD("%s word count:%zu, bytes:%zu", nihao, words_count, bytes_len);
+	return 0;
+}
+
 int string_test()
 {
 	LOGD("--> test stringbuilder");
@@ -75,6 +84,10 @@ int string_test()
 	LOGD("--> test stringsplit_test");
 	stringsplit_test();
 	LOGD("<-- stringsplit_test finished\n");
+
+	LOGD("--> test count_utf8str_words_test");
+	count_utf8str_words_test();
+	LOGD("<-- count_utf8str_words_test finished\n");
 
 	return 0;
 }

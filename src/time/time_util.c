@@ -4,7 +4,7 @@
 #define TIME_STAMP_FORMT ("%m-%d %H:%M:%S")
 #define TIME_STAMP_FORMT_FOR_FILE_NAME ("%m-%d %H_%M_%S")
 
-static inline void get_current_time_str(char str[TIME_STR_LEN], const char* time_format)
+static inline int get_current_time_str(char str[TIME_STR_LEN], const char* time_format)
 {
 	struct tm* lt;
 	int milliseconds;
@@ -25,14 +25,15 @@ static inline void get_current_time_str(char str[TIME_STR_LEN], const char* time
 #endif // _WIN32
 	snprintf(str + strftime(str, TIME_STR_LEN, time_format, lt),
 		TIME_STR_LEN, ".%03d", milliseconds);
+	return 0;
 }
 
-void time_util_get_current_time_str(char str[TIME_STR_LEN])
+int time_util_get_current_time_str(char str[TIME_STR_LEN])
 {
-	get_current_time_str(str, TIME_STAMP_FORMT);
+	return get_current_time_str(str, TIME_STAMP_FORMT);
 }
 
-void time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN])
+int time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN])
 {
-	get_current_time_str(str, TIME_STAMP_FORMT_FOR_FILE_NAME);
+	return get_current_time_str(str, TIME_STAMP_FORMT_FOR_FILE_NAME);
 }

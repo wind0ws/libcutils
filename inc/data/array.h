@@ -21,6 +21,11 @@ extern "C" {
 	// NULL on failure.
 	array_t* array_new(size_t element_size);
 
+	// Returns a new array object that stores elements of size |element_size|. The returned
+    // object must be freed with |array_free|. |element_size| must be greater than 0. Returns
+    // NULL on failure. init_capacity will used for init data capacity.
+	array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity);
+
 	// Frees an array that was allocated with |array_new|. |array| may be NULL.
 	void array_free(array_t* array);
 

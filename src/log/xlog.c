@@ -202,8 +202,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 {
 	va_list args;
 	char buffer_log[1024];
-	char str_time[TIME_STR_LEN];
-	int header_len;
+	int header_len = 0;
 	int header_with_trace_fun_len;
 	bool is_log2console;
 	bool is_log2usercb;
@@ -225,13 +224,11 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	if (is_log2console || is_log2usercb)
 	{
 		char level_char = get_log_level_char(level);
-		time_util_get_current_time_str(str_time);
-		snprintf(buffer_log, sizeof(buffer_log), "[%s][%c][%s] ", str_time, level_char, tag);
+		buffer_log[0] = '[';
+		time_util_get_current_time_str(buffer_log + 1);
+		header_len = (int)strnlen(buffer_log, TIME_STR_LEN);
+		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "][%c][%s] ", level_char, tag);
 		header_len = (int)strlen(buffer_log);
-	}
-	else
-	{
-		header_len = 0;
 	}
 
 	if (func_name && file_line > 0)
@@ -270,17 +267,19 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	//char out_hex_str[sizeof(char) * chars_len * 3 + 1];
 	//char out_hex_str[1024] = { '\0' };
 	out_hex_str[0] = '\0';
+	int header_len = 0;
 	if (chars_len * 3 > out_hex_str_capacity)
 	{
-		strcat(out_hex_str, "hex is truncated:");
+		snprintf(out_hex_str, out_hex_str_capacity, "hex is truncated(%zu):", chars_len);
 		chars_len = out_hex_str_capacity / 3 - 6;
+		header_len = strnlen(out_hex_str, out_hex_str_capacity);
 	}
-	char hex[4] = { '\0' };
-	for (size_t i = 0; i < chars_len; ++i) {
+	out_hex_str_capacity -= header_len;
+	for (size_t i = 0, str_offset = 0; i < chars_len; ++i, str_offset += 3)
+	{
 		//        printf(" %02hhx", (unsigned char)(*(chars + i)));
-		snprintf(hex, 4, " %02hhx", (unsigned char)(*(chars + i)));
+		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[i]);
 		//        printf(" %s",hex);
-		strcat(out_hex_str, hex);
 	}
 	//    printf("%s\n", out_hex_str);
 }
@@ -293,7 +292,8 @@ void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len
 		return;
 	}
 	xlog_chars2hex(hexs, 1024, chars, chars_len);
-	switch (level) {
+	switch (level)
+	{
 	case LOG_LEVEL_VERBOSE:
 		TLOGV(tag, "%s", hexs);
 		break;

@@ -21,9 +21,9 @@ extern "C" {
 #endif // __cplusplus
 
 #define TIME_STR_LEN (24)
-	void time_util_get_current_time_str(char str[TIME_STR_LEN]);
+	int time_util_get_current_time_str(char str[TIME_STR_LEN]);
 
-	void time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN]);
+	int time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN]);
 
 #ifdef __cplusplus
 }

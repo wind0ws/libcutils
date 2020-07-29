@@ -17,15 +17,19 @@
  * reference: https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/array.c
  *
  ******************************************************************************/
-#define LOG_TAG "lcu_array"
+
+
 #include "data/array.h"
-#include "common_macro.h"
 #include <stdlib.h>
 #include <string.h>
+#include "common_macro.h"
 #include "mem/allocator.h"
 #include "log/xlog.h"
 
-struct array_t {
+#define LOG_TAG "lcu_array"
+
+struct array_t 
+{
     size_t element_size;
     size_t length;
     size_t capacity;
@@ -34,18 +38,29 @@ struct array_t {
 };
 
 static bool grow(array_t* array);
-static const size_t INTERNAL_ELEMENTS = 16;
+static const size_t DEFAULT_INIT_ELEMENTS_CAPACITY = 16;
 
-array_t* array_new(size_t element_size) {
-    ASSERT(element_size > 0);
-    array_t* array = lcu_calloc(1, sizeof(array_t) + element_size * INTERNAL_ELEMENTS);
-    array->element_size = element_size;
-    array->capacity = INTERNAL_ELEMENTS;
-    array->data = array->internal_storage;
-    return array;
+array_t* array_new(size_t element_size) 
+{
+    return array_new_with_init_capacity(element_size, DEFAULT_INIT_ELEMENTS_CAPACITY);
 }
 
-void array_free(array_t* array) {
+array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
+{
+	ASSERT(element_size > 0);
+	if (init_capacity < 4)
+	{
+        init_capacity = 4;
+	}
+	array_t* array = lcu_calloc(1, sizeof(array_t) + element_size * init_capacity);
+	array->element_size = element_size;
+	array->capacity = init_capacity;
+	array->data = array->internal_storage;
+	return array;
+}
+
+void array_free(array_t* array) 
+{
     if (!array)
         return;
     if (array->data != array->internal_storage)
@@ -53,26 +68,31 @@ void array_free(array_t* array) {
     lcu_free(array);
 }
 
-void* array_ptr(const array_t* array) {
+void* array_ptr(const array_t* array) 
+{
     return array_at(array, 0);
 }
 
-void* array_at(const array_t* array, size_t index) {
+void* array_at(const array_t* array, size_t index) 
+{
     ASSERT(array != NULL);
     ASSERT(index < array->length);
     return array->data + (index * array->element_size);
 }
 
-size_t array_length(const array_t* array) {
+size_t array_length(const array_t* array) 
+{
     ASSERT(array != NULL);
     return array->length;
 }
 
-bool array_append_value(array_t* array, uint32_t value) {
+bool array_append_value(array_t* array, uint32_t value)
+{
     return array_append_ptr(array, &value);
 }
 
-bool array_append_ptr(array_t* array, void* data) {
+bool array_append_ptr(array_t* array, void* data) 
+{
     ASSERT(array != NULL);
     ASSERT(data != NULL);
     if (array->length == array->capacity && !grow(array)) {
@@ -84,7 +104,8 @@ bool array_append_ptr(array_t* array, void* data) {
     return true;
 }
 
-static bool grow(array_t* array) {
+static bool grow(array_t* array) 
+{
     const size_t new_capacity = array->capacity + (array->capacity / 2);
     const bool is_moving = (array->data == array->internal_storage);
     void* new_data = realloc(is_moving ? NULL : array->data, new_capacity * array->element_size);

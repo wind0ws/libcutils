@@ -100,13 +100,17 @@ typedef intptr_t ssize_t;
 #define SSIZE_T_FORMAT "%zd"
 #endif // _MSC_VER
 
-// Minimum and maximum macros. Be ware of double compute effects!
+// widely useful macros. pay attention to the influence of double computation!
 #ifndef __max
 #define __max(a,b) (((a) > (b)) ? (a) : (b))
 #endif // !__max
 #ifndef __min
 #define __min(a,b) (((a) < (b)) ? (a) : (b))
 #endif // !__min
+#ifndef __abs
+#define __abs(x) ((x) >= 0 ? (x) : -(x))  
+#endif // !__abs
+
 
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }

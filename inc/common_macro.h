@@ -11,7 +11,7 @@
 #include <assert.h>
 
 #ifdef _WIN32
-#include <crtdbg.h>
+#include <crtdbg.h> /* for _ASSERT_AND_INVOKE_WATSON */
 #include <sal.h>
 #define UNUSED_ATTR 
 #else
@@ -24,6 +24,10 @@ typedef unsigned char       BYTE;
 typedef unsigned short      WORD;
 typedef float               FLOAT;
 #endif // _WIN32
+
+#ifndef UNUSED
+#define UNUSED(x)				(void)(x)
+#endif // UNUSED
 
 #ifndef __in
 #define __in
@@ -47,14 +51,17 @@ typedef float               FLOAT;
 #if defined(_MSC_VER) //  Microsoft 
 #define API_EXPORT __declspec(dllexport)
 #define API_IMPORT __declspec(dllimport)
+#define API_HIDDEN 
 #elif defined(__GNUC__) //  GCC
 #define API_EXPORT __attribute__((visibility("default")))
 #define API_IMPORT
+#define API_HIDDEN __attribute__((visibility("hidden")))
 #else
 //  do nothing and hope for the best?
 #define API_EXPORT
 #define API_IMPORT
-#pragma warning Unknown dynamic link import/export semantics.
+#define API_HIDDEN
+#pragma warning Unknown dynamic link import/export/hidden semantics.
 #endif
 
 #ifndef EXTERN_C
@@ -74,7 +81,6 @@ typedef float               FLOAT;
 #endif // __cplusplus
 #endif // !EXTERN_C_START
 
-EXTERN_C_START
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 #ifdef _WIN32
@@ -100,13 +106,21 @@ typedef intptr_t ssize_t;
 #define SSIZE_T_FORMAT "%zd"
 #endif // _MSC_VER
 
-// Minimum and maximum macros. Be ware of double compute effects!
+// widely useful macros. pay attention to the influence of double computation!
 #ifndef __max
 #define __max(a,b) (((a) > (b)) ? (a) : (b))
 #endif // !__max
 #ifndef __min
 #define __min(a,b) (((a) < (b)) ? (a) : (b))
 #endif // !__min
+#ifndef __abs
+#define __abs(x) ((x) >= 0 ? (x) : -(x))  
+#endif // !__abs
+
+#ifndef UNUSED_ATTR
+
+#endif // !UNUSED_ATTR
+
 
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
@@ -134,16 +148,34 @@ typedef intptr_t ssize_t;
 #define DUMMY_PTR DUMMY_COUNTER(__COUNTER__)
 
 #ifndef STATIC_ASSERT
+//#define STATIC_ASSERT_WITH_MSG(expr) typedef char __static_assert_t[(expr) != 0]
 #define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char __static_assert_t_##msg[(expr) != 0]
-#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, _)
+#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, __LINE__)
 #endif  // !STATIC_ASSERT
 
 #ifndef ASSERT
-#ifdef _WIN32
-#define ASSERT(expr) _ASSERT_AND_INVOKE_WATSON(expr)
+
+#ifdef NDEBUG
+#define ASSERT(expr)  while(0) { (void)sizeof(expr); }
+#else
+#if _WIN32
+//why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!
+#define __MYASSERT_AND_INVOKE_WATSON(expr)                                           \
+    {                                                                                \
+        bool is_condition_true = !!(expr);                                           \
+        _ASSERT_EXPR(is_condition_true, _CRT_WIDE(#expr));                           \
+        if (!is_condition_true)                                                      \
+        {                                                                            \
+            _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0); \
+        }                                                                            \
+    }
+#define ASSERT(expr) __MYASSERT_AND_INVOKE_WATSON(expr)
 #else
 #define ASSERT(expr) assert(expr)
-#endif
+#endif // _WIN32
+#endif // NDEBUG
+
+
 #endif // !ASSERT
 
 // Macros for safe integer to pointer conversion. In the C language, data is
@@ -184,7 +216,5 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #endif // _WIN32
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
-
-EXTERN_C_END
 
 #endif // __LCU_COMMON_MACRO_H

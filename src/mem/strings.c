@@ -87,7 +87,7 @@ char* strreplace(char const* const original,
 	const char* patloc;
 
 	// find how many times the pattern occurs in the original string
-	for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
+	for (oriptr = original; (patloc = strstr(oriptr, pattern)) != NULL; oriptr = patloc + patlen)
 	{
 		patcnt++;
 	}
@@ -120,19 +120,35 @@ char* strreplace(char const* const original,
 	}
 }
 
-void strsplit(char* recv_splited_str[], int* p_splited_nums, const char src_str[], const char* delimiter)
+void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char src_str[], const char* delimiter)
 {
 	char* pToken = NULL;
 	char* pContext = NULL;
-	int recv_buffer_size = *p_splited_nums;
+	size_t recv_ptrs_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
 	pToken = STRTOK((char *)src_str, delimiter, &pContext);
-	while (pToken && *p_splited_nums < recv_buffer_size)
+	while (pToken && *p_splited_nums < recv_ptrs_size)
 	{
 		recv_splited_str[*p_splited_nums] = pToken;
 		(*p_splited_nums)++;
 
 		pToken = STRTOK(NULL, delimiter, &pContext);
 	}
+}
+
+size_t strutf8len(const char* utf8str)
+{
+	return strnutf8len(utf8str, strlen(utf8str));
+}
+
+size_t strnutf8len(const char* utf8str, size_t max_count)
+{
+	size_t code_points = 0;
+	size_t chars_count = 0;
+	while (*utf8str && chars_count < max_count) {
+		code_points += (*utf8str++ & 0xC0) != 0x80;
+		chars_count++;
+	}
+	return code_points;
 }

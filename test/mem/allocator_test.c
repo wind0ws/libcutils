@@ -6,6 +6,11 @@
 
 #define LOG_TAG_ALLOC_TEST "alloc_test"
 
+static void report_leak_memory(void* ptr, size_t size)
+{
+	TLOGE(LOG_TAG_ALLOC_TEST, "deteck leak mem. addr: 0x%p, size: %zu bytes", ptr, size);
+}
+
 int allocator_test_begin()
 {
 	allocation_tracker_init();
@@ -14,13 +19,9 @@ int allocator_test_begin()
 
 int allocator_test_end()
 {
+	allocation_tracker_expect_no_allocations(report_leak_memory);
 	allocation_tracker_uninit();
 	return 0;
-}
-
-static void report_leak_memory(void* ptr, size_t size)
-{
-	TLOGE(LOG_TAG_ALLOC_TEST, "deteck leak mem. addr: 0x%p, size: %zu bytes", ptr, size);
 }
 
 int allocator_test()

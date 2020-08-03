@@ -8,7 +8,7 @@ extern "C" {
 
 #include "ring_msg_queue.h"
 
-#define MSG_OBJ_MAX_CAPACITY (2048)
+#define MSG_OBJ_MAX_CAPACITY (1024)
 typedef char MSG_OBJ_DATA_TYPE;
 
 /**

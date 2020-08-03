@@ -1,80 +1,114 @@
 #pragma once
-#ifndef _XLOG_H
-#define _XLOG_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#ifndef __XLOG_H
+#define __XLOG_H
 
 #include <stdio.h>
-#ifdef _WIN32 //for _WIN32
+
+#ifdef _WIN32
+//sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
 #define __func__ __FUNCTION__
-#endif // _WIN32
-#if defined(__ANDROID__)
+#define __PRETTY_FUNCTION__ __FUNCSIG__ 
+#elif(defined(__ANDROID__))
 #include <android/log.h>
-#endif // defined(__ANDROID__)
-
-	typedef enum {
-		LOG_LEVEL_OFF = 0,
-		LOG_LEVEL_VERBOSE = 1,
-		LOG_LEVEL_DEBUG = 2,
-		LOG_LEVEL_INFO = 3,
-		LOG_LEVEL_WARN = 4,
-		LOG_LEVEL_ERROR = 5,
-		LOG_LEVEL_UNKNOWN
-	} LogLevel;
-
-	typedef void (*xlog_user_callback_fn)(void *log_msg, void *user_data);
-
-	typedef enum {
-		LOG_TARGET_NONE = 0,
-		LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
-		LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
-		LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
-	} LogTarget;
+#endif
 
 #define LOG_LINE_STAR "****************************************************************"
 #define CONSOLE_LOG_CONFIG_METHOD printf
 #define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
+
+typedef enum
+{
+	LOG_LEVEL_OFF = 0,
+	LOG_LEVEL_VERBOSE = 1,
+	LOG_LEVEL_DEBUG = 2,
+	LOG_LEVEL_INFO = 3,
+	LOG_LEVEL_WARN = 4,
+	LOG_LEVEL_ERROR = 5,
+	LOG_LEVEL_UNKNOWN
+} LogLevel;
+
+typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
+
+typedef enum
+{
+	LOG_TARGET_NONE = 0,
+	LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
+} LogTarget;
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 	/**
 	 * auto increase log level if current log level below trigger_level
 	 * this is useful when some Android devices have restrictions on the log level below LOG_LEVEL_INFO.
 	 */
 	void xlog_auto_level_up(LogLevel trigger_level);
+
 	/**
 	 * redirect log output from stdout to file.
 	 */
-	void xlog_stdout2file(char *file_path);
+	void xlog_stdout2file(char* file_path);
+
 	/**
 	 * log output set to stdout.
 	 */
 	void xlog_back2stdout();
-	void xlog_set_default_tag(char *tag);
+
+	/**
+	 * set default log tag. use it on LOGX macro.
+	 */
+	void xlog_set_default_tag(char* tag);
+
+	/**
+	 * timezone_hour used by generate log time.
+	 */
+	void xlog_set_timezone(int timezone_hour);
+
 	/**
 	 * set user callback when log called.
 	 * note: log target should include LOG_TARGET_USER_CALLBACK
 	 */
 	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
+
 	/**
 	 * set log target which you want to output.
 	 */
 	void xlog_set_target(LogTarget target);
+
 	LogTarget xlog_get_target();
+
+	/**
+	 * set the min log level. only log if current level greater than or equal to this min_level
+	 */
 	void xlog_set_min_level(LogLevel min_level);
+
 	LogLevel xlog_get_min_level();
+
 	/**
 	 * transform char to hex.
 	 * @param str: place hex result
 	 * @param str_capacity: the length of str you provide.
 	 */
-    void xlog_chars2hex(char* str, size_t str_capacity, const char* chars, size_t chars_len);
+	void xlog_chars2hex(char* str, size_t str_capacity, const char* chars, size_t chars_len);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
-	 * USE macro LOGX or TLOGX instead.
+	 * USE LOGX or TLOGX macro instead.
 	 */
-    void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...);
+	void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...);
+
+	/**
+	 * DO NOT call this method directly.(for xlog internal use only)
+	 * USE TLOGX_HEX or LOGX_HEX macro instead.
+	 */
+	void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__);
 #define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__);
@@ -100,11 +134,6 @@ extern "C" {
 #define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
 #define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
 
-/**
- * do not use this function directly.
- * USE TLOGX_HEX or LOGX_HEX macro instead.
- */
-void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
 #define TLOGV_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
 #define TLOGD_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)
 #define TLOGI_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_len)
@@ -117,8 +146,5 @@ void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len
 #define LOGW_HEX(chars, chars_len) TLOGW_HEX(NULL, chars, chars_len)
 #define LOGE_HEX(chars, chars_len) TLOGE_HEX(NULL, chars, chars_len)
 
-#ifdef __cplusplus
-}
-#endif
 
-#endif //_XLOG_H
+#endif //__XLOG_H

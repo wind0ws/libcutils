@@ -27,15 +27,21 @@ typedef struct xlog_cb_pack
 typedef struct xlog_config
 {
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
+	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
 	/* if level small than this, transform the current level to this */
 	LogLevel trigger_up_level;
+	/* the file pointer after redirect stdout */
 	FILE* fp_stdout;
 	/* min log level: only log if current level bigger or equal than this. */
 	LogLevel min_level;
+	/* log target */
 	LogTarget target;
+	/* for calculate locale time */
+	int timezone_hour;
 }xlog_config_t;
 
+#define DEFAULT_TIMEZONE_HOUR (8)
 static xlog_config_t xlog_cfg = {
 	"XLog",
 	{NULL},
@@ -43,10 +49,11 @@ static xlog_config_t xlog_cfg = {
 	NULL,
 	LOG_LEVEL_VERBOSE,
 #ifdef _WIN32
-	LOG_TARGET_CONSOLE
+	LOG_TARGET_CONSOLE,
 #else
-	(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) // NOLINT(hicpp-signed-bitwise)
+	(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE), // NOLINT(hicpp-signed-bitwise)
 #endif
+	DEFAULT_TIMEZONE_HOUR
 };
 
 #define XLOG_IS_TARGET_ABLE(log_target) (xlog_cfg.target & log_target)
@@ -164,6 +171,15 @@ void xlog_set_default_tag(char* tag)
 	strlcpy(xlog_cfg.default_tag, tag, XLOG_DEFAULT_TAG_MAX_SIZE);
 }
 
+void xlog_set_timezone(int timezone_hour)
+{
+	if (timezone_hour > 12 || timezone_hour < -12)
+	{
+		return;
+	}
+	xlog_cfg.timezone_hour = timezone_hour;
+}
+
 void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 {
 	xlog_cfg.cb_pack.cb = user_cb;
@@ -225,7 +241,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	{
 		char level_char = get_log_level_char(level);
 		buffer_log[0] = '[';
-		time_util_get_current_time_str(buffer_log + 1);
+		time_util_get_current_time_str(buffer_log + 1, xlog_cfg.timezone_hour);
 		header_len = (int)strnlen(buffer_log, TIME_STR_LEN);
 		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "][%c][%s] ", level_char, tag);
 		header_len = (int)strlen(buffer_log);
@@ -267,7 +283,7 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	//char out_hex_str[sizeof(char) * chars_len * 3 + 1];
 	//char out_hex_str[1024] = { '\0' };
 	out_hex_str[0] = '\0';
-	int header_len = 0;
+	size_t header_len = 0;
 	if (chars_len * 3 > out_hex_str_capacity)
 	{
 		snprintf(out_hex_str, out_hex_str_capacity, "hex is truncated(%zu):", chars_len);

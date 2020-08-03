@@ -39,12 +39,12 @@ extern int file_logger_test_end();
 extern int thread_wrapper_test();
 extern int basic_test();
 extern int autocover_buffer_test();
-extern int strings_test();
 extern int mplite_test();
 extern int file_util_test();
 extern int thpool_test();
 extern int string_test();
 extern int time_util_test();
+
 
 int main(int argc, char* argv[])
 {
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 #endif
 
 #if TEST_FILE_LOGGER
-	file_logger_test_begin();
+	ASSERT(file_logger_test_begin() == 0);
 #endif
 
 	LOGI("hello world: LCU_VER:%s \r\n", libcutils_get_version());
@@ -66,16 +66,16 @@ int main(int argc, char* argv[])
 	//RUN_TEST(allocator_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
-	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
 	RUN_TEST(time_util_test);
+	RUN_TEST(thread_wrapper_test);
 
 #if TEST_FILE_LOGGER
-	file_logger_test_end();
+	ASSERT(file_logger_test_end() == 0);
 #endif
 	
 	LOGI("...bye bye...");

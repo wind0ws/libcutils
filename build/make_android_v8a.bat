@@ -14,7 +14,7 @@ mkdir build_android_v8a
 			"-GNinja" ^
 			-DANDROID_ABI=arm64-v8a ^
 			-DANDROID_NDK=%ANDROID_NDK% ^
-			-DCMAKE_BUILD_TYPE=Relase ^
+			-DCMAKE_BUILD_TYPE=Release ^
 			-DANDROID_TOOLCHAIN=clang ^
 			-DCMAKE_TOOLCHAIN_FILE=%tool_chain_file% ^
 			-DCMAKE_MAKE_PROGRAM=%ninja_bin% ^

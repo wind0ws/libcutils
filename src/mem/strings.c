@@ -87,7 +87,7 @@ char* strreplace(char const* const original,
 	const char* patloc;
 
 	// find how many times the pattern occurs in the original string
-	for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
+	for (oriptr = original; (patloc = strstr(oriptr, pattern)) != NULL; oriptr = patloc + patlen)
 	{
 		patcnt++;
 	}

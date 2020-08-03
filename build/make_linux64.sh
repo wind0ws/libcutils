@@ -8,7 +8,7 @@ else
 	rm -rf build_linux64/*
 fi
 
-cmake -H./ -B./build_linux64
+cmake -H./ -B./build_linux64 -DCMAKE_BUILD_TYPE=Release
 cmake --build ./build_linux64 --config Release
 
 mkdir -p ./output/linux/build_linux64

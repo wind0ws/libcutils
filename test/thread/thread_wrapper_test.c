@@ -84,6 +84,7 @@ static void test_log()
 	xlog_set_min_level(LOG_LEVEL_OFF);
 	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF")
 
+	LOGD("now set log min level to VERBOSE, target to 'LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE'");
 	xlog_set_min_level(LOG_LEVEL_VERBOSE);
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	LOGI("LOG test finished!!!")

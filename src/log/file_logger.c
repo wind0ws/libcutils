@@ -16,6 +16,7 @@ typedef struct file_logger
 	queue_handler msg_queue;
 	size_t cur_log_file_size_counter;
 	FILE* cur_fp;
+	int timezone_hour;
 }file_logger_t;
 
 #define FILE_LOGGER_LOCK(logger_handle) 	if (logger_handle->cfg.lock.acquire)\
@@ -32,13 +33,20 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg cfg)
 {
+	if (strlen(cfg.log_folder_path) < 2) //log folder path is abnormal
+	{
+		return NULL;
+	}
 	file_logger_handle handle = calloc(1, sizeof(file_logger_t));
 	if (NULL == handle)
 	{
 		return NULL;
 	}
-	if (strlen(cfg.log_folder_path) < 2)
+	handle->msg_queue = QueueHandler_create((uint32_t)cfg.max_log_queue_size, handle_log_queue_msg, handle);
+	if (NULL == handle->msg_queue)
 	{
+		free(handle);
+		handle = NULL;
 		return NULL;
 	}
 	char* log_folder_path_formatted = strreplace(cfg.log_folder_path, "\\", "/");
@@ -52,7 +60,7 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 		cfg.log_folder_path[slash_location] = '/';
 		cfg.log_folder_path[slash_location + 1] = '\0';
 	}
-	if (cfg.one_piece_file_max_len < 1024)
+	if (cfg.one_piece_file_max_len < 1024) // piece too small
 	{
 		//0 that means won't auto create new log file.
 		cfg.one_piece_file_max_len = 0;
@@ -61,13 +69,8 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 	{
 		cfg.max_log_queue_size = 64;
 	}
+	handle->timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
 	handle->cfg = cfg;
-	handle->msg_queue = QueueHandler_create((uint32_t)cfg.max_log_queue_size, handle_log_queue_msg, handle);
-	if (NULL == handle->msg_queue)
-	{
-		free(handle);
-		handle = NULL;
-	}
 	return handle;
 }
 
@@ -84,23 +87,25 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 	{
 		if ((status = QueueHandler_send(handle->msg_queue, &msg)) == 0)
 		{
-			break;
+			break;//send complete
 		}
 		RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
-		if (handle->cfg.is_try_my_best_not_to_lose_log)
+		if (handle->cfg.is_try_my_best_to_keep_log == false)
 		{
-			RING_LOGE("try again after 2ms");
-			retry_counter++;
-			usleep(2000);
+			break;
 		}
-	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_not_to_lose_log);
+		RING_LOGE("try again after 2ms");
+		retry_counter++;
+		usleep(2000);
+	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_to_keep_log);
 	//final safety
-	if (status != 0 && handle->cfg.is_try_my_best_not_to_lose_log)
+	if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
 	{
 		char cur_time[TIME_STR_LEN];
-		time_util_get_current_time_str_for_file_name(cur_time);
+		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
-		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
+		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", 
+			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		FILE* f_lost = fopen(path_buffer, "wb");
 		if (f_lost)
 		{
@@ -138,7 +143,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	{
 		file_util_mkdirs(handle->cfg.log_folder_path);
 		char cur_time[TIME_STR_LEN];
-		time_util_get_current_time_str(cur_time);
+		time_util_get_current_time_str(cur_time, handle->timezone_hour);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");

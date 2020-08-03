@@ -4,38 +4,42 @@
 
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
 #ifdef _WIN32
+//sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
 #define __func__ __FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCSIG__ 
 #elif(defined(__ANDROID__))
 #include <android/log.h>
-#endif // __ANDROID__
+#endif
 
 #define LOG_LINE_STAR "****************************************************************"
 #define CONSOLE_LOG_CONFIG_METHOD printf
 #define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
 
-	typedef enum {
-		LOG_LEVEL_OFF = 0,
-		LOG_LEVEL_VERBOSE = 1,
-		LOG_LEVEL_DEBUG = 2,
-		LOG_LEVEL_INFO = 3,
-		LOG_LEVEL_WARN = 4,
-		LOG_LEVEL_ERROR = 5,
-		LOG_LEVEL_UNKNOWN
-	} LogLevel;
+typedef enum
+{
+	LOG_LEVEL_OFF = 0,
+	LOG_LEVEL_VERBOSE = 1,
+	LOG_LEVEL_DEBUG = 2,
+	LOG_LEVEL_INFO = 3,
+	LOG_LEVEL_WARN = 4,
+	LOG_LEVEL_ERROR = 5,
+	LOG_LEVEL_UNKNOWN
+} LogLevel;
 
-	typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
+typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
 
-	typedef enum {
-		LOG_TARGET_NONE = 0,
-		LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
-		LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
-		LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
-	} LogTarget;
+typedef enum
+{
+	LOG_TARGET_NONE = 0,
+	LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
+} LogTarget;
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 	/**
 	 * auto increase log level if current log level below trigger_level
@@ -57,6 +61,11 @@ extern "C" {
 	 * set default log tag. use it on LOGX macro.
 	 */
 	void xlog_set_default_tag(char* tag);
+
+	/**
+	 * timezone_hour used by generate log time.
+	 */
+	void xlog_set_timezone(int timezone_hour);
 
 	/**
 	 * set user callback when log called.
@@ -97,6 +106,10 @@ extern "C" {
 	 */
 	void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
 
+#ifdef __cplusplus
+}
+#endif
+
 #define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__);
 #define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__);
 #define LOGI(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, NULL, 0, fmt, ##__VA_ARGS__);
@@ -133,8 +146,5 @@ extern "C" {
 #define LOGW_HEX(chars, chars_len) TLOGW_HEX(NULL, chars, chars_len)
 #define LOGE_HEX(chars, chars_len) TLOGE_HEX(NULL, chars, chars_len)
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif //__XLOG_H

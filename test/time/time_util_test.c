@@ -6,10 +6,11 @@
 
 int time_util_test()
 {
+	const int timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
 	char time_str[TIME_STR_LEN];
-	time_util_get_current_time_str(time_str);
+	time_util_get_current_time_str(time_str, timezone_hour);
 	TLOGD(LOG_TAG, "current time str is：%s", time_str);
-	time_util_get_current_time_str_for_file_name(time_str);
+	time_util_get_current_time_str_for_file_name(time_str, timezone_hour);
 	TLOGD(LOG_TAG, "current time str for file is: %s", time_str);
 	int64_t cur_milliseconds;
 	time_util_current_milliseconds(&cur_milliseconds);

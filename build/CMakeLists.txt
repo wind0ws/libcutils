@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.2.3 LANGUAGES C CXX)
+project(libcutils VERSION 1.2.4 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -65,8 +65,8 @@ else()
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
 	
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wall -Wno-unused-local-typedef -Wno-unused-function")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedef -Wno-unused-function")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wall -Wno-unused-local-typedefs -Wno-unused-function")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedefs -Wno-unused-function")
 endif ()
 
 # 小知识

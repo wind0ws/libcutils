@@ -5,10 +5,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <sys/types.h>
+
+#if(defined(__linux__) || defined(__ANDROID__))
+#include <sys/cdefs.h>  /* for __BEGIN_DECLS */
+#endif
 
 #ifdef _WIN32
 #include <crtdbg.h> /* for _ASSERT_AND_INVOKE_WATSON */
@@ -29,6 +33,7 @@ typedef float               FLOAT;
 #define UNUSED(x)				(void)(x)
 #endif // UNUSED
 
+//for mark parameters
 #ifndef __in
 #define __in
 #endif
@@ -81,6 +86,15 @@ typedef float               FLOAT;
 #endif // __cplusplus
 #endif // !EXTERN_C_START
 
+#ifndef __BEGIN_DECLS
+#ifdef __cplusplus
+#define __BEGIN_DECLS   extern "C" {
+#define __END_DECLS     }
+#else
+#define __BEGIN_DECLS
+#define __END_DECLS
+#endif // __cplusplus
+#endif // !__BEGIN_DECLS
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 #ifdef _WIN32
@@ -117,11 +131,6 @@ typedef intptr_t ssize_t;
 #define __abs(x) ((x) >= 0 ? (x) : -(x))  
 #endif // !__abs
 
-#ifndef UNUSED_ATTR
-
-#endif // !UNUSED_ATTR
-
-
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
 #endif
@@ -138,23 +147,25 @@ typedef intptr_t ssize_t;
 #ifndef STRING
 #define STRING(a) #a
 #endif // !STRING
+#ifndef NULLABLE_STRING
+#define NULLABLE_STRING(a) ((a) ? (a) : "(null)")
+#endif // !NULLABLE_STRING
+
 
 // Use during compile time to check conditional values
 // NOTE: The the failures will present as a generic error
 // "error: initialization makes pointer from integer without a cast"
-// but the file and line number will present the condition that
-// failed.
-#define DUMMY_COUNTER(c) CONCAT(__osi_dummy_, c)
+// but the file and line number will present the condition that failed
+#define DUMMY_COUNTER(c) CONCAT(__lcu_dummy_, c)
 #define DUMMY_PTR DUMMY_COUNTER(__COUNTER__)
 
 #ifndef STATIC_ASSERT
-//#define STATIC_ASSERT_WITH_MSG(expr) typedef char __static_assert_t[(expr) != 0]
 #define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char __static_assert_t_##msg[(expr) != 0]
-#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, __LINE__)
+#define __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, msg) STATIC_ASSERT_WITH_MSG(expr, msg)
+#define STATIC_ASSERT(expr) __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, __LINE__)
 #endif  // !STATIC_ASSERT
 
 #ifndef ASSERT
-
 #ifdef NDEBUG
 #define ASSERT(expr)  while(0) { (void)sizeof(expr); }
 #else
@@ -174,10 +185,9 @@ typedef intptr_t ssize_t;
 #define ASSERT(expr) assert(expr)
 #endif // _WIN32
 #endif // NDEBUG
-
-
 #endif // !ASSERT
 
+#ifndef __cplusplus
 // Macros for safe integer to pointer conversion. In the C language, data is
 // commonly cast to opaque pointer containers and back for generic parameter
 // passing in callbacks. These macros should be used sparingly in new code
@@ -187,6 +197,7 @@ typedef intptr_t ssize_t;
 #define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i) ((void *) ((intptr_t) (i)))
+#endif // __cplusplus
 
 #ifdef _WIN32
 #include <direct.h>

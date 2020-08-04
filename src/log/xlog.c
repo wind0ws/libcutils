@@ -42,7 +42,8 @@ typedef struct xlog_config
 }xlog_config_t;
 
 #define DEFAULT_TIMEZONE_HOUR (8)
-static xlog_config_t xlog_cfg = {
+static xlog_config_t xlog_cfg =
+{
 	"XLog",
 	{NULL},
 	LOG_LEVEL_OFF,
@@ -139,6 +140,10 @@ void xlog_stdout2file(char* file_path)
 #pragma warning(disable:4996)
 #endif // _WIN32
 	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
+	if (!xlog_cfg.fp_stdout)
+	{
+		printf("[XLog] [%s:%d] Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+	}
 #ifdef _WIN32
 #pragma warning(pop)
 #endif // _WIN32
@@ -158,7 +163,7 @@ void xlog_back2stdout()
 #endif // _WIN32
 	if (!freopen(STDOUT, "w", stdout))
 	{
-		printf("[XLog] [%s:%d] Error: failed on freopen\n", __func__, __LINE__);
+		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
 	}
 #ifdef _WIN32
 #pragma warning(pop)
@@ -275,7 +280,8 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		__android_log_print(convert_to_android_log_level(level), tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
-	if (xlog_cfg.cb_pack.cb && is_log2usercb)
+
+	if (is_log2usercb && xlog_cfg.cb_pack.cb)
 	{
 		xlog_cfg.cb_pack.cb(buffer_log, xlog_cfg.cb_pack.cb_user_data);
 	}
@@ -294,10 +300,10 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 		header_len = strnlen(out_hex_str, out_hex_str_capacity);
 	}
 	out_hex_str_capacity -= header_len;
-	for (size_t i = 0, str_offset = 0; i < chars_len; ++i, str_offset += 3)
+	for (size_t chars_index = 0, str_offset = 0; chars_index < chars_len; ++chars_index, str_offset += 3)
 	{
-		//        printf(" %02hhx", (unsigned char)(*(chars + i)));
-		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[i]);
+		//        printf(" %02hhx", (unsigned char)(*(chars + chars_index)));
+		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[chars_index]);
 		//        printf(" %s",hex);
 	}
 	//    printf("%s\n", out_hex_str);

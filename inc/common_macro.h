@@ -117,11 +117,6 @@ typedef intptr_t ssize_t;
 #define __abs(x) ((x) >= 0 ? (x) : -(x))  
 #endif // !__abs
 
-#ifndef UNUSED_ATTR
-
-#endif // !UNUSED_ATTR
-
-
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
 #endif
@@ -142,19 +137,17 @@ typedef intptr_t ssize_t;
 // Use during compile time to check conditional values
 // NOTE: The the failures will present as a generic error
 // "error: initialization makes pointer from integer without a cast"
-// but the file and line number will present the condition that
-// failed.
-#define DUMMY_COUNTER(c) CONCAT(__osi_dummy_, c)
+// but the file and line number will present the condition that failed
+#define DUMMY_COUNTER(c) CONCAT(__lcu_dummy_, c)
 #define DUMMY_PTR DUMMY_COUNTER(__COUNTER__)
 
 #ifndef STATIC_ASSERT
-//#define STATIC_ASSERT_WITH_MSG(expr) typedef char __static_assert_t[(expr) != 0]
 #define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char __static_assert_t_##msg[(expr) != 0]
-#define STATIC_ASSERT(expr) STATIC_ASSERT_WITH_MSG(expr, __LINE__)
+#define __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, msg) STATIC_ASSERT_WITH_MSG(expr, msg)
+#define STATIC_ASSERT(expr) __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, __LINE__)
 #endif  // !STATIC_ASSERT
 
 #ifndef ASSERT
-
 #ifdef NDEBUG
 #define ASSERT(expr)  while(0) { (void)sizeof(expr); }
 #else
@@ -174,8 +167,6 @@ typedef intptr_t ssize_t;
 #define ASSERT(expr) assert(expr)
 #endif // _WIN32
 #endif // NDEBUG
-
-
 #endif // !ASSERT
 
 // Macros for safe integer to pointer conversion. In the C language, data is

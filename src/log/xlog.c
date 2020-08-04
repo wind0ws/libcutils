@@ -156,7 +156,10 @@ void xlog_back2stdout()
 #pragma warning(push)
 #pragma warning(disable:4996)
 #endif // _WIN32
-	freopen(STDOUT, "w", stdout);
+	if (!freopen(STDOUT, "w", stdout))
+	{
+		printf("[XLog] [%s:%d] Error: failed on freopen\n", __func__, __LINE__);
+	}
 #ifdef _WIN32
 #pragma warning(pop)
 #endif // _WIN32

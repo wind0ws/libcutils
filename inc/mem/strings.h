@@ -6,6 +6,7 @@
 #include <string.h>
 
 #ifdef _WIN32
+// strcasecmp is unix function.
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
 //to make MSC happy
@@ -21,12 +22,11 @@
 #define strcpy(dest, source) strcpy_s(dest, strlen(source) + 1, source) 
 #define strncpy(dest, source, max_count) strncpy_s(dest, (max_count) + 1, source, max_count)
 #define strcat(dest, source) strcat_s(dest, strlen(dest) + strlen(source) + 1, source)
-#define STRTOK strtok_s
- //#define snprintf(buf, buf_size, format, ...) \
- //        _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
+#define STRTOK_SAFE strtok_s
+//#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
 //in Unix platform. use strtok_r
-#define STRTOK strtok_r
+#define STRTOK_SAFE strtok_r
 //stricmp is windows function.
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
@@ -45,6 +45,7 @@ extern "C" {
      * Returns strlen(src); if retval >= size, truncation occurred.
      */
 	size_t strlcpy(char* dst, const char* src, size_t size);
+
 	/**
      * Appends src to string dst of size "size" (unlike strncat, size is the
      * full size of dst, not space left).  At most size-1 characters
@@ -54,6 +55,7 @@ extern "C" {
      */
 	size_t strlcat(char* dst, const char* src, size_t size);
 #endif
+
 	/**
 	 * replace the "pattern" to "replacement" from "original".
 	 * WARN: return string is malloced, need free after use!
@@ -76,7 +78,7 @@ extern "C" {
 		const char src_str[], const char* delimiter);
 
 	/**
-	 * count utf8 code points(words, not chars), NOT bytes.
+	 * count utf8 code points(words, NOT chars), NOT bytes.
 	 * if you want to know number of bytes, use strlen/strnlen.
 	 * uft8str must end with '\0', or memory will over read(that is dangerous).
 	 * @return how many word in this string.
@@ -86,6 +88,7 @@ extern "C" {
 	/**
 	 * as same as strutf8len.
 	 * but with max_count limitation: when reach '\0' or max_count, word search end.
+	 * @return how many word in this string.
 	 */
 	size_t strnutf8len(const char* utf8str, size_t max_count);
 

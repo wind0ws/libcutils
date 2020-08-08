@@ -251,7 +251,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		buffer_log[0] = '[';
 		time_util_get_current_time_str(buffer_log + 1, xlog_cfg.timezone_hour);
 		header_len = (int)strnlen(buffer_log, TIME_STR_LEN);
-		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "][%c][%s] ", level_char, tag);
+		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "][%c][%s]: ", level_char, tag);
 		header_len = (int)strlen(buffer_log);
 	}
 

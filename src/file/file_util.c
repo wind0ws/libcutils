@@ -1,13 +1,13 @@
 #include "file/file_util.h"
 #include "mem/strings.h"
 #include "common_macro.h"
+#include <sys/stat.h>
 
 #ifdef WIN32
 #include <io.h>
 #include <direct.h> 
 #else
 #include <unistd.h>
-#include <sys/stat.h>
 #endif
 
 #define MAX_FOLDER_PATH_LEN (256)
@@ -87,7 +87,18 @@ int file_util_mkdirs(__in const char* folder_path)
 	return 0;
 }
 
-long file_util_size(__in FILE* fs)
+long file_util_size_by_path(__in const char* file_path)
+{
+	struct stat buf;
+	int stat_ret;
+	if ((stat_ret = stat(file_path, &buf))!=0) 
+	{
+		return (long)stat_ret;
+	}
+	return buf.st_size;
+}
+
+long file_util_size_by_fs(__in FILE* fs)
 {
 	if (!fs)
 	{

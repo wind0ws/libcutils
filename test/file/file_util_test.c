@@ -32,7 +32,7 @@ int file_util_test()
 		FILE *fs = fopen(TEST_FILE, "rb");
 		if (fs)
 		{
-			long file_size = file_util_size(fs);
+			long file_size = file_util_size_by_fs(fs);
 			LOGD_TRACE(" \"%s\" file size=%d", TEST_FILE, file_size);
 			fclose(fs);
 		}

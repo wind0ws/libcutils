@@ -38,13 +38,13 @@ extern "C" {
 	 * @param out_buf_decoded_size: the result buffer size(should include the last NULL terminator)
 	 * @param src_buf_plain:  the url encoded string
 	 * @param src_buf_plain_strlen: the string length(exclude the last NULL terminator)
-	 * @param last_src_pos: the last decode src_buf_plain position
+	 * @param last_src_pos: the last decode src_buf_plain position. if you don't care, just pass NULL
 	 *
 	 * @return >=0 represent the decoded result string length
 	 *          <0 encode failure
 	 */
 	int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
-		const char* src_buf_plain, const size_t src_buf_plain_strlen, const char** last_src_pos);
+		const char* src_buf_plain, const size_t src_buf_plain_strlen, char** last_src_pos);
 
 #ifdef __cplusplus
 };

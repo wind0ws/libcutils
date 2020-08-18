@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include "common_macro.h"
 
-#define TIME_STAMP_FORMT ("%m-%d %H:%M:%S")
-#define TIME_STAMP_FORMT_FOR_FILE_NAME ("%m-%d %H_%M_%S")
+#define TIME_STAMP_FORMAT ("%m-%d %H:%M:%S")
+#define TIME_STAMP_FORMAT_FOR_FILE_NAME ("%m-%d %H_%M_%S")
 
 #ifdef _WIN32
 
@@ -13,8 +13,8 @@ static const unsigned __int64 epoch = 116444736000000000UL;
 /*
  * timezone information is stored outside the kernel so tzp isn't used anymore.
  * (take from https://git.postgresql.org/gitweb/?p=postgresql.git;a=blob;f=src/port/gettimeofday.c)
- * Note: this function is not for Win32 high precision timing purpose. See
- * elapsed_time().
+ * Note: this function is not for Win32 high precision timing purpose. 
+ * See elapsed_time().
  */
 int gettimeofday(struct timeval* tp, struct timezone* tzp)
 {
@@ -90,7 +90,7 @@ static inline int get_current_time_str(char str[TIME_STR_LEN], const char* time_
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL); // get current time
-	//localtime_r((const time_t*)&tv.tv_sec, &lt);
+	//localtime_r((const time_t*)&tv.tv_sec, &lt);//here has performance issues on multithread.
 	time_util_fast_second2date((const time_t*)&tv.tv_sec, &lt, timezone_hour);
 	//return tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 
@@ -101,12 +101,12 @@ static inline int get_current_time_str(char str[TIME_STR_LEN], const char* time_
 
 int time_util_get_current_time_str(char str[TIME_STR_LEN], int timezone_hour)
 {
-	return get_current_time_str(str, TIME_STAMP_FORMT, timezone_hour);
+	return get_current_time_str(str, TIME_STAMP_FORMAT, timezone_hour);
 }
 
 int time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN], int timezone_hour)
 {
-	return get_current_time_str(str, TIME_STAMP_FORMT_FOR_FILE_NAME, timezone_hour);
+	return get_current_time_str(str, TIME_STAMP_FORMAT_FOR_FILE_NAME, timezone_hour);
 }
 
 void time_util_current_milliseconds(int64_t* p_cur_ms)

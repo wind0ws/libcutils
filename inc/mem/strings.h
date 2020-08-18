@@ -4,6 +4,16 @@
 
 #include <stdint.h>
 #include <string.h>
+#ifndef _WIN32
+#include <strings.h> //for bcopy/bzero
+#endif // !_WIN32
+
+#ifndef bcopy
+#define bcopy(src, dest, len) memcpy((dest), (src), (len))
+#endif // !bcopy
+#ifndef bzero
+#define bzero(b, len) memset((b), '\0', (len))
+#endif // !bzero
 
 #ifdef _WIN32
 // strcasecmp is unix function.
@@ -15,13 +25,13 @@
 
 /**
  * to make MSC happy
- * origin strcpy_s(dest, destSize, source)
- * here we assume that "dest" is big enough to storage "source", so we use 'strlen(source) + 1' as destSize.
+ * origin strcpy_s(dest, destSize, src)
+ * here we assume that "dest" is big enough to storage "src", so we use 'strlen(src) + 1' as destSize.
  * be careful!
  */
-#define strcpy(dest, source) strcpy_s(dest, strlen(source) + 1, source) 
-#define strncpy(dest, source, max_count) strncpy_s(dest, (max_count) + 1, source, max_count)
-#define strcat(dest, source) strcat_s(dest, strlen(dest) + strlen(source) + 1, source)
+#define strcpy(dest, src) strcpy_s(dest, strlen(src) + 1, src) 
+#define strncpy(dest, src, max_count) strncpy_s(dest, (max_count) + 1, src, max_count)
+#define strcat(dest, src) strcat_s(dest, strlen(dest) + strlen(src) + 1, src)
 #define STRTOK_SAFE strtok_s
 //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
@@ -75,7 +85,7 @@ extern "C" {
 	 * @param delimiter: the string of delimiter
 	 */
 	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
-		const char src_str[], const char* delimiter);
+		const char *src_str, const char* delimiter);
 
 	/**
 	 * count utf8 code points(words, NOT chars), NOT bytes.

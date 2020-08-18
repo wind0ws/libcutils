@@ -47,6 +47,13 @@ void *lcu_malloc(size_t size);
 
 void *lcu_calloc(size_t item_count, size_t item_size);
 
+/**
+ * realloc.
+ * Note: here have a performance issue. 
+ * if pointer's memory is not enough that you requested, 
+ * it will free it first, then alloc new memory, and memcpy old pointer's memory to new pointer.
+ * so, if you realloc a lot, maybe memcpy will perform a lot.
+ */
 void* lcu_realloc(void* ptr, size_t size);
 
 void lcu_free(void *ptr);

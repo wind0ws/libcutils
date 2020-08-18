@@ -55,7 +55,7 @@ int url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 }
 
 int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
-	const char* src_buf_plain, const size_t src_buf_plain_strlen, const char** last_src_pos)
+	const char* src_buf_plain, const size_t src_buf_plain_strlen, char** last_src_pos)
 {
 	size_t input_index, output_index;
 	char source_char;
@@ -63,7 +63,7 @@ int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 
 	if (last_src_pos)
 	{
-		*last_src_pos = src_buf_plain;
+		*last_src_pos = (char *)src_buf_plain;
 	}
 	if (src_buf_plain_strlen < 1 || out_buf_decoded_size < 2)
 	{
@@ -72,7 +72,7 @@ int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 
 	for (input_index = 0, output_index = 0; input_index < src_buf_plain_strlen && output_index < out_buf_decoded_size - 1; output_index++)
 	{
-		source_char = *(src_buf_plain + input_index);
+		source_char = *((char *)src_buf_plain + input_index);
 
 		if (source_char == '+')
 		{
@@ -147,7 +147,7 @@ int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 	out_buf_decoded[output_index] = '\0';
 	if (last_src_pos)
 	{
-		*last_src_pos = src_buf_plain + input_index;
+		*last_src_pos = (char *)src_buf_plain + input_index;
 	}
 	return output_index;
 }

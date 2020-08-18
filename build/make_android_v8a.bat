@@ -1,6 +1,6 @@
 @ECHO OFF&PUSHD %~DP0 &TITLE android_v8a &color 0A
 set ANDROID_SDK=D:\Android\android-sdk
-set ANDROID_NDK=D:\Android\android-sdk\ndk\20.0.5594570
+set ANDROID_NDK=D:\Android\android-sdk\ndk\21.3.6528147
 ::for /f %%a in ('dir /a:d /b %ANDROID_SDK%\cmake\') do set cmake_version=%%a
 ::echo "find cmake version %cmake_version%"
 set cmake_version=3.10.2.4988404

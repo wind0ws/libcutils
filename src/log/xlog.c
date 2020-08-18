@@ -17,6 +17,9 @@
 #define STDOUT ("/dev/tty")
 #endif // _WIN32
 
+#define CONSOLE_LOG_CONFIG_METHOD printf
+#define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\n"
+
 typedef struct xlog_cb_pack
 {
 	xlog_user_callback_fn cb;
@@ -53,7 +56,7 @@ static xlog_config_t xlog_cfg =
 	LOG_TARGET_CONSOLE,
 #else
 	(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE), // NOLINT(hicpp-signed-bitwise)
-#endif
+#endif // _WIN32
 	DEFAULT_TIMEZONE_HOUR
 };
 

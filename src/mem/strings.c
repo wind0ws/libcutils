@@ -18,22 +18,29 @@ strlcpy(char* dst, const char* src, size_t size)
 	size_t n = size;
 
 	/* Copy as many bytes as will fit */
-	if (n != 0) {
-		while (--n != 0) {
-			if ((*d++ = *s++) == '\0')
+	if (n != 0) 
+	{
+		while (--n != 0) 
+		{
+			if ((*d++ = *s++) == '\0') 
+			{
 				break;
+			}
 		}
 	}
 
 	/* Not enough room in dst, add NUL and traverse rest of src */
-	if (n == 0) {
+	if (n == 0) 
+	{
 		if (size != 0)
+		{
 			*d = '\0';		/* NUL-terminate dst */
+		}
 		while (*s++)
 			;
 	}
 
-	return(s - src - 1);	/* count does not include NUL */
+	return (s - src - 1);	/* count does not include NUL */
 }
 
 
@@ -52,23 +59,30 @@ size_t strlcat(char* dst, const char* src, size_t size)
 	size_t dlen;
 
 	/* Find the end of dst and adjust bytes left but don't go past end */
-	while (n-- != 0 && *d != '\0')
-		d++;
+	while (n-- != 0 && *d != '\0') 
+	{
+		++d;
+	}
 	dlen = d - dst;
 	n = size - dlen;
 
-	if (n == 0)
-		return(dlen + strlen(s));
-	while (*s != '\0') {
-		if (n != 1) {
+	if (n == 0) 
+	{
+		return (dlen + strlen(s));
+	}
+
+	while (*s != '\0') 
+	{
+		if (n != 1) 
+		{
 			*d++ = *s;
-			n--;
+			--n;
 		}
-		s++;
+		++s;
 	}
 	*d = '\0';
 
-	return(dlen + (s - src));       /* count does not include NUL */
+	return (dlen + (s - src));       /* count does not include NUL */
 }
 
 #endif
@@ -89,7 +103,7 @@ char* strreplace(char const* const original,
 	// find how many times the pattern occurs in the original string
 	for (oriptr = original; (patloc = strstr(oriptr, pattern)) != NULL; oriptr = patloc + patlen)
 	{
-		patcnt++;
+		++patcnt;
 	}
 
 	{
@@ -120,20 +134,20 @@ char* strreplace(char const* const original,
 	}
 }
 
-void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char src_str[], const char* delimiter)
+void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_str, const char* delimiter)
 {
-	char* pToken = NULL;
-	char* pContext = NULL;
+	char* token = NULL;
+	char* token_ctx = NULL;
 	size_t recv_ptrs_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
-	pToken = STRTOK_SAFE((char *)src_str, delimiter, &pContext);
-	while (pToken && *p_splited_nums < recv_ptrs_size)
+	token = STRTOK_SAFE((char *)src_str, delimiter, &token_ctx);
+	while (token && *p_splited_nums < recv_ptrs_size)
 	{
-		recv_splited_str[*p_splited_nums] = pToken;
+		recv_splited_str[*p_splited_nums] = token;
 		(*p_splited_nums)++;
 
-		pToken = STRTOK_SAFE(NULL, delimiter, &pContext);
+		token = STRTOK_SAFE(NULL, delimiter, &token_ctx);
 	}
 }
 
@@ -146,9 +160,11 @@ size_t strnutf8len(const char* utf8str, size_t max_count)
 {
 	size_t code_points = 0;
 	size_t chars_count = 0;
-	while (*utf8str && chars_count < max_count) {
-		code_points += (*utf8str++ & 0xC0) != 0x80;
-		chars_count++;
+	while (*utf8str && chars_count < max_count) 
+	{
+		code_points += ((*utf8str & 0xC0) != 0x80);
+		++utf8str;
+		++chars_count;
 	}
 	return code_points;
 }

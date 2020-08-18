@@ -35,7 +35,9 @@ char* lcu_strdup(const char* str)
 		ptr,
 		size);
 	if (!new_string)
+	{
 		return NULL;
+	}
 	memcpy(new_string, str, size);
 	return new_string;
 }
@@ -44,7 +46,9 @@ char* lcu_strndup(const char* str, size_t len)
 {
 	size_t size = strlen(str);
 	if (len < size)
+	{
 		size = len;
+	}
 	size_t real_size = allocation_tracker_resize_for_canary(size + 1);
 	void* ptr = malloc(real_size);
 	ASSERT(ptr);
@@ -53,7 +57,9 @@ char* lcu_strndup(const char* str, size_t len)
 		ptr,
 		size + 1);
 	if (!new_string)
+	{
 		return NULL;
+	}
 	memcpy(new_string, str, size);
 	new_string[size] = '\0';
 	return new_string;
@@ -84,7 +90,7 @@ void* lcu_calloc1(size_t size)
 
 void* lcu_realloc(void* ptr, size_t size)
 {
-	if (!size)
+	if (size == 0)
 	{
 		//if size == 0, free the ptr, return NULL
 		if (ptr)
@@ -93,19 +99,24 @@ void* lcu_realloc(void* ptr, size_t size)
 		}
 		return NULL;
 	}
-	if (!ptr)
+
+	if (ptr == NULL)
 	{
-		return lcu_malloc(size);
+		return lcu_malloc(size + 2048); /* a little trick: give more memory than you need, for reduce realloc times */
 	}
+
 	size_t cur_ptr_size = allocation_tracker_ptr_size(alloc_allocator_id, ptr);
-	if (!cur_ptr_size || size <= cur_ptr_size)
+	if (size <= cur_ptr_size)
 	{
 		//current size if enough, no need alloc new memory.
 		return ptr;
 	}
 
-	void* new_ptr = lcu_malloc(size);
-	ASSERT(new_ptr != NULL);
+	void* new_ptr = lcu_malloc(size + 2048); /* a little trick: give more memory than you need, for reduce realloc times */
+	if (!new_ptr)
+	{
+		return NULL;
+	}
 	memcpy(new_ptr, ptr, cur_ptr_size);
 	lcu_free(ptr);
 	return new_ptr;

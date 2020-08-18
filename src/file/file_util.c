@@ -3,22 +3,27 @@
 #include "common_macro.h"
 #include <sys/stat.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h> 
 #else
 #include <unistd.h>
-#endif
+#endif // _WIN32
 
 #define MAX_FOLDER_PATH_LEN (256)
 
-#ifdef WIN32
+#ifdef _WIN32
 #define ACCESS(fileName, accessMode) _access(fileName, accessMode)
-#define MKDIR(path) _mkdir(path)
+#define MKDIR(path)                  _mkdir(path)
+#define READ_FUNC                    _read
+#define WRITE_FUNC                   _write
 #else
 #define ACCESS(fileName, accessMode) access(fileName, accessMode)
-#define MKDIR(path) mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
-#endif
+#define MKDIR(path)                  mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
+#define READ_FUNC                    read
+#define WRITE_FUNC                   write
+#endif // WIN32
+
 
 typedef ssize_t(*pfunc_rw)(int file_handle, void* buffer, size_t max_char_count);
 
@@ -118,12 +123,12 @@ long file_util_size_by_fs(__in FILE* fs)
 
 int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count)
 {
-	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&read);
+	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&READ_FUNC);
 }
 
 int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count)
 {
-	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&write);
+	return __internal_rw_file(file_handle, buffer, max_char_count, (pfunc_rw)&WRITE_FUNC);
 }
 
 static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, pfunc_rw target_func)

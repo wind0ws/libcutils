@@ -14,14 +14,16 @@
 #include <sys/cdefs.h>  /* for __BEGIN_DECLS */
 #endif
 
+#ifdef __ANDROID__
+#include <android/log.h>  /* for log error */
+#endif // __ANDROID__
+
 #ifdef _WIN32
 #include <crtdbg.h> /* for _ASSERT_AND_INVOKE_WATSON */
 #include <sal.h>
-#define UNUSED_ATTR 
 #else
-#define UNUSED_ATTR __attribute__((unused))
-typedef void* HANDLE;
-typedef void* PVOID;
+typedef void*               HANDLE;
+typedef void*               PVOID;
 typedef unsigned long       DWORD;
 typedef int                 BOOL;
 typedef unsigned char       BYTE;
@@ -30,8 +32,15 @@ typedef float               FLOAT;
 #endif // _WIN32
 
 #ifndef UNUSED
-#define UNUSED(x)				(void)(x)
-#endif // UNUSED
+#define UNUSED(x)           (void)(x)
+#endif // !UNUSED
+#ifndef UNUSED_ATTR
+#ifdef _WIN32
+#define UNUSED_ATTR 
+#else
+#define UNUSED_ATTR         __attribute__((unused))
+#endif // _WIN32
+#endif // !UNUSED_ATTR
 
 //for mark parameters
 #ifndef __in
@@ -128,7 +137,7 @@ typedef intptr_t ssize_t;
 #define __min(a,b) (((a) < (b)) ? (a) : (b))
 #endif // !__min
 #ifndef __abs
-#define __abs(x) ((x) >= 0 ? (x) : -(x))  
+#define __abs(x)   ((x) >= 0 ? (x) : -(x))  
 #endif // !__abs
 
 #ifndef FREE
@@ -171,20 +180,53 @@ typedef intptr_t ssize_t;
 #else
 #if _WIN32
 //why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!
-#define __MYASSERT_AND_INVOKE_WATSON(expr)                                           \
+#define __TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)                              \
     {                                                                                \
-        bool is_condition_true = !!(expr);                                           \
-        _ASSERT_EXPR(is_condition_true, _CRT_WIDE(#expr));                           \
-        if (!is_condition_true)                                                      \
+        bool expr_##line = !!(expr);                                                 \
+        _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                 \
+        if (!expr_##line)                                                            \
         {                                                                            \
-            _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0); \
+           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0);  \
         }                                                                            \
     }
-#define ASSERT(expr) __MYASSERT_AND_INVOKE_WATSON(expr)
+#define __TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) __TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
+#define ASSERT(expr) __TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, __LINE__)
 #else
 #define ASSERT(expr) assert(expr)
 #endif // _WIN32
 #endif // NDEBUG
+
+#ifdef __ANDROID__
+#define __LOG_PLATFORM(...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", __VA_ARGS__)
+#else
+#define __LOG_PLATFORM(...) 
+#endif //__ANDROID__
+
+//for ASSERT_ABORT to use log error message.
+#define __LOGE(...)                                                                  \
+     {                                                                               \
+        __LOG_PLATFORM(__VA_ARGS__);                                                 \
+        printf(__VA_ARGS__);                                                         \
+        fflush(stdout);                                                              \
+     }
+
+#define __TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
+    {                                                                                \
+        ASSERT(expr);                                                                \
+        bool is_expr_true##line = !!(expr);                                          \
+        if (!is_expr_true##line)                                                     \
+        {                                                                            \
+           __LOGE("API check '%s' failed at %s (%s:%d)\n",                           \
+                  #expr, __func__, __FILE__, __LINE__);                              \
+           abort();                                                                  \
+        }                                                                            \
+     }
+#define __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  __TEMP_FOR_ASSERT_ABORT(expr, line)
+/**
+ * In debug mode, expression check failure will catch by ASSERT.
+ * In release mode, it will log error to stdout/logcat and abort program.
+ */
+#define ASSERT_ABORT(expr)  __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
 #endif // !ASSERT
 
 #ifndef __cplusplus
@@ -193,10 +235,10 @@ typedef intptr_t ssize_t;
 // passing in callbacks. These macros should be used sparingly in new code
 // (never in C++ code). Whenever integers need to be passed as a pointer, use
 // these macros.
-#define PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
-#define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
-#define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
-#define INT_TO_PTR(i) ((void *) ((intptr_t) (i)))
+#define PTR_TO_UINT(p)  ((unsigned int) ((uintptr_t) (p)))
+#define UINT_TO_PTR(u)  ((void *) ((uintptr_t) (u)))
+#define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))
+#define INT_TO_PTR(i)   ((void *) ((intptr_t) (i)))
 #endif // __cplusplus
 
 #ifdef _WIN32
@@ -207,10 +249,10 @@ typedef intptr_t ssize_t;
 #define W_OK 2
 #define R_OK 4
 //just to make MSC happy
-#define access _access
-#define mkdir(path, mode) _mkdir(path)
-#define read _read
-#define write _write
+#define access(path_name, mode)   _access(path_name, mode)
+#define mkdir(path, mode)         _mkdir(path)
+#define read(fd, buf, count)      _read(fd, buf, count)
+#define write(fd, buf, count)     _write(fd, buf, count)
 
 static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 {
@@ -219,7 +261,7 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 	return _ftemp;
 }
 //to make MSC happy
-#define fopen __fopen_safe
+#define fopen(file_name, mode) __fopen_safe(file_name, mode)
 #else
 #include <unistd.h>
 #include <sys/types.h>

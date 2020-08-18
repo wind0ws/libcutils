@@ -8,6 +8,7 @@
 #include "libcutils.h"
 
 #ifdef _WIN32
+#include <locale.h>
 #define CRTDBG_MAP_ALLOC    
 #include <stdlib.h>    
 #include <crtdbg.h>   
@@ -19,10 +20,10 @@ static inline void EnableMemLeakCheck()
 
 #define RUN_TEST(func_name) do \
 {\
-LOGD("\r\n%s\r\nNow run --> %s()\r\n",LOG_LINE_STAR, #func_name);\
+LOGD("\n%s\nNow run --> %s()\n",LOG_LINE_STAR, #func_name);\
 int ret = func_name(); \
-printf("\r\n"); \
-LOGD("<-- %s() run result=%d\r\n%s\r\n", #func_name, ret, LOG_LINE_STAR);\
+printf("\n"); \
+LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret, LOG_LINE_STAR);\
 ASSERT(ret == 0);\
 } while (0)
 
@@ -31,7 +32,7 @@ extern int allocator_test_begin();
 extern int allocator_test_end();
 extern int allocator_test();
 
-#define TEST_FILE_LOGGER (0)
+#define TEST_FILE_LOGGER (1)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
 
@@ -53,6 +54,10 @@ int main(int argc, char* argv[])
 	//char* pChars = (char *)malloc(10);
 	EnableMemLeakCheck();
 
+	// set locale for support Chinese filename.
+	setlocale(LC_ALL, ".65001");
+	//fopen(u8"中文路径.txt", "rb"); //ok
+
    // Set console character encoding, for support Chinese
    // system("chcp 65001"); 
 	SetConsoleOutputCP(65001);
@@ -72,7 +77,8 @@ int main(int argc, char* argv[])
 	ASSERT(file_logger_test_begin() == 0);
 #endif
 
-	LOGI("hello world: LCU_VER:%s \r\n", libcutils_get_version());
+	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
+	//ASSERT_ABORT(1 == 0);
 
 	//RUN_TEST(allocator_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
@@ -83,10 +89,9 @@ int main(int argc, char* argv[])
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
-	//RUN_TEST(thread_wrapper_test);
-	//RUN_TEST(url_encode_test);
+	RUN_TEST(thread_wrapper_test);
 	RUN_TEST(url_encoder_decoder_test);
-	RUN_TEST(base64_test);
+	//RUN_TEST(base64_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

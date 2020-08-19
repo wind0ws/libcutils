@@ -14,6 +14,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
+ * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/allocation_tracker.h
+ *
  ******************************************************************************/
 #pragma once
 #ifndef __LCU_ALLOCATION_TRACKER_H__
@@ -22,10 +24,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-/*
-* reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/allocation_tracker.h
-*/
 
 #ifdef __cplusplus
 extern "C" {

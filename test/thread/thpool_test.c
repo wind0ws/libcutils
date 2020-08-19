@@ -1,3 +1,4 @@
+#include "lcu_stdafx.h"
 #include "thread/thpool.h"
 #include "thread/thread_wrapper.h"
 #include "log/xlog.h"

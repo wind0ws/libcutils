@@ -2,19 +2,15 @@
 #ifndef __XLOG_H
 #define __XLOG_H
 
-#include <stdio.h>
-
 #ifdef _WIN32
 //sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
-#define __func__ __FUNCTION__
+//#define __func__ __FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
 #elif(defined(__ANDROID__))
 #include <android/log.h>
-#endif
+#endif // _WIN32
 
 #define LOG_LINE_STAR "****************************************************************"
-#define CONSOLE_LOG_CONFIG_METHOD printf
-#define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\r\n"
 
 typedef enum
 {
@@ -68,7 +64,8 @@ extern "C" {
 	void xlog_set_timezone(int timezone_hour);
 
 	/**
-	 * set user callback when log called.
+	 * set user callback. when log performed, callback will called.
+	 * you can do your own log logic on callback.
 	 * note: log target should include LOG_TARGET_USER_CALLBACK
 	 */
 	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);

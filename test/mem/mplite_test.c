@@ -1,3 +1,5 @@
+#include "lcu_stdafx.h"
+#include "common_macro.h"
 #include "mem/mplite.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +105,7 @@ int mplite_test()
 			(const int)min_alloc, &pool_lock);
 		threads = (pthread_t*)malloc(sizeof(*threads) * num_threads);
 		threads_param = (multithreaded_param_t*)malloc(sizeof(*threads_param) * num_threads);
+		ASSERT(threads_param);
 		/* Run all the threads */
 		for (alloc_counter = 0; alloc_counter < num_threads; alloc_counter++) 
 		{

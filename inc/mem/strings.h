@@ -4,32 +4,40 @@
 
 #include <stdint.h>
 #include <string.h>
+#ifndef _WIN32
+#include <strings.h> //for bcopy/bzero
+#endif // !_WIN32
+
+#ifndef bcopy
+#define bcopy(src, dest, len) memcpy((dest), (src), (len))
+#endif // !bcopy
+#ifndef bzero
+#define bzero(b, len) memset((b), '\0', (len))
+#endif // !bzero
 
 #ifdef _WIN32
-// strcasecmp is unix function.
-#define strcasecmp stricmp
-#define strncasecmp strnicmp
+// strcasecmp is unix function. suggest to use strcasecmp for cross platform
+#define strcasecmp(s1, s2)                   stricmp(s1, s2)
+#define strncasecmp(s1, s2, n)               strnicmp(s1, s2, n)
 //to make MSC happy
-#define stricmp _stricmp
-#define strnicmp _strnicmp
+#define stricmp(s1, s2)                      _stricmp(s1, s2)
+#define strnicmp(s1, s2, n)                  _strnicmp(s1, s2, n)
 
 /**
  * to make MSC happy
- * origin strcpy_s(dest, destSize, source)
- * here we assume that "dest" is big enough to storage "source", so we use 'strlen(source) + 1' as destSize.
+ * origin strcpy_s(dest, destSize, src)
+ * here we assume that "dest" is big enough to storage "src", so we use 'strlen(src) + 1' as destSize.
  * be careful!
  */
-#define strcpy(dest, source) strcpy_s(dest, strlen(source) + 1, source) 
-#define strncpy(dest, source, max_count) strncpy_s(dest, (max_count) + 1, source, max_count)
-#define strcat(dest, source) strcat_s(dest, strlen(dest) + strlen(source) + 1, source)
-#define STRTOK_SAFE strtok_s
+#define strcpy(dest, src)                    strcpy_s(dest, strlen(src) + 1, src) 
+#define strncpy(dest, src, max_count)        strncpy_s(dest, (max_count) + 1, src, max_count)
+#define strcat(dest, src)                    strcat_s(dest, strlen(dest) + strlen(src) + 1, src)
+#define strtok_r(str, delimiter, ctx)        strtok_s(str, delimiter, ctx)
 //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
-//in Unix platform. use strtok_r
-#define STRTOK_SAFE strtok_r
-//stricmp is windows function.
-#define stricmp strcasecmp
-#define strnicmp strncasecmp
+//stricmp is windows function. suggest to use strcasecmp for cross platform
+#define stricmp(s1, s2)                      strcasecmp(s1, s2)
+#define strnicmp(s1, s2, n)                  strncasecmp(s1, s2, n)
 #endif // _WIN32
 
 #ifdef __cplusplus
@@ -75,7 +83,7 @@ extern "C" {
 	 * @param delimiter: the string of delimiter
 	 */
 	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
-		const char src_str[], const char* delimiter);
+		const char *src_str, const char* delimiter);
 
 	/**
 	 * count utf8 code points(words, NOT chars), NOT bytes.

@@ -14,8 +14,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/hash_map.h
+ *  reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/hash_map.h
  ******************************************************************************/
+
+ // Attention: HashMap is NOT thread safe!
+
 #pragma once
 #ifndef __HASHMAP_H_
 #define __HASHMAP_H_

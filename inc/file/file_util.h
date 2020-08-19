@@ -25,10 +25,16 @@ int file_util_access(__in const char* path, __in const int access_mode);
 int file_util_mkdirs(__in const char* folder_path);
 
 /**
- * get total file size.
+ * get total file size
+ * @return file size
+ */
+long file_util_size_by_path(__in const char* file_path);
+
+/**
+ * get file size from current FILE stream position.
  * @return file size.
  */
-long file_util_size(__in FILE* fs);
+long file_util_size_by_fs(__in FILE* fs);
 
 /**
  * read on file_handle(file descriptor). if you read a real file(FILE), use fread instead.

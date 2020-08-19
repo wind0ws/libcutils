@@ -109,7 +109,7 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 		FILE* f_lost = fopen(path_buffer, "wb");
 		if (f_lost)
 		{
-			fprintf(f_lost, "%s\r\n", (char*)log_msg);
+			fprintf(f_lost, "%s\n", (char*)log_msg);
 			fclose(f_lost);
 		}
 	}
@@ -160,7 +160,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 		return;
 	}
 	//fwrite(msg_p->obj.data, sizeof(char), log_msg_len, handle->cur_fp);
-	fprintf(handle->cur_fp, "%.*s\r\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
+	fprintf(handle->cur_fp, "%.*s\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
 	handle->cur_log_file_size_counter += (log_msg_len + 2);
 	if (handle->cfg.one_piece_file_max_len &&
 		handle->cur_log_file_size_counter >= handle->cfg.one_piece_file_max_len)

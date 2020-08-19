@@ -18,7 +18,7 @@
  *
  ******************************************************************************/
 
-
+#include "lcu_stdafx.h"
 #include "data/array.h"
 #include <stdlib.h>
 #include <string.h>
@@ -61,10 +61,14 @@ array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 
 void array_free(array_t* array) 
 {
-    if (!array)
+    if (!array) 
+    {
         return;
+    }
     if (array->data != array->internal_storage)
-        free(array->data);
+    {
+        free(array->data);//shouldn't use lcu_free because we use pure realloc array->data.
+    }
     lcu_free(array);
 }
 
@@ -95,8 +99,10 @@ bool array_append_ptr(array_t* array, void* data)
 {
     ASSERT(array != NULL);
     ASSERT(data != NULL);
-    if (array->length == array->capacity && !grow(array)) {
-        TLOGE(LOG_TAG, "%s unable to grow array past current capacity of %zu elements of size %zu.", __func__, array->capacity, array->element_size);
+    if (array->length == array->capacity && !grow(array)) 
+    {
+        TLOGE(LOG_TAG, "%s unable to grow array past current capacity of %zu elements of size %zu.",
+            __func__, array->capacity, array->element_size);
         return false;
     }
     ++array->length;
@@ -109,10 +115,14 @@ static bool grow(array_t* array)
     const size_t new_capacity = array->capacity + (array->capacity / 2);
     const bool is_moving = (array->data == array->internal_storage);
     void* new_data = realloc(is_moving ? NULL : array->data, new_capacity * array->element_size);
-    if (!new_data)
+    if (!new_data) 
+    {
         return false;
-    if (is_moving)
+    }
+    if (is_moving) 
+    {
         memcpy(new_data, array->internal_storage, array->length * array->element_size);
+    }
     array->data = new_data;
     array->capacity = new_capacity;
     return true;

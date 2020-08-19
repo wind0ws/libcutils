@@ -3,7 +3,6 @@
 #include "common_macro.h"
 #include "log/xlog.h"
 #include "thread/thread_wrapper.h"
-#include <malloc.h>
 
 #define LOG_TAG_STR_TEST "str_test"
 
@@ -23,11 +22,11 @@ static int stringcmp_test()
 {
 	const char* str1 = "Hello, what's your name?";
 	const char* str2 = "Hello, what's your name?";
-	LOGD("strcasecmp=%d, stricmp=%d", strcasecmp(str1, str2), stricmp(str1, str2));
+	LOGD("strcasecmp=%d", strcasecmp(str1, str2));
 
 	const char* str3 = "Hello,123";
 	const char* str4 = "Hello,456";
-	LOGD("strncasecmp=%d, strnicmp=%d", strncasecmp(str3, str4, 6), strnicmp(str3, str4, 6));
+	LOGD("strncasecmp=%d, strnicmp=%d", strncasecmp(str3, str4, 6), strncasecmp(str3, str4, 9));
 	return 0;
 }
 

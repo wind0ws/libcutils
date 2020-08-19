@@ -2,7 +2,7 @@
 #ifndef __LCU_URL_ENCODER_DECODER_H
 #define __LCU_URL_ENCODER_DECODER_H
 
-#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

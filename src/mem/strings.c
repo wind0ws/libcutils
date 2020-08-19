@@ -43,7 +43,6 @@ strlcpy(char* dst, const char* src, size_t size)
 	return (s - src - 1);	/* count does not include NUL */
 }
 
-
 /*
  * Appends src to string dst of size "size" (unlike strncat, size is the
  * full size of dst, not space left).  At most size-1 characters
@@ -141,13 +140,13 @@ void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_
 	size_t recv_ptrs_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
-	token = STRTOK_SAFE((char *)src_str, delimiter, &token_ctx);
+	token = strtok_r((char *)src_str, delimiter, &token_ctx);
 	while (token && *p_splited_nums < recv_ptrs_size)
 	{
 		recv_splited_str[*p_splited_nums] = token;
 		(*p_splited_nums)++;
 
-		token = STRTOK_SAFE(NULL, delimiter, &token_ctx);
+		token = strtok_r(NULL, delimiter, &token_ctx);
 	}
 }
 

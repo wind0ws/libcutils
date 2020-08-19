@@ -2,7 +2,7 @@
 #ifndef __LCU_BASE64_H
 #define __LCU_BASE64_H
 
-#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

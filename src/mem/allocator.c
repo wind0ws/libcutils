@@ -16,6 +16,8 @@
  *
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/allocator.c
  ******************************************************************************/
+
+#include "lcu_stdafx.h"
 #include <stdlib.h>
 #include <string.h>
 #include "mem/allocator.h"
@@ -106,7 +108,7 @@ void* lcu_realloc(void* ptr, size_t size)
 	}
 
 	size_t cur_ptr_size = allocation_tracker_ptr_size(alloc_allocator_id, ptr);
-	if (size <= cur_ptr_size)
+	if (cur_ptr_size && size <= cur_ptr_size)
 	{
 		//current size if enough, no need alloc new memory.
 		return ptr;

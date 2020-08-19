@@ -17,6 +17,7 @@
  ******************************************************************************/
 #define LOG_TAG "allocation_tracker"
 
+#include "lcu_stdafx.h"
 #include "mem/allocation_tracker.h"
  //#include <assert.h>
  //#include <pthread.h>
@@ -111,14 +112,16 @@ size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report)
 {
 	if (!allocations)
 		return 0;
-	pthread_mutex_lock(&lock);
+	
 	allocation_free_checker_context context = 
 	{
 		.unfreed_memory_size = 0,
 		.fn_report = fn_report
 	};
+	pthread_mutex_lock(&lock);
 	hash_map_foreach(allocations, allocation_entry_freed_checker, &context);
 	pthread_mutex_unlock(&lock);
+
 	return context.unfreed_memory_size;
 }
 
@@ -128,6 +131,7 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 		return ptr;
 	char* return_ptr = (char*)ptr;
 	return_ptr += canary_size;
+
 	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, return_ptr);
 	if (allocation) 
@@ -140,11 +144,12 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 		ASSERT_ABORT(allocation);
 		hash_map_set(allocations, return_ptr, allocation);
 	}
+	pthread_mutex_unlock(&lock);
 	allocation->allocator_id = allocator_id;
 	allocation->freed = false;
 	allocation->size = requested_size;
 	allocation->ptr = return_ptr;
-	pthread_mutex_unlock(&lock);
+
 	// Add the canary on both sides
 	memcpy(return_ptr - canary_size, canary, canary_size);
 	memcpy(return_ptr + requested_size, canary, canary_size);
@@ -183,10 +188,11 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 	size_t ptr_size = 0;
 	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, ptr);
+	pthread_mutex_unlock(&lock);
 	ASSERT_ABORT(allocation);                               // Must have been tracked before
 	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
 	ptr_size = allocation->size;
-	pthread_mutex_unlock(&lock);
+
 	return ptr_size;
 }
 

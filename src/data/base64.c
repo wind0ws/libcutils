@@ -17,7 +17,7 @@ static const char basis_64[] =
 
 int base64_encode_buf_size(const size_t plain_buf_len)
 {
-	return ((plain_buf_len + 2) / 3 * 4) + 1;
+	return (int)(((plain_buf_len + 2) / 3 * 4) + 1);
 }
 
 int base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t src_buf_len)
@@ -57,7 +57,7 @@ int base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t
 	}
 
 	*p++ = '\0';
-	return p - out_buf_encoded;
+	return (int)(p - out_buf_encoded);
 }
 
 /* aaaack but it's fast and const should make it shared text page. */
@@ -84,7 +84,7 @@ static const unsigned char pr2six[256] =
 
 int base64_decode_buf_size(const size_t encoded_buf_len)
 {
-    return ((encoded_buf_len + 3) / 4) * 3 + 1;
+    return (int)(((encoded_buf_len + 3) / 4) * 3 + 1);
 }
 
 int base64_decode(char *out_buf_plain, const char *src_buf_encoded)
@@ -96,7 +96,7 @@ int base64_decode(char *out_buf_plain, const char *src_buf_encoded)
 
     bufin = (const unsigned char *) src_buf_encoded;
     while (pr2six[*(bufin++)] <= 63);
-    nprbytes = (bufin - (const unsigned char *) src_buf_encoded) - 1;
+    nprbytes = (int)(bufin - (const unsigned char *) src_buf_encoded) - 1;
     nbytesdecoded = ((nprbytes + 3) / 4) * 3;
 
     bufout = (unsigned char *) out_buf_plain;

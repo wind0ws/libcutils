@@ -18,6 +18,7 @@
  *
  ******************************************************************************/
 
+#include "lcu_stdafx.h"
 #include "data/array.h"
 #include <stdlib.h>
 #include <string.h>

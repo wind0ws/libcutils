@@ -176,7 +176,7 @@ typedef intptr_t ssize_t;
 
 #ifndef ASSERT
 #ifdef NDEBUG
-#define ASSERT(expr)  while(0) { (void)sizeof(expr); }
+#define ASSERT(expr)  (void)(expr) 
 #else
 #if _WIN32
 //why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!

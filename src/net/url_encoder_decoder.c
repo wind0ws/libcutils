@@ -49,7 +49,7 @@ int url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 	if (input_index == src_buf_plain_strlen)
 	{
 		out_buf_encoded[output_index] = '\0';
-		return output_index;
+		return (int)output_index;
 	}
 	return -3;
 }
@@ -149,5 +149,5 @@ int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 	{
 		*last_src_pos = (char *)src_buf_plain + input_index;
 	}
-	return output_index;
+	return (int)output_index;
 }

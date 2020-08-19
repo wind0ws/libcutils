@@ -1,3 +1,4 @@
+#include "lcu_stdafx.h"
 #include "common_macro.h"
 #include "mem/allocation_tracker.h"
 #include "mem/allocator.h"

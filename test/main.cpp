@@ -1,4 +1,4 @@
-#include "lcu_stdafx.h"
+#include "mem/mem_debug.h"
 #include "common_macro.h"
 #include "thread/thread_wrapper.h"
 #include "sys/dlfcn_wrapper.h"
@@ -22,9 +22,11 @@ static void setup_console();
    ASSERT(ret == 0);                                                       \
 } while (0)
 
-#define TEST_ALLOCATOR (1)
-extern int allocator_test_begin();
-extern int allocator_test_end();
+
+static int memleak_test();
+
+EXTERN_C_START
+
 extern int allocator_test();
 
 #define TEST_FILE_LOGGER (0)
@@ -42,19 +44,24 @@ extern int time_util_test();
 extern int url_encoder_decoder_test();
 extern int base64_test();
 
+EXTERN_C_END
 
+EXTERN_C
 int main(int argc, char* argv[])
 {
 #ifdef _WIN32
-#ifdef _DEBUG
-	enable_memleak_check();
-#endif // _DEBUG
 	setup_console();
+#ifdef _DEBUG
+	// create log file, do not close it at end of main, because crt will write log to it.
+	HANDLE hLogFile = CreateFile("./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
+		NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	// dump is in warn level. let warn log to file and debug console.
+	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+	_CrtSetReportFile(_CRT_WARN, hLogFile);
+#endif // _DEBUG
 #endif // _WIN32
 
-#if TEST_ALLOCATOR
-	allocator_test_begin();
-#endif
+	INIT_MEM_CHECK();
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_begin() == 0);
@@ -63,7 +70,7 @@ int main(int argc, char* argv[])
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 	//ASSERT_ABORT(1 == 0);
 
-	//RUN_TEST(allocator_test);//this will report mem leak.
+	RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
@@ -74,24 +81,33 @@ int main(int argc, char* argv[])
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	RUN_TEST(url_encoder_decoder_test);
-	RUN_TEST(base64_test);
+	//RUN_TEST(base64_test);
 
+	
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);
 #endif
-	
-	LOGI("...bye bye...");
 
-#if TEST_ALLOCATOR
-	allocator_test_end();
-#endif
+	LOGI("...bye bye...\n");
+
+	DEINIT_MEM_CHECK();
 	return 0;
 }
 
+static int memleak_test()
+{
+	int ret = allocator_test();
+	char* leak_mem = new char[16];
+	memset(leak_mem, 0xFF, 16);
+	//memset(leak_mem, 0xFF, 18); // will report memory corruption
+	LOGD("leak_mem=0x%p, leak_mem[0]=%d", &leak_mem[0], leak_mem[0]);
+	//delete[] leak_mem;
+	return ret;
+}
 
 #ifdef _WIN32
 
-static void setup_console() 
+static void setup_console()
 {
 	// set locale for support Chinese filename/output.
 	//should also add /utf-8 option to compiler and make sure your source file save as utf-8.

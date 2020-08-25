@@ -55,12 +55,15 @@ hash_map_t* hash_map_new_internal(
 	key_equality_fn equality_fn,
 	const allocator_t* zeroed_allocator) 
 {
-	ASSERT(hash_fn != NULL);
-	ASSERT(num_bucket > 0);
-	ASSERT(zeroed_allocator != NULL);
+	if (hash_fn == NULL || num_bucket == 0 || zeroed_allocator == NULL)
+	{
+		return NULL;
+	}
 	hash_map_t* hash_map = zeroed_allocator->alloc(sizeof(hash_map_t));
 	if (hash_map == NULL)
+	{
 		return NULL;
+	}
 	hash_map->hash_fn = hash_fn;
 	hash_map->key_fn = key_fn;
 	hash_map->data_fn = data_fn;
@@ -89,7 +92,9 @@ hash_map_t* hash_map_new(
 void hash_map_free(hash_map_t* hash_map) 
 {
 	if (hash_map == NULL)
+	{
 		return;
+	}
 	hash_map_clear(hash_map);
 	hash_map->allocator->free(hash_map->bucket);
 	hash_map->allocator->free(hash_map);
@@ -97,25 +102,37 @@ void hash_map_free(hash_map_t* hash_map)
 
 bool hash_map_is_empty(const hash_map_t* hash_map) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return false;
+	}
 	return (hash_map->hash_size == 0);
 }
 
 size_t hash_map_size(const hash_map_t* hash_map) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return 0;
+	}
 	return hash_map->hash_size;
 }
 
 size_t hash_map_num_buckets(const hash_map_t* hash_map) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return 0;
+	}
 	return hash_map->num_bucket;
 }
 
 bool hash_map_has_key(const hash_map_t* hash_map, const void* key) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return false;
+	}
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -124,8 +141,10 @@ bool hash_map_has_key(const hash_map_t* hash_map, const void* key)
 
 bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) 
 {
-	ASSERT(hash_map != NULL);
-	ASSERT(data != NULL);
+	if (hash_map == NULL || data == NULL)
+	{
+		return false;
+	}
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	if (hash_map->bucket[hash_key].list == NULL) 
 	{
@@ -156,7 +175,10 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data)
 
 bool hash_map_erase(hash_map_t* hash_map, const void* key) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return false;
+	}
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -170,7 +192,10 @@ bool hash_map_erase(hash_map_t* hash_map, const void* key)
 
 void* hash_map_get(const hash_map_t* hash_map, const void* key) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return NULL;
+	}
 	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -181,7 +206,10 @@ void* hash_map_get(const hash_map_t* hash_map, const void* key)
 
 void hash_map_clear(hash_map_t* hash_map) 
 {
-	ASSERT(hash_map != NULL);
+	if (hash_map == NULL)
+	{
+		return;
+	}
 	for (hash_index_t i = 0; i < hash_map->num_bucket; i++) 
 	{
 		if (hash_map->bucket[i].list == NULL)
@@ -193,8 +221,10 @@ void hash_map_clear(hash_map_t* hash_map)
 
 void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* context) 
 {
-	ASSERT(hash_map != NULL);
-	ASSERT(callback != NULL);
+	if (hash_map == NULL || callback == NULL)
+	{
+		return;
+	}
 	for (hash_index_t i = 0; i < hash_map->num_bucket; ++i)
 	{
 		if (hash_map->bucket[i].list == NULL)
@@ -212,7 +242,10 @@ void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* con
 
 static void bucket_free_(void* data) 
 {
-	ASSERT(data != NULL);
+	if (data == NULL)
+	{
+		return;
+	}
 	hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)data;
 	const hash_map_t* hash_map = hash_map_entry->hash_map;
 	if (hash_map->key_fn)

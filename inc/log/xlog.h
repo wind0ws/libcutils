@@ -4,8 +4,12 @@
 
 #ifdef _WIN32
 //sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
-//#define __func__ __FUNCTION__
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif // !__func__
+#ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
+#endif // !__PRETTY_FUNCTION__
 #elif(defined(__ANDROID__))
 #include <android/log.h>
 #endif // _WIN32

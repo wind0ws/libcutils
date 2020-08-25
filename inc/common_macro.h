@@ -19,6 +19,12 @@
 #endif // __ANDROID__
 
 #ifdef _WIN32
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif // !__func__
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCSIG__ 
+#endif // !__PRETTY_FUNCTION__
 #include <crtdbg.h> /* for _ASSERT_AND_INVOKE_WATSON */
 #include <sal.h>
 #else
@@ -80,15 +86,16 @@ typedef float               FLOAT;
 
 #ifndef EXTERN_C
 #ifdef __cplusplus
-#define EXTERN_C       extern "C"
+#define EXTERN_C         extern "C"
 #else
-#define EXTERN_C       extern
+#define EXTERN_C         extern
 #endif // __cplusplus
 #endif // !EXTERN_C
+
 #ifndef EXTERN_C_START
 #ifdef __cplusplus
-#define EXTERN_C_START extern "C" {
-#define EXTERN_C_END   }
+#define EXTERN_C_START   extern "C" {
+#define EXTERN_C_END     }
 #else
 #define EXTERN_C_START
 #define EXTERN_C_END
@@ -96,13 +103,8 @@ typedef float               FLOAT;
 #endif // !EXTERN_C_START
 
 #ifndef __BEGIN_DECLS
-#ifdef __cplusplus
-#define __BEGIN_DECLS   extern "C" {
-#define __END_DECLS     }
-#else
-#define __BEGIN_DECLS
-#define __END_DECLS
-#endif // __cplusplus
+#define __BEGIN_DECLS    EXTERN_C_START
+#define __END_DECLS      EXTERN_C_END
 #endif // !__BEGIN_DECLS
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
@@ -160,7 +162,6 @@ typedef intptr_t ssize_t;
 #define NULLABLE_STRING(a) ((a) ? (a) : "(null)")
 #endif // !NULLABLE_STRING
 
-
 // Use during compile time to check conditional values
 // NOTE: The the failures will present as a generic error
 // "error: initialization makes pointer from integer without a cast"
@@ -174,8 +175,22 @@ typedef intptr_t ssize_t;
 #define STATIC_ASSERT(expr) __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, __LINE__)
 #endif  // !STATIC_ASSERT
 
+#ifdef __ANDROID__
+#define __EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", fmt, ##__VA_ARGS__)
+#else
+#define __EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) 
+#endif //__ANDROID__
+
+//for log emergency error message.
+#define EMERGENCY_LOG(fmt, ...)                                                      \
+     {                                                                               \
+        __EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                            \
+        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                             \
+        fflush(stdout);                                                              \
+     }
+
 #ifndef ASSERT
-#ifdef NDEBUG
+#if(defined(NDEBUG) || !defined(_DEBUG))
 #define ASSERT(expr)  (void)(expr) 
 #else
 #if _WIN32
@@ -194,21 +209,8 @@ typedef intptr_t ssize_t;
 #else
 #define ASSERT(expr) assert(expr)
 #endif // _WIN32
-#endif // NDEBUG
-
-#ifdef __ANDROID__
-#define __LOG_PLATFORM(...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", __VA_ARGS__)
-#else
-#define __LOG_PLATFORM(...) 
-#endif //__ANDROID__
-
-//for ASSERT_ABORT to use log error message.
-#define __LOGE(...)                                                                  \
-     {                                                                               \
-        __LOG_PLATFORM(__VA_ARGS__);                                                 \
-        printf(__VA_ARGS__);                                                         \
-        fflush(stdout);                                                              \
-     }
+#endif // NDEBUG || !_DEBUG
+#endif // !ASSERT
 
 #define __TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
     {                                                                                \
@@ -216,7 +218,7 @@ typedef intptr_t ssize_t;
         bool is_expr_true##line = !!(expr);                                          \
         if (!is_expr_true##line)                                                     \
         {                                                                            \
-           __LOGE("API check '%s' failed at %s (%s:%d)\n",                           \
+           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
                   #expr, __func__, __FILE__, __LINE__);                              \
            abort();                                                                  \
         }                                                                            \
@@ -227,7 +229,6 @@ typedef intptr_t ssize_t;
  * In release mode, it will log error to stdout/logcat and abort program.
  */
 #define ASSERT_ABORT(expr)  __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
-#endif // !ASSERT
 
 #ifndef __cplusplus
 // Macros for safe integer to pointer conversion. In the C language, data is

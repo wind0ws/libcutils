@@ -16,30 +16,43 @@
  *
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_functions.c
  ******************************************************************************/
-#include <string.h>
 #include "data/hash_functions.h"
 
-hash_index_t hash_function_naive(const void *key)
+hash_index_t hash_function_naive(const void* key)
 {
-  return (hash_index_t)key;
+	return (hash_index_t)key;
 }
 
-hash_index_t hash_function_integer(const void *key)
+// 2^32 = 2654435761 
+
+hash_index_t hash_function_integer(const void* key)
 {
-  return ((hash_index_t)key) * 2654435761;
+	return ((hash_index_t)key) * 2654435761;
 }
 
-hash_index_t hash_function_pointer(const void *key)
+hash_index_t hash_function_pointer(const void* key)
 {
-  return ((hash_index_t)key) * 2654435761;
+	return ((hash_index_t)key) * 2654435761;
 }
 
-hash_index_t hash_function_string(const void *key)
+/**
+ * hash string.
+ * 
+ * Magic Constant 5381:
+ * 1. odd number
+ * 2. prime number
+ * 3. deficient number
+ * 4. 001/010/100/000/101 b
+ */
+hash_index_t hash_function_string(const void* key)
 {
-  hash_index_t hash = 5381;
-  const char *name = (const char *)key;
-  size_t string_len = strlen(name);
-  for (size_t i = 0; i < string_len; ++i)
-    hash = ((hash << 5) + hash ) + name[i];
-  return hash;
+	hash_index_t hash = 5381;
+	const char* str = (const char*)key;
+	char c;
+	while ((c = *str) != '\0')
+	{
+		hash = ((hash << 5) + hash) + c;
+		++str;
+	}
+	return hash;
 }

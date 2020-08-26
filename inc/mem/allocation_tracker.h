@@ -21,9 +21,8 @@
 #ifndef __LCU_ALLOCATION_TRACKER_H__
 #define __LCU_ALLOCATION_TRACKER_H__
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <stdint.h> /* for uint8_t */
+#include <stddef.h> /* for size_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +30,8 @@ extern "C" {
 
 typedef struct allocation_tracker_t allocation_tracker_t;
 typedef uint8_t allocator_id_t;
-typedef void (*report_leak_mem_fn)(void* leak_ptr, size_t leak_size);
+typedef void (*report_leak_mem_fn)(void* leak_ptr, size_t leak_size, 
+	char *leak_file, char *leak_func, int leak_line, void *user_data);
 
 // Initialize the allocation tracker. If you do not call this function,
 // the allocation tracker functions do nothing but are still safe to call.
@@ -48,7 +48,7 @@ void allocation_tracker_reset(void);
 // Expects that there are no allocations at the time of this call. Dumps
 // information about unfreed allocations to the log. Returns the amount of
 // unallocated memory. report_leak_mem_fn can be NULL.
-size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report);
+size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report, void *report_fn_user_data);
 
 // Notify the tracker of a new allocation belonging to |allocator_id|.
 // If |ptr| is NULL, this function does nothing. |requested_size| is the
@@ -56,7 +56,8 @@ size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report);
 // enough memory for canaries; the total allocation size can be determined
 // by calling |allocation_tracker_resize_for_canary|. Returns |ptr| offset
 // to the the beginning of the uncanaried region.
-void *allocation_tracker_notify_alloc(allocator_id_t allocator_id, void *ptr, size_t requested_size);
+void *allocation_tracker_notify_alloc(allocator_id_t allocator_id, void *ptr, size_t requested_size, 
+	const char* file_path, const char* func_name, int file_line);
 
 // Notify the tracker of an allocation that is being freed. |ptr| must be a
 // pointer returned by a call to |allocation_tracker_notify_alloc| with the

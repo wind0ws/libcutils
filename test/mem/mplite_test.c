@@ -1,4 +1,4 @@
-#include "lcu_stdafx.h"
+#include <malloc.h>
 #include "common_macro.h"
 #include "mem/mplite.h"
 #include <stdio.h>
@@ -43,11 +43,11 @@ int mplite_test()
 	size_t buffer_size;
 	size_t min_alloc;
 	size_t num_threads;
-	char* large_buffer;
-	char* alloc_ret;
+	char* large_buffer = NULL;
+	char* alloc_ret = NULL;
 	mplite_t mempool;
-	pthread_t* threads;
-	multithreaded_param_t* threads_param;
+	pthread_t* threads = NULL;
+	multithreaded_param_t* threads_param = NULL;
 	mplite_lock_t pool_lock;
 	pthread_mutex_t mutex;
 	int test_again;
@@ -74,6 +74,10 @@ int mplite_test()
 		printf("Enter the number of threads to run for multi-threaded test: ");
 		scanf_ret = scanf("%zu", &num_threads);
 		if (scanf_ret != 1)
+		{
+			break;
+		}
+		if (num_threads < 1)
 		{
 			break;
 		}
@@ -104,6 +108,7 @@ int mplite_test()
 		mplite_init(&mempool, large_buffer, (const int)buffer_size,
 			(const int)min_alloc, &pool_lock);
 		threads = (pthread_t*)malloc(sizeof(*threads) * num_threads);
+		ASSERT(threads);
 		threads_param = (multithreaded_param_t*)malloc(sizeof(*threads_param) * num_threads);
 		ASSERT(threads_param);
 		/* Run all the threads */

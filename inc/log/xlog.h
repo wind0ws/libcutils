@@ -4,8 +4,12 @@
 
 #ifdef _WIN32
 //sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
-//#define __func__ __FUNCTION__
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif // !__func__
+#ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
+#endif // !__PRETTY_FUNCTION__
 #elif(defined(__ANDROID__))
 #include <android/log.h>
 #endif // _WIN32
@@ -14,12 +18,12 @@
 
 typedef enum
 {
-	LOG_LEVEL_OFF = 0,
+	LOG_LEVEL_OFF     = 0,
 	LOG_LEVEL_VERBOSE = 1,
-	LOG_LEVEL_DEBUG = 2,
-	LOG_LEVEL_INFO = 3,
-	LOG_LEVEL_WARN = 4,
-	LOG_LEVEL_ERROR = 5,
+	LOG_LEVEL_DEBUG   = 2,
+	LOG_LEVEL_INFO    = 3,
+	LOG_LEVEL_WARN    = 4,
+	LOG_LEVEL_ERROR   = 5,
 	LOG_LEVEL_UNKNOWN
 } LogLevel;
 
@@ -27,9 +31,9 @@ typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
 
 typedef enum
 {
-	LOG_TARGET_NONE = 0,
-	LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
-	LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_NONE          = 0,          // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_ANDROID       = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_CONSOLE       = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
 	LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
 } LogTarget;
 
@@ -44,29 +48,31 @@ extern "C" {
 	void xlog_auto_level_up(LogLevel trigger_level);
 
 	/**
-	 * redirect log output from stdout to file.
+	 * redirect stdout from console window to file.
 	 */
 	void xlog_stdout2file(char* file_path);
 
 	/**
-	 * log output set to stdout.
+	 * let stdout print on console window.
 	 */
 	void xlog_back2stdout();
 
 	/**
-	 * set default log tag. use it on LOGX macro.
+	 * set default log tag. use this tag if you not passed TAG.
 	 */
 	void xlog_set_default_tag(char* tag);
 
 	/**
 	 * timezone_hour used by generate log time.
+	 * default timezone_hour is 8.
+	 * eg: In china, we are in +8 timezone area, so here set it to 8.
 	 */
 	void xlog_set_timezone(int timezone_hour);
 
 	/**
 	 * set user callback. when log performed, callback will called.
 	 * you can do your own log logic on callback.
-	 * note: log target should include LOG_TARGET_USER_CALLBACK
+	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
 	 */
 	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
 
@@ -78,7 +84,7 @@ extern "C" {
 	LogTarget xlog_get_target();
 
 	/**
-	 * set the min log level. only log if current level greater than or equal to this min_level
+	 * set the min log level. only log if current level greater or equal to this min_level
 	 */
 	void xlog_set_min_level(LogLevel min_level);
 

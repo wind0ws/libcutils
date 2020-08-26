@@ -6,16 +6,16 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
+#include <stddef.h>
 
 #define TIME_RFC2822_STR_LEN (31)
 
 #define TIME_RFC2822_UTC_STR_LEN (29)
 
-int time_now_rfc2822(char *out_time_str, size_t out_time_str_len);
+int time_rfc2822_now(char *out_time_str, size_t out_time_str_len);
 
 //Format： Thu, 09 Jan 2020 06:11:13 UTC
-int time_now_rfc2822_utc(char *out_time_str, size_t out_time_str_len);
+int time_rfc2822_utc_now(char *out_time_str, size_t out_time_str_len);
 
 #ifdef __cplusplus
 };

@@ -18,7 +18,7 @@
  *
  ******************************************************************************/
 
-#include "lcu_stdafx.h"
+#include "mem/mem_debug.h"
 #include "data/array.h"
 #include <stdlib.h>
 #include <string.h>

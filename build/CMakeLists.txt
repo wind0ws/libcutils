@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.2.5 LANGUAGES C CXX)
+project(libcutils VERSION 1.2.6 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -50,15 +50,14 @@ endif(WIN32)
 
 #add compile/optimize options for DEBUG/RELEASE
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /Ot /MT")
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /MTd /DEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /Ot /MT")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MTd /DEBUG /Zi")
 	
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     /utf-8 -W3")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 -W3")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     /utf-8 /W3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /W3")
 else()
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Og")
@@ -66,7 +65,9 @@ else()
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
 	
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wall -Wno-unused-local-typedefs -Wno-unused-function")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedefs -Wno-unused-function")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 endif ()
 
 # 小知识

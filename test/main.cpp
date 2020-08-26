@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 	//ASSERT_ABORT(1 == 0);
 
-	RUN_TEST(memleak_test);//this will report mem leak.
+	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	RUN_TEST(url_encoder_decoder_test);
-	//RUN_TEST(base64_test);
+	RUN_TEST(base64_test);
 
 	
 #if TEST_FILE_LOGGER
@@ -110,21 +110,12 @@ static int memleak_test()
 static void setup_console()
 {
 	// set locale for support Chinese filename/output.
-	//should also add /utf-8 option to compiler and make sure your source file save as utf-8.
+	// should also add /utf-8 option to compiler and make sure your source file save as utf-8.
 	setlocale(LC_CTYPE, ".utf8");
 	//FILE* f = fopen(u8"D:\\迅雷下载\\你好.txt", "rb");//ok
 	//ASSERT_ABORT(f);
 	//fclose(f);
 	//LOGD("你好");
-
-	// Set console character encoding, for support Chinese
-	//SetConsoleOutputCP(CP_UTF8);
-	//CONSOLE_FONT_INFOEX console_font_info = { 0 };
-	//console_font_info.cbSize = sizeof(console_font_info);
-	//console_font_info.dwFontSize.Y = 16; // leave X as zero
-	//console_font_info.FontWeight = FW_NORMAL;
-	//wcscpy_s(console_font_info.FaceName, _countof(console_font_info.FaceName), L"Consolas");
-	//SetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), false, &console_font_info);
 }
 
 #endif // _WIN32

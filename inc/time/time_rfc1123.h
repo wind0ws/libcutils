@@ -6,11 +6,11 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
+#include <stddef.h>
 
 #define TIME_RFC1123_STR_LEN (29)
 
-int time_now_rfc1123(char *out_time_str, size_t out_time_str_len);
+int time_rfc1123_now(char *out_time_str, size_t out_time_str_len);
 
 #ifdef __cplusplus
 };

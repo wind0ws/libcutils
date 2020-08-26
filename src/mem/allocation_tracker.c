@@ -233,7 +233,7 @@ static bool allocation_memory_corruption_checker(allocation_t* allocation)
 		if (beginning_canary[i] != canary[i] ||
 			end_canary[i] != canary[i])
 		{
-			EMERGENCY_LOG("detect corrupted memory at %s (%s:%d), address: 0x%zx size: %zd bytes",
+			EMERGENCY_LOG("detect corrupted memory at '%s' (%s:%d), address: 0x%zx size: %zd bytes",
 				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), allocation->file_line,
 				(uintptr_t)allocation->ptr, allocation->size);
 			abort();
@@ -259,7 +259,7 @@ static bool allocation_entry_freed_checker(hash_map_entry_t* entry, void* contex
 		}
 		else
 		{
-			EMERGENCY_LOG("%s found unfreed memory at %s (%s:%d), address: 0x%zx size: %zd bytes", __func__,
+			EMERGENCY_LOG("'%s' found unfreed memory at '%s' (%s:%d), address: 0x%zx size: %zd bytes", __func__,
 				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), allocation->file_line,
 				(uintptr_t)allocation->ptr, allocation->size);
 		}

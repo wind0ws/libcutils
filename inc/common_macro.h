@@ -2,20 +2,20 @@
 #ifndef __LCU_COMMON_MACRO_H
 #define __LCU_COMMON_MACRO_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <sys/types.h>
+#include <stdbool.h>      /* for true/false    */
+#include <stddef.h>       /* for size_t        */
+#include <stdint.h>       /* for int32_t       */
+#include <stdlib.h>       /* for abort         */
+#include <stdio.h>        /* for FILE          */
+#include <assert.h>       /* for assert        */
+#include <sys/types.h>    /* for ssize_t       */
 
 #if(defined(__linux__) || defined(__ANDROID__))
-#include <sys/cdefs.h>  /* for __BEGIN_DECLS */
+#include <sys/cdefs.h>    /* for __BEGIN_DECLS */
 #endif
 
 #ifdef __ANDROID__
-#include <android/log.h>  /* for log error */
+#include <android/log.h>  /* for log error     */
 #endif // __ANDROID__
 
 #ifdef _WIN32
@@ -108,28 +108,28 @@ typedef float               FLOAT;
 #endif // !__BEGIN_DECLS
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
+//sigh: windows ONLY defined size_t on vcruntime.h. so we need define ssize_t
 #ifdef _WIN32
 #if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
 typedef intptr_t ssize_t;
 # define SSIZE_MAX INTPTR_MAX
-# define _SSIZE_T_
-# define _SSIZE_T_DEFINED
-#endif
-#endif // _WIN32
-
+# define _SSIZE_T_        // mark ssize_t defined
+# define _SSIZE_T_DEFINED // mark ssize_t defined
+#endif // !_SSIZE_T_ && !_SSIZE_T_DEFINED
 #if(defined(_MSC_VER) && _MSC_VER < 1800)
 /* __LP64__ is defined by compiler. If set to 1 means this is 64bit build system */
 #ifdef __LP64__
-#define SIZE_T_FORMAT "%lu"
-#define SSIZE_T_FORMAT "%ld"
+#define SIZE_T_FORMAT   "%lu"
+#define SSIZE_T_FORMAT  "%ld"
 #else
-#define SIZE_T_FORMAT "%u"
-#define SSIZE_T_FORMAT "%d"
+#define SIZE_T_FORMAT   "%u"
+#define SSIZE_T_FORMAT  "%d"
 #endif
 #else
-#define SIZE_T_FORMAT "%zu"
-#define SSIZE_T_FORMAT "%zd"
+#define SIZE_T_FORMAT   "%zu"
+#define SSIZE_T_FORMAT  "%zd"
 #endif // _MSC_VER
+#endif // _WIN32
 
 // widely useful macros. pay attention to the influence of double computation!
 #ifndef __max
@@ -155,9 +155,9 @@ typedef intptr_t ssize_t;
 #ifndef CONCAT
 #define CONCAT(a, b) a##b
 #endif // !CONCAT
-#ifndef STRING
-#define STRING(a) #a
-#endif // !STRING
+#ifndef STRINGFY
+#define STRINGFY(a) #a
+#endif // !STRINGFY
 #ifndef NULLABLE_STRING
 #define NULLABLE_STRING(a) ((a) ? (a) : "(null)")
 #endif // !NULLABLE_STRING
@@ -185,7 +185,7 @@ typedef intptr_t ssize_t;
 #define EMERGENCY_LOG(fmt, ...)                                                      \
      {                                                                               \
         __EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                            \
-        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                             \
+        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                  \
         fflush(stdout);                                                              \
      }
 
@@ -231,11 +231,11 @@ typedef intptr_t ssize_t;
 #define ASSERT_ABORT(expr)  __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
 
 #ifndef __cplusplus
-// Macros for safe integer to pointer conversion. In the C language, data is
-// commonly cast to opaque pointer containers and back for generic parameter
-// passing in callbacks. These macros should be used sparingly in new code
-// (never in C++ code). Whenever integers need to be passed as a pointer, use
-// these macros.
+ // Macros for safe integer to pointer conversion. In the C language, data is
+ // commonly cast to opaque pointer containers and back for generic parameter
+ // passing in callbacks. These macros should be used sparingly in new code
+ // (never in C++ code). Whenever integers need to be passed as a pointer, use
+ // these macros.
 #define PTR_TO_UINT(p)  ((unsigned int) ((uintptr_t) (p)))
 #define UINT_TO_PTR(u)  ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))

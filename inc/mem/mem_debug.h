@@ -54,8 +54,9 @@
 #endif // __cplusplus
 #include <malloc.h>
 
-//define this macro will enable mem check feature
-#define _ENABLE_LCU_MEM_CHECK_FEATURE
+//define this macro will enable memory check feature
+//suggest user add it to compiler on build if you really want to debug memory.
+//#define _ENABLE_LCU_MEM_CHECK_FEATURE
 
 #if(!defined(_CRTDBG_MAP_ALLOC) && defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
 //to mark we really use lcu mem check feature
@@ -66,14 +67,14 @@
 #ifdef __cplusplus
 void* operator new(size_t size, const char* fileName, const char* funcName, int line);
 void* operator new[](size_t size, const char* fileName, const char* funcName, int line);
-void  operator delete(void* pMem) noexcept;
-void  operator delete[](void* pMem) noexcept;
+void  operator delete(void* ptr) noexcept;
+void  operator delete[](void* ptr) noexcept;
 
 #define new new(__FILE__, __func__, __LINE__)
 #endif // __cplusplus
 
 #define INIT_MEM_CHECK()   allocation_tracker_init()
-#define DEINIT_MEM_CHECK() allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit()
+#define DEINIT_MEM_CHECK() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
 
 #define free(p)            lcu_free(p)
 #define malloc(s)          lcu_malloc_trace(s, __FILE__, __func__, __LINE__)

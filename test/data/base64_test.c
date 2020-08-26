@@ -20,7 +20,7 @@ int base64_test()
 		free(encode_buf);
 		return ret;
 	}
-	TLOGI(LOG_TAG, "succeed encode \"%s\" to \"%s\"", plain_utf8_str, encode_buf);
+	TLOGI(LOG_TAG, "succeed encode \"%s\" ==> \"%s\"", plain_utf8_str, encode_buf);
 
 	size_t decode_buf_len = base64_decode_buf_size(encode_buf_len);
 	char* decode_buf = (char*)malloc(decode_buf_len);
@@ -31,7 +31,7 @@ int base64_test()
 	}
 	else
 	{
-		TLOGI(LOG_TAG, "succeed decode \"%s\" to \"%s\"", encode_buf, decode_buf);
+		TLOGI(LOG_TAG, "succeed decode \"%s\" ==> \"%s\"", encode_buf, decode_buf);
 	}
 
 	free(encode_buf);

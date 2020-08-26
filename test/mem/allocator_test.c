@@ -7,9 +7,9 @@
 #define LOG_TAG_ALLOC_TEST "alloc_test"
 
 static void report_leak_memory(void* ptr, size_t size,
-	char* leak_file, char *leak_func, int leak_line, void* user_data)
+	char* leak_file, char* leak_func, int leak_line, void* user_data)
 {
-	TLOGE(LOG_TAG_ALLOC_TEST, "deteck leak mem at %s (%s:%d), addr: 0x%p, size: %zu bytes",
+	TLOGE(LOG_TAG_ALLOC_TEST, "deteck leak memory at '%s' (%s:%d), address: 0x%p, size: %zu bytes",
 		NULLABLE_STRING(leak_func), NULLABLE_STRING(leak_file), leak_line, ptr, size);
 }
 

@@ -7,11 +7,8 @@
 #include "log/file_logger.h"
 #include "libcutils.h"
 #include <locale.h> /* for setlocale */
-#include <malloc.h>
 
-#ifdef _WIN32
 static void setup_console();
-#endif // _WIN32
 
 #define RUN_TEST(func_name) do                                             \
 {                                                                          \
@@ -49,17 +46,7 @@ EXTERN_C_END
 EXTERN_C
 int main(int argc, char* argv[])
 {
-#ifdef _WIN32
 	setup_console();
-#ifdef _DEBUG
-	// create log file, do not close it at end of main, because crt will write log to it.
-	HANDLE hLogFile = CreateFile("./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
-		NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	// dump is in warn level. let warn log to file and debug console.
-	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-	_CrtSetReportFile(_CRT_WARN, hLogFile);
-#endif // _DEBUG
-#endif // _WIN32
 
 	INIT_MEM_CHECK();
 
@@ -70,7 +57,7 @@ int main(int argc, char* argv[])
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 	//ASSERT_ABORT(1 == 0);
 
-	//RUN_TEST(memleak_test);//this will report mem leak.
+	RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
@@ -105,10 +92,11 @@ static int memleak_test()
 	return ret;
 }
 
-#ifdef _WIN32
+
 
 static void setup_console()
 {
+#ifdef _WIN32
 	// set locale for support Chinese filename/output.
 	// should also add /utf-8 option to compiler and make sure your source file save as utf-8.
 	setlocale(LC_CTYPE, ".utf8");
@@ -116,6 +104,5 @@ static void setup_console()
 	//ASSERT_ABORT(f);
 	//fclose(f);
 	//LOGD("你好");
-}
-
 #endif // _WIN32
+}

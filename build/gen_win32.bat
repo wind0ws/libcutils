@@ -13,7 +13,7 @@ goto main
 :choose_win_pthread
 @echo "LCU support two mode win pthread mode:"
 @echo "  0: use pthreads-win32 lib."
-@echo "  1: use default windows native implemention."
+@echo "  1: use windows native implemention."
 @echo .
 set /p user_choose_win_pthread_mode="please choose LCU pthread mode:"
 
@@ -27,6 +27,7 @@ mkdir build_win32 & pushd build_win32
 popd
 ::%cmake_bin% --build build_win32 --config Debug
 
+@echo.
 @echo "Generate finished. Press any key to exit..."
 @pause>nul
 color 0F

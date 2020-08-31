@@ -26,6 +26,7 @@ copy /Y .\build_android_v8a\libcutils_test .\output\android\arm64-v8a\
 copy /Y .\build_android_v8a\liblcu_a.a .\output\android\arm64-v8a\
 copy /Y .\build_android_v8a\liblcu.so .\output\android\arm64-v8a\
 
+@echo.
 @echo "compile complete. Press any key to exit..."
 @pause>nul
 color 0F

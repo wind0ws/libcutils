@@ -1,10 +1,10 @@
-//#include <assert.h>
-#include "mem/allocator.h"
-#include "data/list.h"
-
 /*
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/list.c
 */
+
+//#include <assert.h>
+#include "mem/allocator.h"
+#include "data/list.h"
 
 struct list_node_t 
 {
@@ -28,8 +28,10 @@ static list_node_t* list_free_node_(list_t* list, list_node_t* node);
 list_t* list_new_internal(list_free_cb callback, const allocator_t* zeroed_allocator) 
 {
 	list_t* list = (list_t*)zeroed_allocator->alloc(sizeof(list_t));
-	if (!list)
+	if (list == NULL)
+	{
 		return NULL;
+	}
 	list->free_cb = callback;
 	list->allocator = zeroed_allocator;
 	return list;
@@ -40,86 +42,127 @@ list_t* list_new(list_free_cb callback)
 	return list_new_internal(callback, &allocator_calloc);
 }
 
-void list_free(list_t* list) {
-	if (!list)
+void list_free(list_t* list) 
+{
+	if (list == NULL)
+	{
 		return;
+	}
 	list_clear(list);
 	list->allocator->free(list);
 }
 
-bool list_is_empty(const list_t* list) {
-	ASSERT(list != NULL);
+bool list_is_empty(const list_t* list) 
+{
+	if (list == NULL)
+	{
+		return false;
+	}
 	return (list->length == 0);
 }
 
-bool list_contains(const list_t* list, const void* data) {
-	ASSERT(list != NULL);
-	ASSERT(data != NULL);
+bool list_contains(const list_t* list, const void* data) 
+{
+	if (list == NULL || data == NULL)
+	{
+		return false;
+	}
 	for (const list_node_t* node = list_begin(list); node != list_end(list); node = list_next(node)) 
 	{
 		if (list_node(node) == data)
+		{
 			return true;
+		}
 	}
 	return false;
 }
 
-size_t list_length(const list_t* list) {
-	ASSERT(list != NULL);
+size_t list_length(const list_t* list) 
+{
+	if (list == NULL)
+	{
+		return 0;
+	}
 	return list->length;
 }
 
-void* list_front(const list_t* list) {
-	ASSERT(list != NULL);
-	ASSERT(!list_is_empty(list));
+void* list_front(const list_t* list) 
+{
+	if (list == NULL || list_is_empty(list))
+	{
+		return NULL;
+	}
 	return list->head->data;
 }
 
-void* list_back(const list_t* list) {
-	ASSERT(list != NULL);
-	ASSERT(!list_is_empty(list));
+void* list_back(const list_t* list) 
+{
+	if (list == NULL || list_is_empty(list))
+	{
+		return NULL;
+	}
 	return list->tail->data;
 }
 
-list_node_t* list_back_node(const list_t* list) {
-	ASSERT(list != NULL);
-	ASSERT(!list_is_empty(list));
+list_node_t* list_back_node(const list_t* list) 
+{
+	if (list == NULL || list_is_empty(list))
+	{
+		return NULL;
+	}
 	return list->tail;
 }
 
-bool list_insert_after(list_t* list, list_node_t* prev_node, void* data) {
-	ASSERT(list != NULL);
-	ASSERT(prev_node != NULL);
-	ASSERT(data != NULL);
+bool list_insert_after(list_t* list, list_node_t* prev_node, void* data) 
+{
+	if (list == NULL || prev_node == NULL || data == NULL)
+	{
+		return false;
+	}
 	list_node_t* node = (list_node_t*)list->allocator->alloc(sizeof(list_node_t));
 	if (!node)
+	{
 		return false;
+	}
 	node->next = prev_node->next;
 	node->data = data;
 	prev_node->next = node;
 	if (list->tail == prev_node)
+	{
 		list->tail = node;
+	}
 	++list->length;
 	return true;
 }
 
-bool list_prepend(list_t* list, void* data) {
-	ASSERT(list != NULL);
-	ASSERT(data != NULL);
-	list_node_t* node = (list_node_t*)list->allocator->alloc(sizeof(list_node_t));
-	if (!node)
+bool list_prepend(list_t* list, void* data) 
+{
+	if (list == NULL || data == NULL)
+	{
 		return false;
+	}
+	list_node_t* node = (list_node_t*)list->allocator->alloc(sizeof(list_node_t));
+	if (node == NULL)
+	{
+		return false;
+	}
 	node->next = list->head;
 	node->data = data;
 	list->head = node;
 	if (list->tail == NULL)
+	{
 		list->tail = list->head;
+	}
 	++list->length;
 	return true;
 }
 
-bool list_append(list_t* list, void* data) {
-	ASSERT(list != NULL);
-	ASSERT(data != NULL);
+bool list_append(list_t* list, void* data) 
+{
+	if (list == NULL || data == NULL)
+	{
+		return false;
+	}
 	list_node_t* node = (list_node_t*)list->allocator->alloc(sizeof(list_node_t));
 	if (!node)
 	{
@@ -143,9 +186,7 @@ bool list_append(list_t* list, void* data) {
 
 bool list_remove(list_t* list, void* data) 
 {
-	ASSERT(list != NULL);
-	ASSERT(data != NULL);
-	if (list_is_empty(list))
+	if (list == NULL || data == NULL || list_is_empty(list))
 	{
 		return false;
 	}
@@ -175,10 +216,16 @@ bool list_remove(list_t* list, void* data)
 	return false;
 }
 
-void list_clear(list_t* list) {
-	ASSERT(list != NULL);
+void list_clear(list_t* list) 
+{
+	if (list == NULL)
+	{
+		return;
+	}
 	for (list_node_t* node = list->head; node; )
+	{
 		node = list_free_node_(list, node);
+	}
 	list->head = NULL;
 	list->tail = NULL;
 	list->length = 0;
@@ -186,13 +233,17 @@ void list_clear(list_t* list) {
 
 list_node_t* list_foreach(const list_t* list, list_iter_cb callback, void* context) 
 {
-	ASSERT(list != NULL);
-	ASSERT(callback != NULL);
+	if (list == NULL || callback == NULL)
+	{
+		return NULL;
+	}
 	for (list_node_t* node = list->head; node; ) 
 	{
 		list_node_t* next = node->next;
 		if (!callback(node->data, context))
+		{
 			return node;
+		}
 		node = next;
 	}
 	return NULL;
@@ -200,35 +251,51 @@ list_node_t* list_foreach(const list_t* list, list_iter_cb callback, void* conte
 
 list_node_t* list_begin(const list_t* list) 
 {
-	ASSERT(list != NULL);
+	if (list == NULL)
+	{
+		return NULL;
+	}
 	return list->head;
 }
 
 list_node_t* list_end(UNUSED_ATTR const list_t* list) 
 {
-	ASSERT(list != NULL);
+	if (list == NULL)
+	{
+		return NULL;
+	}
 	return NULL;
 }
 
 list_node_t* list_next(const list_node_t* node) 
 {
-	ASSERT(node != NULL);
+	if (node == NULL)
+	{
+		return NULL;
+	}
 	return node->next;
 }
 
 void* list_node(const list_node_t* node) 
 {
-	ASSERT(node != NULL);
+	if (node == NULL)
+	{
+		return NULL;
+	}
 	return node->data;
 }
 
 static list_node_t* list_free_node_(list_t* list, list_node_t* node) 
 {
-	ASSERT(list != NULL);
-	ASSERT(node != NULL);
+	if (list == NULL || node == NULL)
+	{
+		return NULL;
+	}
 	list_node_t* next = node->next;
 	if (list->free_cb)
+	{
 		list->free_cb(node->data);
+	}
 	list->allocator->free(node);
 	--list->length;
 	return next;

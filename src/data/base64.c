@@ -15,12 +15,12 @@
 static const char basis_64[] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-int base64_encode_buf_size(const size_t plain_buf_len)
+int lcu_base64_encode_buf_size(const size_t plain_buf_len)
 {
 	return (int)(((plain_buf_len + 2) / 3 * 4) + 1);
 }
 
-int base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t src_buf_len)
+int lcu_base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t src_buf_len)
 {
 	size_t i;
 	char* p;
@@ -82,12 +82,12 @@ static const unsigned char pr2six[256] =
                 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
         };
 
-int base64_decode_buf_size(const size_t encoded_buf_len)
+int lcu_base64_decode_buf_size(const size_t encoded_buf_len)
 {
     return (int)(((encoded_buf_len + 3) / 4) * 3 + 1);
 }
 
-int base64_decode(char *out_buf_plain, const char *src_buf_encoded)
+int lcu_base64_decode(char *out_buf_plain, const char *src_buf_encoded)
 {
     int nbytesdecoded;
     register const unsigned char *bufin;
@@ -104,12 +104,9 @@ int base64_decode(char *out_buf_plain, const char *src_buf_encoded)
 
     while (nprbytes > 4) 
     {
-        *(bufout++) =
-                (unsigned char) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
-        *(bufout++) =
-                (unsigned char) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
-        *(bufout++) =
-                (unsigned char) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
+        *(bufout++) = (unsigned char) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
+        *(bufout++) = (unsigned char) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
+        *(bufout++) = (unsigned char) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
         bufin += 4;
         nprbytes -= 4;
     }
@@ -117,18 +114,15 @@ int base64_decode(char *out_buf_plain, const char *src_buf_encoded)
     /* Note: (nprbytes == 1) would be an error, so just ingore that case */
     if (nprbytes > 1) 
     {
-        *(bufout++) =
-                (unsigned char) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
+        *(bufout++) = (unsigned char) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
     }
     if (nprbytes > 2) 
     {
-        *(bufout++) =
-                (unsigned char) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
+        *(bufout++) = (unsigned char) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
     }
     if (nprbytes > 3) 
     {
-        *(bufout++) =
-                (unsigned char) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
+        *(bufout++) = (unsigned char) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
     }
 
     *(bufout++) = '\0';

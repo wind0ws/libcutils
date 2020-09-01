@@ -14,7 +14,7 @@ extern "C" {
 	 * @param plain_buf_len: how many characters(bytes) do you want to encode.
 	 * @return encode buf size
 	 */
-	int base64_encode_buf_size(const size_t plain_buf_len);
+	int lcu_base64_encode_buf_size(const size_t plain_buf_len);
 
 	/**
 	 * encode base64
@@ -28,7 +28,7 @@ extern "C" {
 	 *                     this should small or equal src_buf_plain size.
 	 * @return encode buf size.
 	 */
-	int base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t src_buf_len);
+	int lcu_base64_encode(char* out_buf_encoded, const char* src_buf_plain, const size_t src_buf_len);
 
 	/**
 	 * get base64 decode buf size for alloc decode buf, return size is include NULL terminator.
@@ -36,7 +36,7 @@ extern "C" {
 	 * @param encoded_buf_len: how many characters(bytes) do you want to decode.
 	 * @return decode buf size
 	 */
-	int base64_decode_buf_size(const size_t encoded_buf_len);
+	int lcu_base64_decode_buf_size(const size_t encoded_buf_len);
 
 	/**
 	 * decode base64
@@ -45,7 +45,7 @@ extern "C" {
 	 * @param src_buf_encoded: the base64 encoded buf
 	 * @return decoded byte size.
 	 */
-	int base64_decode(char* out_buf_plain, const char* src_buf_encoded);
+	int lcu_base64_decode(char* out_buf_plain, const char* src_buf_encoded);
 
 #ifdef  __cplusplus
 };

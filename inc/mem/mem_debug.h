@@ -30,10 +30,16 @@
 #define __MYDEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new __MYDEBUG_NEW
 
-//only need call once on your main function first line!
-#define INIT_MEM_CHECK()\
-	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF)
-
+// only need call once on your main function first line!
+// create log file, do not close it at end of main, because crt will write log to it.
+// dump is in warn level. let warn log to file and debug console.
+#define INIT_MEM_CHECK() {\
+    HANDLE hLogFile = CreateFile("./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
+	                             NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); \
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG); \
+    _CrtSetReportFile(_CRT_WARN, hLogFile); \
+	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
+}
 #define DEINIT_MEM_CHECK() 
 #endif // _DEBUG
 #endif // _WIN32
@@ -69,6 +75,36 @@ void* operator new(size_t size, const char* fileName, const char* funcName, int 
 void* operator new[](size_t size, const char* fileName, const char* funcName, int line);
 void  operator delete(void* ptr) noexcept;
 void  operator delete[](void* ptr) noexcept;
+
+void* operator new(size_t size, const char* fileName, const char* funcName, int line)
+{
+	//here we are not deal with new(0), but it is ok,
+	//because if user change return pointer's memory, it will trigger memory corruption on delete it.
+	return lcu_malloc_trace(size, fileName, funcName, line);
+}
+
+void* operator new[](size_t size, const char* fileName, const char* funcName, int line)
+{
+	return operator new(size, fileName, funcName, line);
+}
+
+void operator delete(void* ptr) noexcept
+{
+	if (ptr == nullptr)
+	{
+		return;
+	}
+	lcu_free(ptr);
+}
+
+void operator delete[](void* ptr) noexcept
+{
+	if (ptr == nullptr)
+	{
+		return;
+	}
+	operator delete(ptr);
+}
 
 #define new new(__FILE__, __func__, __LINE__)
 #endif // __cplusplus

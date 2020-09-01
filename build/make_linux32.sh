@@ -15,4 +15,6 @@ mkdir -p ./output/linux/build_linux32
 cp ./build_linux32/libcutils_test ./output/linux/build_linux32/
 cp ./build_linux32/liblcu_a.a ./output/linux/build_linux32/
 cp ./build_linux32/liblcu.so ./output/linux/build_linux32/
+
+echo .
 echo Build finished...

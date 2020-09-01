@@ -26,6 +26,7 @@ copy /Y .\build_android_v7a\libcutils_test .\output\android\armeabi-v7a\
 copy /Y .\build_android_v7a\liblcu_a.a .\output\android\armeabi-v7a\
 copy /Y .\build_android_v7a\liblcu.so .\output\android\armeabi-v7a\
 
+@echo.
 @echo "compile complete. Press any key to exit..."
 @pause>nul
 color 0F

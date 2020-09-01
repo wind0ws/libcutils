@@ -2,7 +2,7 @@
 
 static const unsigned char hexchars[] = "0123456789ABCDEF";
 
-int url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
+int lcu_url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 	const char* src_buf_plain, const size_t src_buf_plain_strlen)
 {
 	size_t input_index, output_index;
@@ -54,7 +54,7 @@ int url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 	return -3;
 }
 
-int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
+int lcu_url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 	const char* src_buf_plain, const size_t src_buf_plain_strlen, char** last_src_pos)
 {
 	size_t input_index, output_index;
@@ -123,7 +123,6 @@ int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 				}
 
 				out_buf_decoded[output_index] = output_char;
-
 				input_index += 3;
 			}
 			else

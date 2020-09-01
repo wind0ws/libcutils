@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-	#if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB     /* use posix-win32 lib */
+	#if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB         /* use posix-win32 lib          */
 	  #include "thread/pthread_win_lib/pthread_win_lib.h"
 	  #include "thread/pthread_win_lib/sched_win_lib.h"
 	  #include "thread/pthread_win_lib/semaphore_win_lib.h"

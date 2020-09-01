@@ -13,7 +13,7 @@ static int url_encoder_test()
 	size_t out_encode_buf_size = url_strlen * 3 + 1;
 	char* out_encode_str = (char *)malloc(out_encode_buf_size);
 
-	int real_encode_strlen = url_encode(out_encode_str, out_encode_buf_size, url, url_strlen);
+	int real_encode_strlen = lcu_url_encode(out_encode_str, out_encode_buf_size, url, url_strlen);
 	do 
 	{
 		if (real_encode_strlen < 1)
@@ -41,7 +41,7 @@ static int url_decoder_test()
 	int decode_ret;
 	do 
 	{
-		if ((decode_ret = url_decode(decode_url, decode_url_buf_size, encode_url, encode_url_strlen, &last_src_pos)) < 0)
+		if ((decode_ret = lcu_url_decode(decode_url, decode_url_buf_size, encode_url, encode_url_strlen, &last_src_pos)) < 0)
 		{
 			TLOGE(LOG_TAG, "failed on decode: %s", encode_url);
 			break;

@@ -150,7 +150,9 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data)
 	{
 		hash_map->bucket[hash_key].list = list_new_internal(bucket_free_, hash_map->allocator);
 		if (hash_map->bucket[hash_key].list == NULL)
+		{
 			return false;
+		}
 	}
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
@@ -166,7 +168,9 @@ bool hash_map_set(hash_map_t* hash_map, const void* key, void* data)
 	}
 	hash_map_entry = hash_map->allocator->alloc(sizeof(hash_map_entry_t));
 	if (hash_map_entry == NULL)
+	{
 		return false;
+	}
 	hash_map_entry->key = key;
 	hash_map_entry->data = data;
 	hash_map_entry->hash_map = hash_map;
@@ -200,7 +204,9 @@ void* hash_map_get(const hash_map_t* hash_map, const void* key)
 	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
 	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
 	if (hash_map_entry != NULL)
+	{
 		return hash_map_entry->data;
+	}
 	return NULL;
 }
 
@@ -213,7 +219,9 @@ void hash_map_clear(hash_map_t* hash_map)
 	for (hash_index_t i = 0; i < hash_map->num_bucket; i++) 
 	{
 		if (hash_map->bucket[i].list == NULL)
+		{
 			continue;
+		}
 		list_free(hash_map->bucket[i].list);
 		hash_map->bucket[i].list = NULL;
 	}
@@ -228,14 +236,18 @@ void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* con
 	for (hash_index_t i = 0; i < hash_map->num_bucket; ++i)
 	{
 		if (hash_map->bucket[i].list == NULL)
+		{
 			continue;
+		}
 		for (const list_node_t* iter = list_begin(hash_map->bucket[i].list);
 			iter != list_end(hash_map->bucket[i].list);
 			iter = list_next(iter)) 
 		{
 			hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)list_node(iter);
 			if (!callback(hash_map_entry, context))
+			{
 				return;
+			}
 		}
 	}
 }
@@ -249,16 +261,22 @@ static void bucket_free_(void* data)
 	hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)data;
 	const hash_map_t* hash_map = hash_map_entry->hash_map;
 	if (hash_map->key_fn)
+	{
 		hash_map->key_fn((void*)hash_map_entry->key);
+	}
 	if (hash_map->data_fn)
+	{
 		hash_map->data_fn(hash_map_entry->data);
+	}
 	hash_map->allocator->free(hash_map_entry);
 }
 
 static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,	const void* key) 
 {
 	if (hash_bucket_list == NULL)
+	{
 		return NULL;
+	}
 	for (const list_node_t* iter = list_begin(hash_bucket_list);
 		iter != list_end(hash_bucket_list);
 		iter = list_next(iter)) 

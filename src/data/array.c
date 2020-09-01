@@ -18,12 +18,11 @@
  *
  ******************************************************************************/
 
-#include "mem/mem_debug.h"
 #include "data/array.h"
+#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include "common_macro.h"
-#include "mem/allocator.h"
 #include "log/xlog.h"
 
 #define LOG_TAG "lcu_array"
@@ -52,7 +51,11 @@ array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 	{
         init_capacity = 4;
 	}
-	array_t* array = lcu_calloc(1, sizeof(array_t) + element_size * init_capacity);
+	array_t* array = calloc(1, sizeof(array_t) + element_size * init_capacity);
+    if (array == NULL)
+    {
+        return NULL;
+    }
 	array->element_size = element_size;
 	array->capacity = init_capacity;
 	array->data = array->internal_storage;
@@ -67,9 +70,9 @@ void array_free(array_t* array)
     }
     if (array->data != array->internal_storage)
     {
-        free(array->data);//shouldn't use lcu_free because we use pure realloc array->data.
+        free(array->data);
     }
-    lcu_free(array);
+    free(array);
 }
 
 void* array_ptr(const array_t* array) 

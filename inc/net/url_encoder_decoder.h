@@ -24,7 +24,7 @@ extern "C" {
      * @return >=0 represent the encoded result string length
      *          <0 encode failure
      */
-	int url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
+	int lcu_url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 		const char* src_buf_plain, const size_t src_buf_plain_strlen);
 		
 	/**
@@ -43,7 +43,7 @@ extern "C" {
 	 * @return >=0 represent the decoded result string length
 	 *          <0 encode failure
 	 */
-	int url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
+	int lcu_url_decode(char* out_buf_decoded, const size_t out_buf_decoded_size,
 		const char* src_buf_plain, const size_t src_buf_plain_strlen, char** last_src_pos);
 
 #ifdef __cplusplus

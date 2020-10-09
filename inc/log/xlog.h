@@ -149,5 +149,4 @@ extern "C" {
 #define LOGW_HEX(chars, chars_len) TLOGW_HEX(NULL, chars, chars_len)
 #define LOGE_HEX(chars, chars_len) TLOGE_HEX(NULL, chars, chars_len)
 
-
 #endif //__XLOG_H

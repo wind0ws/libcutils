@@ -14,11 +14,13 @@ typedef char MSG_OBJ_DATA_TYPE;
 /**
  * msg prototype
  */
-typedef struct {
+typedef struct 
+{
     int what;
     int arg1;
     int arg2;
-    struct {
+    struct 
+    {
         MSG_OBJ_DATA_TYPE data[MSG_OBJ_MAX_CAPACITY];
         int data_len;
     } obj;

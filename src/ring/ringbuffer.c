@@ -48,9 +48,9 @@ struct __ring_buffer_t
 //buf_size must be power of 2.
 ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 {
-	if (buf_size == 0) 
+	if (buf_size < 2)
 	{
-		RING_LOGE("buf_size=0");
+		RING_LOGE("invalid buf_size");
 		return NULL;
 	}
 	if (!is_power_of_2(buf_size))
@@ -59,13 +59,15 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 		buf_size = roundup_pow_of_two(buf_size);
 		RING_LOGW("RingBuffer_create changed buf_size to %u ", buf_size);
 	}
+
 	ring_buf_handle ring_buffer_p = calloc(1, sizeof(struct __ring_buffer_t));
 	if (ring_buffer_p == NULL)
 	{
 		return NULL;
 	}
 	ring_buffer_p->buf = (char*)calloc(buf_size, 1);
-	if (!ring_buffer_p->buf) {
+	if (!ring_buffer_p->buf)
+	{
 		RING_LOGE("can't malloc ring_buffer->buf. size=%u", buf_size);
 		free(ring_buffer_p);
 		return NULL;

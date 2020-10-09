@@ -150,6 +150,20 @@ void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_
 	}
 }
 
+void strtrim(char *s, const char *cset)
+{
+	char* start, * end, * sp, * ep;
+	size_t len;
+
+	sp = start = s;
+	ep = end = s + strlen(s) - 1;
+	while (sp <= end && strchr(cset, *sp)) sp++;
+	while (ep > sp && strchr(cset, *ep)) ep--;
+	len = (sp > ep) ? 0 : ((ep - sp) + 1);
+	if (len && s != sp) memmove(s, sp, len);
+	s[len] = '\0';
+}
+
 size_t strutf8len(const char* utf8str)
 {
 	return strnutf8len(utf8str, strlen(utf8str));

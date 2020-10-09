@@ -86,6 +86,25 @@ extern "C" {
 		const char *src_str, const char* delimiter);
 
 	/**
+	 * trim string.
+	 * Remove the part of the string from left and from right composed just of
+	 * contiguous characters found in 'cset', that is a null terminted C string.
+	 * 
+	 * Example:
+	 *
+	 * char s[64] = {0};
+	 * strcpy(s, "AA...AA.a.aa.aHelloWorld     :::");
+	 * strtrim(s,"Aa. :");
+	 * printf("%s\n", s);
+	 *
+	 * Output will be just "HelloWorld".
+	 * 
+	 * @param s: the string want to trim. this string must editable!!!
+	 * @param cset: the char set want to be removed from s.
+	 */
+	void strtrim(char* s, const char* cset);
+
+	/**
 	 * count utf8 code points(words, NOT chars), NOT bytes.
 	 * if you want to know number of bytes, use strlen/strnlen.
 	 * uft8str must end with '\0', or memory will over read(that is dangerous).

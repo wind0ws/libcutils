@@ -34,7 +34,7 @@
 // create log file, do not close it at end of main, because crt will write log to it.
 // dump is in warn level. let warn log to file and debug console.
 #define INIT_MEM_CHECK() {\
-    HANDLE hLogFile = CreateFile("./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
+    void *hLogFile = CreateFile((LPCSTR)"./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
 	                             NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); \
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG); \
     _CrtSetReportFile(_CRT_WARN, hLogFile); \
@@ -119,7 +119,7 @@ void operator delete[](void* ptr) noexcept
 #define strdup(p)          lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
 #define strndup(p, s)      lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
 
-#endif
+#endif // !_CRTDBG_MAP_ALLOC && _ENABLE_LCU_MEM_CHECK_FEATURE
 
 #ifndef INIT_MEM_CHECK 
 #define INIT_MEM_CHECK() 

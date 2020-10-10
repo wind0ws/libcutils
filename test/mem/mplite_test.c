@@ -131,7 +131,7 @@ int mplite_test()
 
 		free(large_buffer);
 
-		printf("Test again? <0:false, non-zero:true>: ");
+		printf("\n\nTest again? <0:false, non-zero:true>: ");
 		scanf_ret = scanf("%d", &test_again);
 		if (scanf_ret != 1)
 		{

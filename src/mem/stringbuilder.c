@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static const size_t stringbuilder_default_size = 128;
+#define STRING_BUILDER_DEFAULT_SIZE (128)
 
 struct stringbuilder
 {
@@ -23,7 +23,7 @@ stringbuilder_t* stringbuilder_create(size_t init_buf_size)
 	}
 	if (init_buf_size < 8)
 	{
-		init_buf_size = stringbuilder_default_size;
+		init_buf_size = STRING_BUILDER_DEFAULT_SIZE;
 	}
 	sb->buffer = (char*)malloc(init_buf_size);
 	if (sb->buffer == NULL)

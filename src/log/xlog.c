@@ -127,6 +127,10 @@ void xlog_auto_level_up(LogLevel trigger_level)
 	xlog_cfg.trigger_up_level = trigger_level;
 }
 
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable:4996) //for disable freopen warning
+#endif // _WIN32
 void xlog_stdout2file(char* file_path)
 {
 	if (NULL == file_path)
@@ -138,18 +142,11 @@ void xlog_stdout2file(char* file_path)
 		fclose(xlog_cfg.fp_stdout);
 		xlog_cfg.fp_stdout = NULL;
 	}
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable:4996)
-#endif // _WIN32
 	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
 	if (!xlog_cfg.fp_stdout)
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
 	}
-#ifdef _WIN32
-#pragma warning(pop)
-#endif // _WIN32
 }
 
 void xlog_back2stdout()
@@ -160,18 +157,14 @@ void xlog_back2stdout()
 	}
 	fclose(xlog_cfg.fp_stdout);
 	xlog_cfg.fp_stdout = NULL;
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable:4996)
-#endif // _WIN32
 	if (!freopen(STDOUT, "w", stdout))
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
 	}
+}
 #ifdef _WIN32
 #pragma warning(pop)
 #endif // _WIN32
-}
 
 void xlog_set_default_tag(char* tag)
 {
@@ -292,8 +285,6 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 
 void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* chars, size_t chars_len)
 {
-	//char out_hex_str[sizeof(char) * chars_len * 3 + 1];
-	//char out_hex_str[1024] = { '\0' };
 	out_hex_str[0] = '\0';
 	size_t header_len = 0;
 	if (chars_len * 3 > out_hex_str_capacity)
@@ -305,14 +296,11 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	out_hex_str_capacity -= header_len;
 	for (size_t chars_index = 0, str_offset = 0; chars_index < chars_len; ++chars_index, str_offset += 3)
 	{
-		//        printf(" %02hhx", (unsigned char)(*(chars + chars_index)));
 		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[chars_index]);
-		//        printf(" %s",hex);
 	}
-	//    printf("%s\n", out_hex_str);
 }
 
-void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
+void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
 {
 	char hexs[1024];
 	if (!XLOG_IS_LOGABLE(level))

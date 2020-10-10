@@ -2,8 +2,9 @@
 #ifndef __LCU_STRINGS_HEADER
 #define __LCU_STRINGS_HEADER
 
-#include <stdint.h>
+#include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 #ifndef _WIN32
 #include <strings.h> //for bcopy/bzero
 #endif // !_WIN32
@@ -22,6 +23,12 @@
 //to make MSC happy
 #define stricmp(s1, s2)                      _stricmp(s1, s2)
 #define strnicmp(s1, s2, n)                  _strnicmp(s1, s2, n)
+#ifndef strdup
+#define strdup(s)                            _strdup(s)
+#endif // !strdup
+
+//windows not implement strndup, let's do it.
+char* strndup(const char* s, size_t n);
 
 /**
  * to make MSC happy
@@ -39,6 +46,10 @@
 #define stricmp(s1, s2)                      strcasecmp(s1, s2)
 #define strnicmp(s1, s2, n)                  strncasecmp(s1, s2, n)
 #endif // _WIN32
+
+#define _STRING_TRANSFORM(s, trans_func)     do{ for ( ; *p; ++p) *p = trans_func(*p); }while(0)
+#define STRING2UPPER(s)                      _STRING_TRANSFORM(s, tolower)
+#define STRING2LOWER(s)                      _STRING_TRANSFORM(s, toupper)
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +95,25 @@ extern "C" {
 	 */
 	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
 		const char *src_str, const char* delimiter);
+
+	/**
+	 * trim string.
+	 * Remove the part of the string from left and from right composed just of
+	 * contiguous characters found in 'cset', that is a null terminted C string.
+	 * 
+	 * Example:
+	 *
+	 * char s[64] = {0};
+	 * strcpy(s, "AA...AA.a.aa.aHelloWorld     :::");
+	 * strtrim(s,"Aa. :");
+	 * printf("%s\n", s);
+	 *
+	 * Output will be just "HelloWorld".
+	 * 
+	 * @param s: the string want to trim. this string must editable!!!
+	 * @param cset: the char set want to be removed from s.
+	 */
+	void strtrim(char* s, const char* cset);
 
 	/**
 	 * count utf8 code points(words, NOT chars), NOT bytes.

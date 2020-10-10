@@ -1,5 +1,6 @@
 #include "common_macro.h"
 #include "mem/strings.h"
+#include <stdio.h>
 
 int basic_test()
 {

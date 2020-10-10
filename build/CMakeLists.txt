@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.3.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.3.1 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -11,6 +11,8 @@ include(utility)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -66,7 +68,7 @@ else()
 	
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wall -Wno-unused-local-typedefs -Wno-unused-function")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 endif ()
 
@@ -94,8 +96,9 @@ IF(WIN32)
 ELSE()
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
   # Android 5.0 以上需要在此处设置 PIE
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIC -fPIE")
 ENDIF(WIN32)
 
 

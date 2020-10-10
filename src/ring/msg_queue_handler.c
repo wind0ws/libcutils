@@ -121,8 +121,8 @@ extern inline bool QueueHandler_is_full(__in queue_handler handler_p)
 extern inline void QueueHandler_clear(__in queue_handler handler_p)
 {
 	handler_p->min_valid_token = handler_p->token_counter;
-	RING_LOGD("QueueHandler_clear handler_p(%p) min_valid_token=%zd", handler_p,
-		handler_p->min_valid_token);
+	RING_LOGD("QueueHandler_clear handler_p(%p) min_valid_token=%zd", 
+		handler_p, handler_p->min_valid_token);
 }
 
 void QueueHandler_destroy(__inout queue_handler *handler_pp)

@@ -29,6 +29,7 @@ extern int allocator_test();
 #define TEST_FILE_LOGGER (0)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
+extern int ini_test();
 
 extern int thread_wrapper_test();
 extern int basic_test();
@@ -59,6 +60,7 @@ int main(int argc, char* argv[])
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
+	RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(strings_test);
@@ -67,8 +69,8 @@ int main(int argc, char* argv[])
 	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
-	RUN_TEST(url_encoder_decoder_test);
-	RUN_TEST(base64_test);
+	//RUN_TEST(url_encoder_decoder_test);
+	//RUN_TEST(base64_test);
 	
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);
@@ -101,5 +103,7 @@ static void setup_console()
 	//ASSERT_ABORT(f);
 	//fclose(f);
 	//LOGD("你好");
+
+	//_CrtSetBreakAlloc(104);
 #endif // _WIN32
 }

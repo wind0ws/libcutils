@@ -38,8 +38,8 @@
  *      N >=  M*(1 + log2(n)/2) - n + 1
  */
 #pragma once
-#ifndef MPLITE_H
-#define MPLITE_H
+#ifndef __LCU_MPLITE_H
+#define __LCU_MPLITE_H
 
 #include <stdint.h>
 
@@ -76,7 +76,8 @@
 /**
  * @brief Lock object to be used in a threadsafe memory pool
  */
-typedef struct mplite_lock {
+typedef struct mplite_lock 
+{
     void *arg; /**< Argument to be passed to acquire and release function pointers */
     int (*acquire)(void *arg); /**< Function pointer to acquire a lock */
     int (*release)(void *arg); /**< Function pointer to release a lock */
@@ -85,7 +86,8 @@ typedef struct mplite_lock {
 /**
  * @brief Memory pool object
  */
-typedef struct mplite {
+typedef struct mplite 
+{
     /*-------------------------------
       Memory available for allocation
       -------------------------------*/
@@ -229,4 +231,4 @@ MPLITE_API int mplite_freemem(mplite_t *handle);
 }
 #endif
 
-#endif /* #ifndef MPLITE_H */
+#endif /* #ifndef __LCU_MPLITE_H */

@@ -300,7 +300,7 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	}
 }
 
-void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
+void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
 {
 	char hexs[1024];
 	if (!XLOG_IS_LOGABLE(level))

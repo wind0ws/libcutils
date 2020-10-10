@@ -18,12 +18,12 @@
 
 typedef enum
 {
-	LOG_LEVEL_OFF     = 0,
+	LOG_LEVEL_OFF = 0,
 	LOG_LEVEL_VERBOSE = 1,
-	LOG_LEVEL_DEBUG   = 2,
-	LOG_LEVEL_INFO    = 3,
-	LOG_LEVEL_WARN    = 4,
-	LOG_LEVEL_ERROR   = 5,
+	LOG_LEVEL_DEBUG = 2,
+	LOG_LEVEL_INFO = 3,
+	LOG_LEVEL_WARN = 4,
+	LOG_LEVEL_ERROR = 5,
 	LOG_LEVEL_UNKNOWN
 } LogLevel;
 
@@ -31,9 +31,9 @@ typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
 
 typedef enum
 {
-	LOG_TARGET_NONE          = 0,          // NOLINT(hicpp-signed-bitwise)
-	LOG_TARGET_ANDROID       = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
-	LOG_TARGET_CONSOLE       = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_NONE = 0,          // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_ANDROID = (0x1 << 1), // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_CONSOLE = (0x1 << 2), // NOLINT(hicpp-signed-bitwise)
 	LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
 } LogTarget;
 
@@ -107,35 +107,35 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE TLOGX_HEX or LOGX_HEX macro instead.
 	 */
-	void  __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
+	void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
 
 #ifdef __cplusplus
 }
 #endif
 
-#define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__);
-#define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__);
-#define LOGI(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, NULL, 0, fmt, ##__VA_ARGS__);
-#define LOGW(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, NULL, 0, fmt, ##__VA_ARGS__);
-#define LOGE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, NULL, 0, fmt, ##__VA_ARGS__);
+#define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, NULL, 0, fmt, ##__VA_ARGS__)
 
-#define LOGV_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define LOGD_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL,__func__, __LINE__, fmt, ##__VA_ARGS__);
-#define LOGI_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define LOGW_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define LOGE_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__);
+#define LOGV_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL,__func__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define TLOGV(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGD(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGI(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGW(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__);
-#define TLOGE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__);
+#define TLOGV(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGD(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGI(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGW(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__)
 
-#define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define TLOGD_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define TLOGI_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
-#define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__);
+#define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGD_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGI_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 #define TLOGV_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
 #define TLOGD_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)

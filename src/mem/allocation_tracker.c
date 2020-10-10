@@ -61,7 +61,7 @@ typedef struct
 } allocation_free_checker_context;
 
 // Hidden constructor for hash map for our use only. 
-//Everything else should use the normal interface.
+// Everything else should use the normal interface.
 hash_map_t* hash_map_new_internal(
 	size_t size,
 	hash_index_fn hash_fn,

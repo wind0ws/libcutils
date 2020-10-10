@@ -43,55 +43,55 @@ static int sem_test()
 
 static void test_log()
 {
-	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", LOG_LINE_STAR, xlog_get_min_level(), xlog_get_target(), LOG_LINE_STAR)
+	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", LOG_LINE_STAR, xlog_get_min_level(), xlog_get_target(), LOG_LINE_STAR);
 
-	LOGV("this log is printed by LOGV")
-	LOGD("this log is printed by LOGD")
-	LOGI("this log is printed by LOGI")
-	LOGW("this log is printed by LOGW")
-	LOGE("this log is printed by LOGE")
+	LOGV("this log is printed by LOGV");
+	LOGD("this log is printed by LOGD");
+	LOGI("this log is printed by LOGI");
+	LOGW("this log is printed by LOGW");
+	LOGE("this log is printed by LOGE");
 
-	LOGV_TRACE("this log is printed by LOGV_TRACE")
-	LOGD_TRACE("this log is printed by LOGD_TRACE")
-	LOGI_TRACE("this log is printed by LOGI_TRACE")
-	LOGW_TRACE("this log is printed by LOGW_TRACE")
-	LOGE_TRACE("this log is printed by LOGE_TRACE")
+	LOGV_TRACE("this log is printed by LOGV_TRACE");
+	LOGD_TRACE("this log is printed by LOGD_TRACE");
+	LOGI_TRACE("this log is printed by LOGI_TRACE");
+	LOGW_TRACE("this log is printed by LOGW_TRACE");
+	LOGE_TRACE("this log is printed by LOGE_TRACE");
 
-	TLOGV(LOG_TAG_MAIN, "this log is printed by TLOGV")
-	TLOGD(LOG_TAG_MAIN, "this log is printed by TLOGD")
-	TLOGI(LOG_TAG_MAIN, "this log is printed by TLOGI")
-	TLOGW(LOG_TAG_MAIN, "this log is printed by TLOGW")
-	TLOGE(LOG_TAG_MAIN, "this log is printed by TLOGE")
+	TLOGV(LOG_TAG_MAIN, "this log is printed by TLOGV");
+	TLOGD(LOG_TAG_MAIN, "this log is printed by TLOGD");
+	TLOGI(LOG_TAG_MAIN, "this log is printed by TLOGI");
+	TLOGW(LOG_TAG_MAIN, "this log is printed by TLOGW");
+	TLOGE(LOG_TAG_MAIN, "this log is printed by TLOGE");
 
-	TLOGV_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGV_TRACE")
-	TLOGD_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGD_TRACE")
-	TLOGI_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGI_TRACE")
-	TLOGW_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGW_TRACE")
-	TLOGE_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGE_TRACE")
+	TLOGV_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGV_TRACE");
+	TLOGD_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGD_TRACE");
+	TLOGI_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGI_TRACE");
+	TLOGW_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGW_TRACE");
+	TLOGE_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGE_TRACE");
 
 	char chars[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0xA0, 0xAF, 0xFD, 0xFE, 0xFF };
-	TLOGV_HEX(LOG_TAG_MAIN, chars, 16);
+	TLOGV_HEX(LOG_TAG_MAIN, chars, sizeof(chars));
 	LOGI_HEX(chars, 16);
 
 	xlog_set_min_level(LOG_LEVEL_ERROR);
 	xlog_set_target(LOG_TARGET_ANDROID);
-	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR")
-	LOGE("this log only print on logcat because of xlog_config_target=LOG_TARGET_ANDROID")
+	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR");
+	LOGE("this log only print on logcat because of xlog_config_target=LOG_TARGET_ANDROID");
 
 	xlog_set_target(LOG_TARGET_CONSOLE);
-	LOGE_TRACE("this log only print on console because of xlog_config_target=LOG_TARGET_CONSOLE")
+	LOGE_TRACE("this log only print on console because of xlog_config_target=LOG_TARGET_CONSOLE");
 
 	xlog_set_min_level(LOG_LEVEL_OFF);
-	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF")
+	LOGE("this log won't print because of xlog_config_level = LOG_LEVEL_OFF");
 
 	LOGD("now set log min level to VERBOSE, target to 'LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE'");
 	xlog_set_min_level(LOG_LEVEL_VERBOSE);
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
-	LOGI("LOG test finished!!!")
+	LOGI("LOG test finished!!!");
 }
 
 //#define MYLOG(...) EXPAND_VA_ARGS(LOGD(__VA_ARGS__))
-int thread_wrapper_test() 
+int thread_wrapper_test()
 {
 	LOGD("Hello World, thread id: %d", gettid());
 	//MYLOG("MYLOG, %d", 1111);

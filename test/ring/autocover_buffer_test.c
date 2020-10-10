@@ -14,7 +14,7 @@ typedef struct
 
 static void* thread_consumer(void* param)
 {
-	LOGD("consumer thread in")
+	LOGD("consumer thread in");
 	cover_case_data* data_p = (cover_case_data*)param;
 	char buffer[12];
 	while (!(data_p->exit_flag))
@@ -44,13 +44,13 @@ static void* thread_consumer(void* param)
 			Sleep(80);
 		}
 	}
-	LOGD("consumer thread out")
+	LOGD("consumer thread out");
 	return NULL;
 }
 
 static void* thread_producer(void* param)
 {
-	LOGD("producer thread in")
+	LOGD("producer thread in");
 	cover_case_data* data_p = (cover_case_data*)param;
 	char buffer[4] = { 0x01, 0x02, 0x03, 0x04};
 	while (!(data_p->exit_flag))
@@ -65,7 +65,7 @@ static void* thread_producer(void* param)
 		}
 		Sleep(100);
 	}
-	LOGD("producer thread out")
+	LOGD("producer thread out");
 	return NULL;
 }
 

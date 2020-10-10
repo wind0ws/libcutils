@@ -3,6 +3,7 @@
 #define LCU_INI_PARSER_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,8 @@ extern "C" {
 	INI_PARSER_ERROR_CODE ini_parser_get_long(ini_parser_ptr parser_p, const char* section, const char* key, long* value);
 
 	INI_PARSER_ERROR_CODE ini_parser_get_double(ini_parser_ptr parser_p, const char* section, const char* key, double* value);
+
+	INI_PARSER_ERROR_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section, const char* key, bool* value);
 
 	INI_PARSER_ERROR_CODE ini_parser_destory(ini_parser_ptr* parser_pp);
 

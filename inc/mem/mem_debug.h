@@ -112,10 +112,16 @@ void operator delete[](void* ptr) noexcept
 #define INIT_MEM_CHECK()   allocation_tracker_init()
 #define DEINIT_MEM_CHECK() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
 
+#if(defined(free) || defined(malloc) || defined(calloc) || defined(realloc))
+#error free/malloc/calloc/realloc is defined. you should put mem_debug.h on your source file first line.
+#endif // free || malloc || calloc || realloc
 #define free(p)            lcu_free(p)
 #define malloc(s)          lcu_malloc_trace(s, __FILE__, __func__, __LINE__)
 #define calloc(c, s)       lcu_calloc_trace(c, s, __FILE__, __func__, __LINE__)
 #define realloc(p, s)      lcu_realloc_trace(p, s, __FILE__, __func__, __LINE__)
+#if(defined(strdup) || defined(strndup))
+#error strdup or strndup is defined. you should put mem_debug.h on your source file first line.
+#endif // strdup || strndup
 #define strdup(p)          lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
 #define strndup(p, s)      lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
 
@@ -125,6 +131,5 @@ void operator delete[](void* ptr) noexcept
 #define INIT_MEM_CHECK() 
 #define DEINIT_MEM_CHECK() 
 #endif // ! INIT_MEM_CHECK 
-
 
 #endif // __LCU_MEM_DEBUG_H

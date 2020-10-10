@@ -1,4 +1,3 @@
-#include "mem/mem_debug.h"
 #include "file/ini_parser.h"
 #include "file/ini_reader.h"
 #include "data/hash_map.h"
@@ -9,13 +8,14 @@
 #include <stdio.h>       /* for fopen */
 #include <stdlib.h>      /* for atoi/atol/atof */
 
-#define INI_VALUE_STACK_SIZE (1024)
+#define INI_VALUE_STACK_SIZE (128)
 
 typedef enum
 {
 	INI_VALUE_TYPE_INT,
 	INI_VALUE_TYPE_LONG,
-	INI_VALUE_TYPE_DOUBLE
+	INI_VALUE_TYPE_DOUBLE,
+	INI_VALUE_TYPE_BOOL
 }INI_VALUE_TYPE;
 
 struct _ini_parser
@@ -26,19 +26,11 @@ struct _ini_parser
 static INI_PARSER_ERROR_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
-static void map_key_free(void* key)
+static void map_key_value_free_func(void* p)
 {
-	if (key)
+	if (p)
 	{
-		free(key);
-	}
-}
-
-static void map_value_free(void* value)
-{
-	if (value)
-	{
-		free(value);
+		free(p);
 	}
 }
 
@@ -93,7 +85,12 @@ static int ini_handler_cb(void* user, int lineno,
 
 ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 {
-	hash_map_t* ini_map_p = hash_map_new(64, hash_function_string, map_key_free, map_value_free, map_key_equality);
+	if (!ini_content || strlen(ini_content) < 6)
+	{
+		return NULL;
+	}
+	hash_map_t* ini_map_p = hash_map_new(16, hash_function_string,
+		map_key_value_free_func, map_key_value_free_func, map_key_equality);
 	if (!ini_map_p)
 	{
 		return NULL;
@@ -115,6 +112,10 @@ ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 
 ini_parser_ptr ini_parser_parse_file(const char* ini_file)
 {
+	if (!ini_file || strlen(ini_file) < 1)
+	{
+		return NULL;
+	}
 	ini_parser_ptr parser = NULL;
 	char* ini_content = NULL;
 	FILE* fp = fopen(ini_file, "rb");
@@ -153,15 +154,19 @@ ini_parser_ptr ini_parser_parse_file(const char* ini_file)
 	return parser;
 }
 
-INI_PARSER_ERROR_CODE ini_parser_get_string(ini_parser_ptr parser_p, const char* section, const char* key,
-	char* value, const size_t value_size)
+INI_PARSER_ERROR_CODE ini_parser_get_string(ini_parser_ptr parser_p,
+	const char* section, const char* key, char* value, const size_t value_size)
 {
 	if (!parser_p || !section || !key)
 	{
 		return INI_PARSER_ERR_INVALID_HANDLE;
 	}
-	size_t section_len = strlen(section);
-	size_t key_len = strlen(key);
+	const size_t section_len = strlen(section);
+	const size_t key_len = strlen(key);
+	if (!section_len || !key_len)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
 #define MAX_MAP_KEY_LEN (1024)
 	if (section_len + key_len >= MAX_MAP_KEY_LEN)
 	{
@@ -206,6 +211,11 @@ INI_PARSER_ERROR_CODE ini_parser_get_double(ini_parser_ptr parser_p, const char*
 	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_DOUBLE);
 }
 
+INI_PARSER_ERROR_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section, const char* key, bool* value)
+{
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_BOOL);
+}
+
 INI_PARSER_ERROR_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 {
 	if (NULL == parser_pp || NULL == *parser_pp)
@@ -223,35 +233,73 @@ INI_PARSER_ERROR_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 	return INI_PARSER_ERR_SUCCEED;
 }
 
+static long parse_str2long(INI_PARSER_ERROR_CODE* p_err, char* str_value)
+{
+	char* end_ptr = NULL;
+	long result = strtol(str_value, &end_ptr, 10);
+	*p_err = strlen(end_ptr) ? INI_PARSER_ERR_FAILED : INI_PARSER_ERR_SUCCEED;
+	return result;
+}
+
 static INI_PARSER_ERROR_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type)
 {
 	char str_value[INI_VALUE_STACK_SIZE] = { 0 };
-	int ret = ini_parser_get_string(parser_p, section, key, str_value, INI_VALUE_STACK_SIZE);
-	if (ret == INI_PARSER_ERR_SUCCEED)
+	INI_PARSER_ERROR_CODE ret = ini_parser_get_string(parser_p, section, key, str_value, INI_VALUE_STACK_SIZE);
+	if (ret != INI_PARSER_ERR_SUCCEED)
 	{
-		if (strlen(str_value))
-		{
-			switch (value_type)
-			{
-			case INI_VALUE_TYPE_INT:
-				*((int*)value) = atoi(str_value);
-				break;
-			case INI_VALUE_TYPE_LONG:
-				*((long*)value) = atol(str_value);
-				break;
-			case INI_VALUE_TYPE_DOUBLE:
-				*((double*)value) = atof(str_value);
-				break;
-			default:
-				ret = INI_PARSER_ERR_FAILED;
-				break;
-			}
-		}
-		else
+		return ret;
+	}
+	if (!strlen(str_value))
+	{
+		return INI_PARSER_ERR_FAILED;
+	}
+	char* end_ptr = NULL;
+	switch (value_type)
+	{
+	case INI_VALUE_TYPE_INT:
+		*((int*)value) = parse_str2long(&ret, str_value);
+		break;
+	case INI_VALUE_TYPE_LONG:
+		*((long*)value) = parse_str2long(&ret, str_value);
+		break;
+	case INI_VALUE_TYPE_DOUBLE:
+	{
+		double result = strtod(str_value, &end_ptr);
+		if (strlen(end_ptr))
 		{
 			ret = INI_PARSER_ERR_FAILED;
+			break;
 		}
+		*((double*)value) = result;
+	}
+	break;
+	case INI_VALUE_TYPE_BOOL:
+	{
+		bool result = strncasecmp(str_value, "true", 4) == 0;
+		do
+		{
+			if (result)
+			{
+				break;
+			}
+			if (strncasecmp(str_value, "false", 5) == 0)
+			{
+				result = false;
+				break;
+			}
+			long num = parse_str2long(&ret, str_value);
+			if (ret == INI_PARSER_ERR_SUCCEED)
+			{
+				result = (bool)num;
+			}
+		} while (0);
+		*((bool*)value) = result;
+	}
+	break;
+	default:
+		ret = INI_PARSER_ERR_FAILED;
+		break;
 	}
 	return ret;
 }

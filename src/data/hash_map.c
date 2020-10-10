@@ -42,7 +42,7 @@ typedef struct hash_map_t
 // Hidden constructor for list, only to be used by us.
 list_t* list_new_internal(list_free_cb callback, const allocator_t* zeroed_allocator);
 static void bucket_free_(void* data);
-static inline bool default_key_equality(const void* x, const void* y);
+static bool default_key_equality(const void* x, const void* y);
 static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list, const void* key);
 
 // Hidden constructor, only to be used by the allocation tracker. Behaves the same as
@@ -290,7 +290,7 @@ static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,	const void
 	return NULL;
 }
 
-static inline bool default_key_equality(const void* x, const void* y) 
+static bool default_key_equality(const void* x, const void* y) 
 {
 	return x == y;
 }

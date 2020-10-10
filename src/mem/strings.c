@@ -1,6 +1,29 @@
 #include "mem/strings.h"
 #include <malloc.h>
 
+#ifdef _WIN32
+char* strndup(const char* s, size_t n)
+{
+	if (!s)
+	{
+		return NULL;
+	}
+	// n == 0 is acceptable: just empty string.
+	const size_t target_len = strnlen(s, n);
+	char *target_str = (char *)malloc(target_len + sizeof(char));
+	if (!target_str)
+	{
+		return NULL;
+	}
+	if (target_len)
+	{
+		memcpy(target_str, s, target_len);
+	}
+	target_str[target_len] = '\0';
+	return target_str;
+}
+#endif // _WIN32
+
 #if defined(__GLIBC__) || defined(_WIN32)
 
 /* Implementation of strlcpy() for platforms that don't already have it. */

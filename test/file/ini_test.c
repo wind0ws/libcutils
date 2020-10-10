@@ -8,6 +8,7 @@
 
 static const char* test_ini_str = "[config]\r\n\
 #this is comment\r\n\
+#number=1\r\n\
 nNum1 = 6\r\n\
 test=\r\n\
 #中文注释\r\n\
@@ -17,10 +18,12 @@ nNum3 = 0.035\r\n\
 \r\n\
 [config2]\r\n\
 #test true false\r\n\
-auto_start = true\r\n\
+auto_start = FALSE\r\n\
+enable_state = true \r\n\
+number_bool_state = 0 \r\n\
 \r\n\
 [config3]\r\n\
-path=/sdcard/Android/data/\
+path=  /sdcard/Android/data/  \r\n\
 \r\n";
 
 static int my_ini_handler(void* user, int lineno, 
@@ -69,9 +72,19 @@ static int ini_parser_test()
 	{
 		TLOGE(LOG_TAG_INI_TEST, "failed get nNum3.  %d", err);
 	}
-	
+
+	bool bool_result = true;
+	err = ini_parser_get_bool(parser, "config2", "auto_start", &bool_result);
+	TLOGI(LOG_TAG_INI_TEST, "%d get auto_start=%d", err, bool_result);
+
+	err = ini_parser_get_bool(parser, "config2", "enable_state", &bool_result);
+	TLOGI(LOG_TAG_INI_TEST, "%d get enable_state=%d", err, bool_result);
+
+	err = ini_parser_get_bool(parser, "config2", "number_bool_state", &bool_result);
+	TLOGI(LOG_TAG_INI_TEST, "%d get number_bool_state=%d", err, bool_result);
+
 	char path[128];
-	err = ini_parser_get_string(parser, "config3", "path", path, 128);
+	err = ini_parser_get_string(parser, "config3", "path", path, sizeof(path));
 	if (err == INI_PARSER_ERR_SUCCEED)
 	{
 		TLOGI(LOG_TAG_INI_TEST, "succeed get path=%s", path);

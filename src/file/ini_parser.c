@@ -20,26 +20,19 @@ typedef enum
 
 struct _ini_parser
 {
-	hash_map_t* ini_map_p;
+	hashmap_t* ini_map_p;
 };
 
 static INI_PARSER_ERROR_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
-
-static void map_key_value_free_func(void* p)
-{
-	if (p)
-	{
-		free(p);
-	}
-}
 
 static bool map_key_equality(const void* x, const void* y)
 {
 	return (x == y) || (x && y && strcmp(x, y) == 0);
 }
 
-static void generate_map_key(char* out_map_key, const char* section, const size_t section_len,
+static void generate_map_key(char* out_map_key,
+	const char* section, const size_t section_len,
 	const char* key, const size_t key_len)
 {
 	memcpy(out_map_key, section, section_len);
@@ -54,7 +47,7 @@ static int ini_handler_cb(void* user, int lineno,
 		return 0;// just continue to parse file
 	}
 	ini_parser_ptr parser_p = (ini_parser_ptr)user;
-	hash_map_t* ini_map_p = parser_p->ini_map_p;
+	hashmap_t* ini_map_p = parser_p->ini_map_p;
 	//section + key as map key
 	size_t section_len = strlen(section);
 	size_t key_len = strlen(key);
@@ -79,7 +72,7 @@ static int ini_handler_cb(void* user, int lineno,
 	{
 		map_value = (char*)calloc(1, 1);
 	}
-	hash_map_set(ini_map_p, map_key, map_value);
+	hashmap_put(ini_map_p, map_key, map_value);
 	return 0;
 }
 
@@ -89,8 +82,8 @@ ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 	{
 		return NULL;
 	}
-	hash_map_t* ini_map_p = hash_map_new(16, hash_function_string,
-		map_key_value_free_func, map_key_value_free_func, map_key_equality);
+	hashmap_t* ini_map_p = hashmap_create(64, hash_function_string,
+		free, free, map_key_equality, NULL);
 	if (!ini_map_p)
 	{
 		return NULL;
@@ -98,7 +91,7 @@ ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 	ini_parser_ptr parser_p = (ini_parser_ptr)calloc(sizeof(struct _ini_parser), 1);
 	if (!parser_p)
 	{
-		hash_map_free(ini_map_p);
+		hashmap_free(ini_map_p);
 		return NULL;
 	}
 	parser_p->ini_map_p = ini_map_p;
@@ -174,7 +167,7 @@ INI_PARSER_ERROR_CODE ini_parser_get_string(ini_parser_ptr parser_p,
 	}
 	char map_key[MAX_MAP_KEY_LEN];
 	generate_map_key(map_key, section, section_len, key, key_len);
-	char* map_value = (char*)hash_map_get(parser_p->ini_map_p, map_key);
+	char* map_value = (char*)hashmap_get(parser_p->ini_map_p, map_key);
 	if (!map_value)
 	{
 		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
@@ -225,7 +218,7 @@ INI_PARSER_ERROR_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 	ini_parser_ptr parser_p = *parser_pp;
 	if (parser_p->ini_map_p)
 	{
-		hash_map_free(parser_p->ini_map_p);
+		hashmap_free(parser_p->ini_map_p);
 		parser_p->ini_map_p = NULL;
 	}
 	free(parser_p);

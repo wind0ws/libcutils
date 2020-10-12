@@ -15,282 +15,358 @@
  *  limitations under the License.
  *
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
+ *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
-#include "mem/allocator.h"
 #include "data/hash_map.h"
-#include "data/list.h"
 #include "common_macro.h"
+#include <string.h>
+#include <errno.h>
 
-struct hash_map_t;
-typedef struct hash_map_bucket_t 
+typedef struct Entry Entry;
+struct Entry {
+	void* key;
+	int hash;
+	void* value;
+	Entry* next;
+};
+struct Hashmap {
+	Entry** buckets;
+	size_t bucketCount;
+	hash_key_fn fn_hash;
+	key_free_fn fn_key_free;
+	value_free_fn fn_value_free;
+	key_equality_fn fn_key_equality;
+	hashmap_lock_t lock;
+	size_t size;
+};
+
+#define hashmap_enter(handle)    if((handle != NULL) &&        \
+        ((handle)->lock.acquire != NULL))                    \
+        { (handle)->lock.acquire((handle)->lock.arg); }
+#define hashmap_leave(handle)    if((handle != NULL) &&        \
+        ((handle)->lock.release != NULL))                    \
+        { (handle)->lock.release((handle)->lock.arg); }
+
+hashmap_t* hashmap_create(size_t initial_capacity,
+	hash_key_fn fn_hash,
+	key_free_fn fn_key_free,
+	value_free_fn fn_value_free,
+	key_equality_fn fn_key_equality,
+	hashmap_lock_t* lock) 
 {
-	list_t* list;
-} hash_map_bucket_t;
-
-typedef struct hash_map_t 
-{
-	hash_map_bucket_t* bucket;
-	size_t num_bucket;
-	size_t hash_size;
-	hash_index_fn hash_fn;
-	key_free_fn key_fn;
-	data_free_fn data_fn;
-	const allocator_t* allocator;
-	key_equality_fn keys_are_equal;
-} hash_map_t;
-
-// Hidden constructor for list, only to be used by us.
-list_t* list_new_internal(list_free_cb callback, const allocator_t* zeroed_allocator);
-static void bucket_free_(void* data);
-static bool default_key_equality(const void* x, const void* y);
-static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list, const void* key);
-
-// Hidden constructor, only to be used by the allocation tracker. Behaves the same as
-// |hash_map_new|, except you get to specify the allocator.
-hash_map_t* hash_map_new_internal(
-	size_t num_bucket,
-	hash_index_fn hash_fn,
-	key_free_fn key_fn,
-	data_free_fn data_fn,
-	key_equality_fn equality_fn,
-	const allocator_t* zeroed_allocator) 
-{
-	if (hash_fn == NULL || num_bucket == 0 || zeroed_allocator == NULL)
+	hashmap_t* map = (hashmap_t*)(malloc(sizeof(hashmap_t)));
+	if (map == NULL) 
 	{
 		return NULL;
 	}
-	hash_map_t* hash_map = zeroed_allocator->alloc(sizeof(hash_map_t));
-	if (hash_map == NULL)
+	/* Initialize the hashmap object */
+	memset(map, 0, sizeof(*map));
+	/* Copy the lock if it is not NULL */
+	if (lock != NULL)
 	{
+		memcpy(&map->lock, lock, sizeof(map->lock));
+	}
+	// 0.75 load factor.
+	size_t minimumBucketCount = initial_capacity * 4 / 3;
+	map->bucketCount = 1;
+	while (map->bucketCount <= minimumBucketCount) 
+	{
+		// Bucket count must be power of 2.
+		map->bucketCount <<= 1;
+	}
+	map->buckets = (Entry**)(calloc(map->bucketCount, sizeof(Entry*)));
+	if (map->buckets == NULL) 
+	{
+		free(map);
 		return NULL;
 	}
-	hash_map->hash_fn = hash_fn;
-	hash_map->key_fn = key_fn;
-	hash_map->data_fn = data_fn;
-	hash_map->allocator = zeroed_allocator;
-	hash_map->keys_are_equal = equality_fn ? equality_fn : default_key_equality;
-	hash_map->num_bucket = num_bucket;
-	hash_map->bucket = zeroed_allocator->alloc(sizeof(hash_map_bucket_t) * num_bucket);
-	if (hash_map->bucket == NULL) 
-	{
-		zeroed_allocator->free(hash_map);
-		return NULL;
-	}
-	return hash_map;
+	map->fn_hash = fn_hash;
+	map->fn_key_free = fn_key_free;
+	map->fn_value_free = fn_value_free;
+	map->fn_key_equality = fn_key_equality;
+	map->size = 0;
+	return map;
+}
+/**
+ * Hashes the given key.
+ */
+#ifdef __clang__
+__attribute__((no_sanitize("integer")))
+#endif //__clang__
+static inline int hashKey(hashmap_t* map, void* key) 
+{
+	int h = map->fn_hash(key);
+	// We apply this secondary hashing discovered by Doug Lea to defend
+	// against bad hashes.
+	h += ~(h << 9);
+	h ^= (((unsigned int)h) >> 14);
+	h += (h << 4);
+	h ^= (((unsigned int)h) >> 10);
+	return h;
 }
 
-hash_map_t* hash_map_new(
-	size_t num_bucket,
-	hash_index_fn hash_fn,
-	key_free_fn key_fn,
-	data_free_fn data_fn,
-	key_equality_fn equality_fn) 
+static inline size_t calculateIndex(size_t bucketCount, int hash) 
 {
-	return hash_map_new_internal(num_bucket, hash_fn, key_fn, data_fn, equality_fn, &allocator_calloc);
+	return ((size_t)hash) & (bucketCount - 1);
 }
 
-void hash_map_free(hash_map_t* hash_map) 
+static void expandIfNecessary(hashmap_t* map) 
 {
-	if (hash_map == NULL)
+	// If the load factor exceeds 0.75...
+	if (map->size <= (map->bucketCount * 3 / 4)) 
 	{
 		return;
 	}
-	hash_map_clear(hash_map);
-	hash_map->allocator->free(hash_map->bucket);
-	hash_map->allocator->free(hash_map);
-}
-
-bool hash_map_is_empty(const hash_map_t* hash_map) 
-{
-	if (hash_map == NULL)
+	// Start off with a 0.33 load factor.
+	size_t newBucketCount = map->bucketCount << 1;
+	Entry** newBuckets = (Entry**)(calloc(newBucketCount, sizeof(Entry*)));
+	if (newBuckets == NULL)
 	{
-		return false;
-	}
-	return (hash_map->hash_size == 0);
-}
-
-size_t hash_map_size(const hash_map_t* hash_map) 
-{
-	if (hash_map == NULL)
-	{
-		return 0;
-	}
-	return hash_map->hash_size;
-}
-
-size_t hash_map_num_buckets(const hash_map_t* hash_map) 
-{
-	if (hash_map == NULL)
-	{
-		return 0;
-	}
-	return hash_map->num_bucket;
-}
-
-bool hash_map_has_key(const hash_map_t* hash_map, const void* key) 
-{
-	if (hash_map == NULL)
-	{
-		return false;
-	}
-	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
-	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
-	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
-	return (hash_map_entry != NULL);
-}
-
-bool hash_map_set(hash_map_t* hash_map, const void* key, void* data) 
-{
-	if (hash_map == NULL || data == NULL)
-	{
-		return false;
-	}
-	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
-	if (hash_map->bucket[hash_key].list == NULL) 
-	{
-		hash_map->bucket[hash_key].list = list_new_internal(bucket_free_, hash_map->allocator);
-		if (hash_map->bucket[hash_key].list == NULL)
-		{
-			return false;
-		}
-	}
-	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
-	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
-	if (hash_map_entry) 
-	{
-		// Calls hash_map callback to delete the hash_map_entry.
-		UNUSED_ATTR bool rc = list_remove(hash_bucket_list, hash_map_entry);
-		ASSERT(rc == true);
-	}
-	else 
-	{
-		hash_map->hash_size++;
-	}
-	hash_map_entry = hash_map->allocator->alloc(sizeof(hash_map_entry_t));
-	if (hash_map_entry == NULL)
-	{
-		return false;
-	}
-	hash_map_entry->key = key;
-	hash_map_entry->data = data;
-	hash_map_entry->hash_map = hash_map;
-	return list_append(hash_bucket_list, hash_map_entry);
-}
-
-bool hash_map_erase(hash_map_t* hash_map, const void* key) 
-{
-	if (hash_map == NULL)
-	{
-		return false;
-	}
-	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
-	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
-	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
-	if (hash_map_entry == NULL) 
-	{
-		return false;
-	}
-	hash_map->hash_size--;
-	return list_remove(hash_bucket_list, hash_map_entry);
-}
-
-void* hash_map_get(const hash_map_t* hash_map, const void* key) 
-{
-	if (hash_map == NULL)
-	{
-		return NULL;
-	}
-	hash_index_t hash_key = hash_map->hash_fn(key) % hash_map->num_bucket;
-	list_t* hash_bucket_list = hash_map->bucket[hash_key].list;
-	hash_map_entry_t* hash_map_entry = find_bucket_entry_(hash_bucket_list, key);
-	if (hash_map_entry != NULL)
-	{
-		return hash_map_entry->data;
-	}
-	return NULL;
-}
-
-void hash_map_clear(hash_map_t* hash_map) 
-{
-	if (hash_map == NULL)
-	{
+		// Abort expansion.
 		return;
 	}
-	for (hash_index_t i = 0; i < hash_map->num_bucket; i++) 
+	// Move over existing entries.
+	size_t i;
+	for (i = 0; i < map->bucketCount; i++)
 	{
-		if (hash_map->bucket[i].list == NULL)
+		Entry* entry = map->buckets[i];
+		while (entry != NULL)
 		{
-			continue;
+			Entry* next = entry->next;
+			size_t index = calculateIndex(newBucketCount, entry->hash);
+			entry->next = newBuckets[index];
+			newBuckets[index] = entry;
+			entry = next;
 		}
-		list_free(hash_map->bucket[i].list);
-		hash_map->bucket[i].list = NULL;
 	}
+	// Copy over internals.
+	free(map->buckets);
+	map->buckets = newBuckets;
+	map->bucketCount = newBucketCount;
 }
 
-void hash_map_foreach(hash_map_t* hash_map, hash_map_iter_cb callback, void* context) 
+static void hashmap_clear_unsafe(hashmap_t* map)
 {
-	if (hash_map == NULL || callback == NULL)
+	size_t i;
+	for (i = 0; i < map->bucketCount; i++) 
 	{
-		return;
-	}
-	for (hash_index_t i = 0; i < hash_map->num_bucket; ++i)
-	{
-		if (hash_map->bucket[i].list == NULL)
+		Entry* entry = map->buckets[i];
+		while (entry != NULL) 
 		{
-			continue;
-		}
-		for (const list_node_t* iter = list_begin(hash_map->bucket[i].list);
-			iter != list_end(hash_map->bucket[i].list);
-			iter = list_next(iter)) 
-		{
-			hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)list_node(iter);
-			if (!callback(hash_map_entry, context))
+			Entry* next = entry->next;
+			if (map->fn_key_free)
 			{
-				return;
+				map->fn_key_free(entry->key);
 			}
+			if (map->fn_value_free)
+			{
+				map->fn_value_free(entry->value);
+			}
+			free(entry);
+			map->size--;
+			entry = next;
 		}
+		map->buckets[i] = NULL;
 	}
 }
 
-static void bucket_free_(void* data) 
+void hashmap_free(hashmap_t* map) 
 {
-	if (data == NULL)
+	if (!map)
 	{
 		return;
 	}
-	hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)data;
-	const hash_map_t* hash_map = hash_map_entry->hash_map;
-	if (hash_map->key_fn)
-	{
-		hash_map->key_fn((void*)hash_map_entry->key);
-	}
-	if (hash_map->data_fn)
-	{
-		hash_map->data_fn(hash_map_entry->data);
-	}
-	hash_map->allocator->free(hash_map_entry);
+	hashmap_enter(map);
+	hashmap_clear_unsafe(map);
+	free(map->buckets);
+	map->buckets = NULL;
+	map->bucketCount = 0;
+	hashmap_leave(map);
+	free(map);
 }
 
-static hash_map_entry_t* find_bucket_entry_(list_t* hash_bucket_list,	const void* key) 
+#ifdef __clang__
+__attribute__((no_sanitize("integer")))
+#endif
+/* FIXME: relies on signed integer overflow, which is undefined behavior */
+int hashmap_hash(void* key, size_t keySize)
 {
-	if (hash_bucket_list == NULL)
+	int h = keySize;
+	char* data = (char*)key;
+	size_t i;
+	for (i = 0; i < keySize; i++) 
+	{
+		h = h * 31 + *data;
+		data++;
+	}
+	return h;
+}
+
+static Entry* createEntry(void* key, int hash, void* value) 
+{
+	Entry* entry = (Entry*)(malloc(sizeof(Entry)));
+	if (entry == NULL) 
 	{
 		return NULL;
 	}
-	for (const list_node_t* iter = list_begin(hash_bucket_list);
-		iter != list_end(hash_bucket_list);
-		iter = list_next(iter)) 
-	{
-		hash_map_entry_t* hash_map_entry = (hash_map_entry_t*)list_node(iter);
-		if (hash_map_entry->hash_map->keys_are_equal(hash_map_entry->key, key)) 
-		{
-			return hash_map_entry;
-		}
-	}
-	return NULL;
+	entry->key = key;
+	entry->hash = hash;
+	entry->value = value;
+	entry->next = NULL;
+	return entry;
 }
 
-static bool default_key_equality(const void* x, const void* y) 
+static inline bool equalKeys(void* keyA, int hashA, void* keyB, int hashB,
+	key_equality_fn fn_equals) 
 {
-	return x == y;
+	if (keyA == keyB) 
+	{
+		return true;
+	}
+	if (hashA != hashB) 
+	{
+		return false;
+	}
+	return fn_equals(keyA, keyB);
+}
+
+size_t hashmap_size(hashmap_t* map)
+{
+	return map->size;
+}
+
+void* hashmap_put(hashmap_t* map, void* key, void* value) 
+{
+	if (!map)
+	{
+		return NULL;
+	}
+	hashmap_enter(map);
+	int hash = hashKey(map, key);
+	size_t index = calculateIndex(map->bucketCount, hash);
+	Entry** p = &(map->buckets[index]);
+	void* ret = NULL;
+	while (true) 
+	{
+		Entry* current = *p;
+		// Add a new entry.
+		if (current == NULL) 
+		{
+			*p = createEntry(key, hash, value);
+			if (*p == NULL) 
+			{
+				errno = ENOMEM;
+				break;
+			}
+			map->size++;
+			expandIfNecessary(map);
+			break;
+		}
+		// Replace existing entry.
+		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality)) 
+		{
+			ret = current->value;
+			current->value = value;
+			break;
+		}
+		// Move to next entry.
+		p = &current->next;
+	}
+	hashmap_leave(map);
+	return ret;
+}
+
+void* hashmap_get(hashmap_t* map, void* key) 
+{
+	if (!map)
+	{
+		return NULL;
+	}
+	hashmap_enter(map);
+	int hash = hashKey(map, key);
+	size_t index = calculateIndex(map->bucketCount, hash);
+	Entry* entry = map->buckets[index];
+	void* ret = NULL;
+	while (entry != NULL) 
+	{
+		if (equalKeys(entry->key, entry->hash, key, hash, map->fn_key_equality)) 
+		{
+			ret = entry->value;
+			break;
+		}
+		entry = entry->next;
+	}
+	hashmap_leave(map);
+	return ret;
+}
+
+void* hashmap_remove(hashmap_t* map, void* key) 
+{
+	if (!map)
+	{
+		return NULL;
+	}
+	hashmap_enter(map);
+	int hash = hashKey(map, key);
+	size_t index = calculateIndex(map->bucketCount, hash);
+	// Pointer to the current entry.
+	Entry** p = &(map->buckets[index]);
+	Entry* current;
+	void* ret = NULL;
+	while ((current = *p) != NULL) 
+	{
+		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality)) 
+		{
+			ret = current->value;
+			*p = current->next;
+			if (map->fn_key_free)
+			{
+				map->fn_key_free(current->key);
+			}
+			if (map->fn_value_free)
+			{
+				map->fn_value_free(current->value);
+			}
+			free(current);
+			map->size--;
+			break;
+		}
+		p = &current->next;
+	}
+	hashmap_leave(map);
+	return ret;
+}
+
+void hashmap_clear(hashmap_t* map)
+{
+	if (!map)
+	{
+		return;
+	}
+	hashmap_enter(map);
+	hashmap_clear_unsafe(map);
+	hashmap_leave(map);
+}
+
+void hashmap_foreach(hashmap_t* map, hashmap_iter_cb callback, void* context) {
+	size_t i;
+	if (!map)
+	{
+		return;
+	}
+	hashmap_enter(map);
+	for (i = 0; i < map->bucketCount; i++) 
+	{
+		Entry* entry = map->buckets[i];
+		while (entry != NULL) 
+		{
+			Entry* next = entry->next;
+			if (!callback(entry->key, entry->value, context)) 
+			{
+				break;
+			}
+			entry = next;
+		}
+	}
+	hashmap_leave(map);
 }

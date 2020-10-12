@@ -27,9 +27,6 @@
 #define strdup(s)                            _strdup(s)
 #endif // !strdup
 
-//windows not implement strndup, let's do it.
-char* strndup(const char* s, size_t n);
-
 /**
  * to make MSC happy
  * origin strcpy_s(dest, destSize, src)
@@ -55,6 +52,13 @@ char* strndup(const char* s, size_t n);
 extern "C" {
 #endif // __cplusplus
 
+#ifdef _WIN32
+#ifndef strndup
+	//windows not implement strndup, let's do it.
+	char* strndup(const char* s, size_t n);
+#endif // !strndup
+#endif // _WIN32
+
 #if defined(__GLIBC__) || defined(_WIN32)
 	/* Declaration of strlcpy() for platforms that don't already have it. */
 
@@ -73,7 +77,8 @@ extern "C" {
      * If retval >= size, truncation occurred.
      */
 	size_t strlcat(char* dst, const char* src, size_t size);
-#endif
+
+#endif // __GLIBC__ || _WIN32
 
 	/**
 	 * replace the "pattern" to "replacement" from "original".

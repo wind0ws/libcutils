@@ -66,12 +66,12 @@ int main(int argc, char* argv[])
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
-	RUN_TEST(string_test);
+	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
-	//RUN_TEST(str_params_test);
+	RUN_TEST(str_params_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

@@ -5,11 +5,12 @@
 
 #define LOG_TAG  "STR_PARAMS_TEST"
 
-static const char* test_str = "foo=bar;abc=123;bad_key;def=123.456;";
+//static const char* test_str = "foo=bar;abc=123;bad_key;def=123.456;";
+static const char* test_str = "foo=bar,abc=123,bad_key,def=123.456,";
 
 int str_params_test()
 {
-	str_params_ptr params = str_params_create_str(test_str);
+	str_params_ptr params = str_params_create_str(",", test_str);
 	if (!params)
 	{
 		TLOGE(LOG_TAG, "failed on parse: %s", params);
@@ -51,7 +52,7 @@ int str_params_test()
 	str_params_add_float(params, "my_float", 1.234f);
 	str_params_dump(params);
 
-	char *param_str = str_params_to_str(params);
+	char* param_str = str_params_to_str(params);
 	if (param_str)
 	{
 		TLOGI(LOG_TAG, "param_str=> %s", param_str);

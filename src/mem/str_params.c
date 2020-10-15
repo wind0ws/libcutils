@@ -28,6 +28,7 @@ static void* released_pointer;
 struct str_params
 {
 	hashmap_t* map;
+	char delimiter[2];
 };
 
 static bool str_eq(const void* key_a, const void* key_b)
@@ -47,7 +48,7 @@ static int str_hash_fn(const void* str)
 	return (int)hash;
 }
 
-str_params_ptr str_params_create(void)
+str_params_ptr str_params_create(const char* delimiter)
 {
 	str_params_ptr s = (str_params_ptr)(calloc(1, sizeof(struct str_params)));
 	if (!s) return NULL;
@@ -57,6 +58,7 @@ str_params_ptr str_params_create(void)
 		free(s);
 		return NULL;
 	}
+	strlcpy(s->delimiter, delimiter ? delimiter : ";", sizeof(s->delimiter));
 	return s;
 }
 
@@ -76,21 +78,21 @@ void str_params_destroy(str_params_ptr params)
 	free(params);
 }
 
-str_params_ptr str_params_create_str(const char* param_str)
+str_params_ptr str_params_create_str(const char* delimiter, const char* param_str)
 {
 	struct str_params* parms;
 	char* str = NULL;
 	char* kvpair = NULL;
 	char* tmpstr = NULL;
 	int items = 0;
-	parms = str_params_create();
+	parms = str_params_create(delimiter);
 	if (!parms)
 		goto err_create_str_parms;
 	str = strdup(param_str);
 	if (!str)
 		goto err_strdup;
 	TLOGV(LOG_TAG, "%s: source string == '%s'", __func__, param_str);
-	kvpair = strtok_r(str, ";", &tmpstr);
+	kvpair = strtok_r(str, parms->delimiter, &tmpstr);
 	while (kvpair && *kvpair)
 	{
 		char* eq = strchr(kvpair, '='); /* would love strchrnul */
@@ -120,7 +122,7 @@ str_params_ptr str_params_create_str(const char* param_str)
 
 		items++;
 	next_pair:
-		kvpair = strtok_r(NULL, ";", &tmpstr);
+		kvpair = strtok_r(NULL, parms->delimiter, &tmpstr);
 	}
 	if (!items)
 		TLOGV(LOG_TAG, "%s: no items found in string", __func__);
@@ -287,33 +289,43 @@ int str_params_get_float(str_params_ptr params, const char* key, float* out_val)
 	return ret;
 }
 
+typedef struct  
+{
+	char* str;
+	str_params_ptr params_ptr;
+}combine_strings_ctx;
+
 static bool combine_strings(void* key, void* value, void* context)
 {
-	char** old_str = (char**)(context);
+	combine_strings_ctx* combine_ctx = (combine_strings_ctx*)context;
 	char* new_str;
 	int ret = asprintf(&new_str, "%s%s%s=%s",
-		*old_str ? *old_str : "",
-		*old_str ? ";" : "",
+		combine_ctx->str ? combine_ctx->str : "",
+		combine_ctx->str ? combine_ctx->params_ptr->delimiter : "",
 		(char*)key,
 		(char*)value);
-	if (*old_str) 
+	if (combine_ctx->str)
 	{
-		free(*old_str);
+		free(combine_ctx->str);
 	}
 	if (ret >= 0)
 	{
-		*old_str = new_str;
+		combine_ctx->str = new_str;
 		return true;
 	}
-	*old_str = NULL;
+	combine_ctx->str = NULL;
 	return false;
 }
 
 char* str_params_to_str(str_params_ptr params)
 {
-	char* str = NULL;
-	hashmap_foreach(params->map, combine_strings, &str);
-	return (str != NULL) ? str : strdup("");
+	combine_strings_ctx ctx =
+	{
+	   .str = NULL,
+	   .params_ptr = params,
+	};
+	hashmap_foreach(params->map, combine_strings, &ctx);
+	return (ctx.str != NULL) ? ctx.str : strdup("");
 }
 
 static bool dump_entry(void* key, void* value, void* context)

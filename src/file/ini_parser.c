@@ -1,6 +1,6 @@
 #include "file/ini_parser.h"
 #include "file/ini_reader.h"
-#include "data/hash_map.h"
+#include "data/hashmap.h"
 #include "data/hash_functions.h"
 #include "common_macro.h"
 #include <malloc.h>
@@ -230,7 +230,7 @@ static long parse_str2long(INI_PARSER_ERROR_CODE* p_err, char* str_value)
 {
 	char* end_ptr = NULL;
 	long result = strtol(str_value, &end_ptr, 10);
-	*p_err = strlen(end_ptr) ? INI_PARSER_ERR_FAILED : INI_PARSER_ERR_SUCCEED;
+	*p_err = (!end_ptr || *end_ptr != '\0') ? INI_PARSER_ERR_FAILED : INI_PARSER_ERR_SUCCEED;
 	return result;
 }
 
@@ -251,7 +251,7 @@ static INI_PARSER_ERROR_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	switch (value_type)
 	{
 	case INI_VALUE_TYPE_INT:
-		*((int*)value) = parse_str2long(&ret, str_value);
+		*((int*)value) = (int)parse_str2long(&ret, str_value);
 		break;
 	case INI_VALUE_TYPE_LONG:
 		*((long*)value) = parse_str2long(&ret, str_value);
@@ -259,7 +259,7 @@ static INI_PARSER_ERROR_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	case INI_VALUE_TYPE_DOUBLE:
 	{
 		double result = strtod(str_value, &end_ptr);
-		if (strlen(end_ptr))
+		if (!end_ptr || *end_ptr != '\0')
 		{
 			ret = INI_PARSER_ERR_FAILED;
 			break;

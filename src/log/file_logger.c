@@ -76,7 +76,7 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 
 void file_logger_log(file_logger_handle handle, void* log_msg)
 {
-#define MAX_RETRY_LOG_TIMES (5)
+#define MAX_RETRY_LOG_TIMES (2)
 	queue_msg_t msg = { 0 };
 	strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY);
 	int status;
@@ -159,9 +159,11 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 		//message is invalid or corrupted!
 		return;
 	}
-	//fwrite(msg_p->obj.data, sizeof(char), log_msg_len, handle->cur_fp);
-	fprintf(handle->cur_fp, "%.*s\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
-	handle->cur_log_file_size_counter += (log_msg_len + 2);
+	int write_len = fprintf(handle->cur_fp, "%.*s\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
+	if (write_len)
+	{
+		handle->cur_log_file_size_counter += write_len;
+	}
 	if (handle->cfg.one_piece_file_max_len &&
 		handle->cur_log_file_size_counter >= handle->cfg.one_piece_file_max_len)
 	{

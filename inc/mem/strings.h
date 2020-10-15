@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_STRINGS_HEADER
-#define __LCU_STRINGS_HEADER
+#ifndef LCU_STRINGS_H
+#define LCU_STRINGS_H
 
 #include <stddef.h>
 #include <string.h>
@@ -26,6 +26,16 @@
 #ifndef strdup
 #define strdup(s)                            _strdup(s)
 #endif // !strdup
+#ifndef strndup
+	//windows not implement strndup, let's do it.
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+	char* strndup(const char* s, size_t n);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+#endif // !strndup
 
 /**
  * to make MSC happy
@@ -37,7 +47,7 @@
 #define strncpy(dest, src, max_count)        strncpy_s(dest, (max_count) + 1, src, max_count)
 #define strcat(dest, src)                    strcat_s(dest, strlen(dest) + strlen(src) + 1, src)
 #define strtok_r(str, delimiter, ctx)        strtok_s(str, delimiter, ctx)
-//#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
+ //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
 //stricmp is windows function. suggest to use strcasecmp for cross platform
 #define stricmp(s1, s2)                      strcasecmp(s1, s2)
@@ -52,30 +62,23 @@
 extern "C" {
 #endif // __cplusplus
 
-#ifdef _WIN32
-#ifndef strndup
-	//windows not implement strndup, let's do it.
-	char* strndup(const char* s, size_t n);
-#endif // !strndup
-#endif // _WIN32
-
 #if defined(__GLIBC__) || defined(_WIN32)
 	/* Declaration of strlcpy() for platforms that don't already have it. */
 
 	/**
-     * Copy src to string dst of size size.  At most size-1 characters
-     * will be copied.  Always NUL terminates (unless size == 0).
-     * Returns strlen(src); if retval >= size, truncation occurred.
-     */
+	 * Copy src to string dst of size size.  At most size-1 characters
+	 * will be copied.  Always NUL terminates (unless size == 0).
+	 * Returns strlen(src); if retval >= size, truncation occurred.
+	 */
 	size_t strlcpy(char* dst, const char* src, size_t size);
 
 	/**
-     * Appends src to string dst of size "size" (unlike strncat, size is the
-     * full size of dst, not space left).  At most size-1 characters
-     * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
-     * Returns strlen(src) + MIN(size, strlen(initial dst)).
-     * If retval >= size, truncation occurred.
-     */
+	 * Appends src to string dst of size "size" (unlike strncat, size is the
+	 * full size of dst, not space left).  At most size-1 characters
+	 * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
+	 * Returns strlen(src) + MIN(size, strlen(initial dst)).
+	 * If retval >= size, truncation occurred.
+	 */
 	size_t strlcat(char* dst, const char* src, size_t size);
 
 #endif // __GLIBC__ || _WIN32
@@ -99,13 +102,13 @@ extern "C" {
 	 * @param delimiter: the string of delimiter
 	 */
 	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
-		const char *src_str, const char* delimiter);
+		const char* src_str, const char* delimiter);
 
 	/**
 	 * trim string.
 	 * Remove the part of the string from left and from right composed just of
 	 * contiguous characters found in 'cset', that is a null terminted C string.
-	 * 
+	 *
 	 * Example:
 	 *
 	 * char s[64] = {0};
@@ -114,7 +117,7 @@ extern "C" {
 	 * printf("%s\n", s);
 	 *
 	 * Output will be just "HelloWorld".
-	 * 
+	 *
 	 * @param s: the string want to trim. this string must editable!!!
 	 * @param cset: the char set want to be removed from s.
 	 */
@@ -139,4 +142,4 @@ extern "C" {
 };
 #endif // __cplusplus
 
-#endif // __LCU_STRINGS_HEADER
+#endif // LCU_STRINGS_H

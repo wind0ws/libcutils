@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_COMMON_MACRO_H
-#define __LCU_COMMON_MACRO_H
+#ifndef LCU_COMMON_MACRO_H
+#define LCU_COMMON_MACRO_H
 
 #include <stdbool.h>      /* for true/false    */
 #include <stddef.h>       /* for size_t        */
@@ -271,4 +271,4 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 
-#endif // __LCU_COMMON_MACRO_H
+#endif // LCU_COMMON_MACRO_H

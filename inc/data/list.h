@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_LIST_H
-#define __LCU_LIST_H
+#ifndef LCU_LIST_H
+#define LCU_LIST_H
 /*
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/list.h
 */
@@ -126,4 +126,4 @@ void *list_node(const list_node_t *node);
 }
 #endif
 
-#endif //__LCU_LIST_H
+#endif // LCU_LIST_H

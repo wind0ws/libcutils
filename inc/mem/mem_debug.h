@@ -8,8 +8,8 @@
  */
 
 #pragma once
-#ifndef __LCU_MEM_DEBUG_H
-#define __LCU_MEM_DEBUG_H
+#ifndef LCU_MEM_DEBUG_H
+#define LCU_MEM_DEBUG_H
 
 #ifdef _WIN32
 #ifndef __func__
@@ -132,4 +132,4 @@ void operator delete[](void* ptr) noexcept
 #define DEINIT_MEM_CHECK() 
 #endif // ! INIT_MEM_CHECK 
 
-#endif // __LCU_MEM_DEBUG_H
+#endif // LCU_MEM_DEBUG_H

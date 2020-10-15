@@ -22,7 +22,7 @@
 #include <stdbool.h>
 #include "mem/strings.h"
 #include "data/hash_functions.h"
-#include "data/hash_map.h"
+#include "data/hashmap.h"
 #include "common_macro.h"
 
  //we define alloc function to lcu_alloc, 

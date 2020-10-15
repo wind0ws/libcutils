@@ -17,19 +17,22 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
-#include "data/hash_map.h"
+#include "mem/mem_debug.h"
+#include "data/hashmap.h"
 #include "common_macro.h"
 #include <string.h>
 #include <errno.h>
 
 typedef struct Entry Entry;
-struct Entry {
+struct Entry 
+{
 	void* key;
 	int hash;
 	void* value;
 	Entry* next;
 };
-struct Hashmap {
+struct Hashmap 
+{
 	Entry** buckets;
 	size_t bucketCount;
 	hash_key_fn fn_hash;
@@ -52,10 +55,10 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 	key_free_fn fn_key_free,
 	value_free_fn fn_value_free,
 	key_equality_fn fn_key_equality,
-	hashmap_lock_t* lock) 
+	hashmap_lock_t* lock)
 {
 	hashmap_t* map = (hashmap_t*)(malloc(sizeof(hashmap_t)));
-	if (map == NULL) 
+	if (map == NULL)
 	{
 		return NULL;
 	}
@@ -69,13 +72,13 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 	// 0.75 load factor.
 	size_t minimumBucketCount = initial_capacity * 4 / 3;
 	map->bucketCount = 1;
-	while (map->bucketCount <= minimumBucketCount) 
+	while (map->bucketCount <= minimumBucketCount)
 	{
 		// Bucket count must be power of 2.
 		map->bucketCount <<= 1;
 	}
 	map->buckets = (Entry**)(calloc(map->bucketCount, sizeof(Entry*)));
-	if (map->buckets == NULL) 
+	if (map->buckets == NULL)
 	{
 		free(map);
 		return NULL;
@@ -93,7 +96,7 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 #ifdef __clang__
 __attribute__((no_sanitize("integer")))
 #endif //__clang__
-static inline int hashKey(hashmap_t* map, void* key) 
+static inline int hashKey(hashmap_t* map, void* key)
 {
 	int h = map->fn_hash(key);
 	// We apply this secondary hashing discovered by Doug Lea to defend
@@ -105,15 +108,15 @@ static inline int hashKey(hashmap_t* map, void* key)
 	return h;
 }
 
-static inline size_t calculateIndex(size_t bucketCount, int hash) 
+static inline size_t calculateIndex(size_t bucketCount, int hash)
 {
 	return ((size_t)hash) & (bucketCount - 1);
 }
 
-static void expandIfNecessary(hashmap_t* map) 
+static void expandIfNecessary(hashmap_t* map)
 {
 	// If the load factor exceeds 0.75...
-	if (map->size <= (map->bucketCount * 3 / 4)) 
+	if (map->size <= (map->bucketCount * 3 / 4))
 	{
 		return;
 	}
@@ -148,17 +151,17 @@ static void expandIfNecessary(hashmap_t* map)
 static void hashmap_clear_unsafe(hashmap_t* map)
 {
 	size_t i;
-	for (i = 0; i < map->bucketCount; i++) 
+	for (i = 0; i < map->bucketCount; i++)
 	{
 		Entry* entry = map->buckets[i];
-		while (entry != NULL) 
+		while (entry != NULL)
 		{
 			Entry* next = entry->next;
-			if (map->fn_key_free)
+			if (entry->key && map->fn_key_free)
 			{
 				map->fn_key_free(entry->key);
 			}
-			if (map->fn_value_free)
+			if (entry->value && map->fn_value_free)
 			{
 				map->fn_value_free(entry->value);
 			}
@@ -170,9 +173,9 @@ static void hashmap_clear_unsafe(hashmap_t* map)
 	}
 }
 
-void hashmap_free(hashmap_t* map) 
+void hashmap_free(hashmap_t* map)
 {
-	if (!map)
+	if (!map || !map->buckets)
 	{
 		return;
 	}
@@ -194,7 +197,7 @@ int hashmap_hash(void* key, size_t keySize)
 	int h = keySize;
 	char* data = (char*)key;
 	size_t i;
-	for (i = 0; i < keySize; i++) 
+	for (i = 0; i < keySize; i++)
 	{
 		h = h * 31 + *data;
 		data++;
@@ -202,10 +205,10 @@ int hashmap_hash(void* key, size_t keySize)
 	return h;
 }
 
-static Entry* createEntry(void* key, int hash, void* value) 
+static Entry* createEntry(void* key, int hash, void* value)
 {
 	Entry* entry = (Entry*)(malloc(sizeof(Entry)));
-	if (entry == NULL) 
+	if (entry == NULL)
 	{
 		return NULL;
 	}
@@ -217,13 +220,13 @@ static Entry* createEntry(void* key, int hash, void* value)
 }
 
 static inline bool equalKeys(void* keyA, int hashA, void* keyB, int hashB,
-	key_equality_fn fn_equals) 
+	key_equality_fn fn_equals)
 {
-	if (keyA == keyB) 
+	if (keyA == keyB)
 	{
 		return true;
 	}
-	if (hashA != hashB) 
+	if (hashA != hashB)
 	{
 		return false;
 	}
@@ -235,7 +238,7 @@ size_t hashmap_size(hashmap_t* map)
 	return map->size;
 }
 
-void* hashmap_put(hashmap_t* map, void* key, void* value) 
+void* hashmap_put(hashmap_t* map, void* key, void* value)
 {
 	if (!map)
 	{
@@ -246,14 +249,14 @@ void* hashmap_put(hashmap_t* map, void* key, void* value)
 	size_t index = calculateIndex(map->bucketCount, hash);
 	Entry** p = &(map->buckets[index]);
 	void* ret = NULL;
-	while (true) 
+	while (true)
 	{
 		Entry* current = *p;
 		// Add a new entry.
-		if (current == NULL) 
+		if (current == NULL)
 		{
 			*p = createEntry(key, hash, value);
-			if (*p == NULL) 
+			if (*p == NULL)
 			{
 				errno = ENOMEM;
 				break;
@@ -263,9 +266,13 @@ void* hashmap_put(hashmap_t* map, void* key, void* value)
 			break;
 		}
 		// Replace existing entry.
-		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality)) 
+		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
 			ret = current->value;
+			if (ret && map->fn_value_free)
+			{
+				map->fn_value_free(ret);
+			}
 			current->value = value;
 			break;
 		}
@@ -276,7 +283,7 @@ void* hashmap_put(hashmap_t* map, void* key, void* value)
 	return ret;
 }
 
-void* hashmap_get(hashmap_t* map, void* key) 
+void* hashmap_get(hashmap_t* map, void* key)
 {
 	if (!map)
 	{
@@ -287,9 +294,9 @@ void* hashmap_get(hashmap_t* map, void* key)
 	size_t index = calculateIndex(map->bucketCount, hash);
 	Entry* entry = map->buckets[index];
 	void* ret = NULL;
-	while (entry != NULL) 
+	while (entry != NULL)
 	{
-		if (equalKeys(entry->key, entry->hash, key, hash, map->fn_key_equality)) 
+		if (equalKeys(entry->key, entry->hash, key, hash, map->fn_key_equality))
 		{
 			ret = entry->value;
 			break;
@@ -300,7 +307,7 @@ void* hashmap_get(hashmap_t* map, void* key)
 	return ret;
 }
 
-void* hashmap_remove(hashmap_t* map, void* key) 
+void* hashmap_remove(hashmap_t* map, void* key)
 {
 	if (!map)
 	{
@@ -313,17 +320,17 @@ void* hashmap_remove(hashmap_t* map, void* key)
 	Entry** p = &(map->buckets[index]);
 	Entry* current;
 	void* ret = NULL;
-	while ((current = *p) != NULL) 
+	while ((current = *p) != NULL)
 	{
-		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality)) 
+		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
 			ret = current->value;
 			*p = current->next;
-			if (map->fn_key_free)
+			if (current->key && map->fn_key_free)
 			{
 				map->fn_key_free(current->key);
 			}
-			if (map->fn_value_free)
+			if (current->value && map->fn_value_free)
 			{
 				map->fn_value_free(current->value);
 			}
@@ -355,13 +362,13 @@ void hashmap_foreach(hashmap_t* map, hashmap_iter_cb callback, void* context) {
 		return;
 	}
 	hashmap_enter(map);
-	for (i = 0; i < map->bucketCount; i++) 
+	for (i = 0; i < map->bucketCount; i++)
 	{
 		Entry* entry = map->buckets[i];
-		while (entry != NULL) 
+		while (entry != NULL)
 		{
 			Entry* next = entry->next;
-			if (!callback(entry->key, entry->value, context)) 
+			if (!callback(entry->key, entry->value, context))
 			{
 				break;
 			}

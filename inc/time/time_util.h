@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __TIME_UTIL_H
-#define __TIME_UTIL_H
+#ifndef LCU_TIME_UTIL_H
+#define LCU_TIME_UTIL_H
 
 #include <time.h>
 #include <stdint.h>
@@ -83,4 +83,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif // __TIME_UTIL_H
+#endif // LCU_TIME_UTIL_H

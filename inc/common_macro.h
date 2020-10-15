@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_COMMON_MACRO_H
-#define __LCU_COMMON_MACRO_H
+#ifndef LCU_COMMON_MACRO_H
+#define LCU_COMMON_MACRO_H
 
 #include <stdbool.h>      /* for true/false    */
 #include <stddef.h>       /* for size_t        */
@@ -219,7 +219,7 @@ typedef intptr_t ssize_t;
         if (!is_expr_true##line)                                                     \
         {                                                                            \
            EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
-                  #expr, __func__, __FILE__, __LINE__);                              \
+                  #expr, __func__, __FILE__, line);                              \
            abort();                                                                  \
         }                                                                            \
      }
@@ -271,4 +271,4 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
 
-#endif // __LCU_COMMON_MACRO_H
+#endif // LCU_COMMON_MACRO_H

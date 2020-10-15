@@ -12,4 +12,3 @@ pid_t gettid()
 	#endif
 }
 #endif  // __ANDROID__
-

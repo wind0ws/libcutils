@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_FILE_LOGGER_H
-#define __LCU_FILE_LOGGER_H
+#ifndef LCU_FILE_LOGGER_H
+#define LCU_FILE_LOGGER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -11,7 +11,8 @@ extern "C" {
 
 	typedef struct file_logger* file_logger_handle;
 
-	typedef struct file_logger_lock {
+	typedef struct file_logger_lock 
+	{
 		void* arg; /**< Argument to be passed to acquire and release function pointers */
 		int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
 		int (*release)(void* arg); /**< Function pointer to release a lock */
@@ -39,4 +40,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif // __LCU_FILE_LOGGER_H
+#endif // LCU_FILE_LOGGER_H

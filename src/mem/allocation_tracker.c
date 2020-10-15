@@ -16,17 +16,13 @@
  *
  ******************************************************************************/
 
-#include "mem/mem_debug.h"
-#include "mem/allocator.h"
 #include "mem/allocation_tracker.h"
- //#include <assert.h>
- //#include <pthread.h>
 #include "thread/thread_wrapper.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include "mem/strings.h"
 #include "data/hash_functions.h"
-#include "data/hash_map.h"
+#include "data/hashmap.h"
 #include "common_macro.h"
 
  //we define alloc function to lcu_alloc, 
@@ -60,31 +56,20 @@ typedef struct
 	void* report_fn_user_data;
 } allocation_free_checker_context;
 
-// Hidden constructor for hash map for our use only. 
-// Everything else should use the normal interface.
-hash_map_t* hash_map_new_internal(
-	size_t size,
-	hash_index_fn hash_fn,
-	key_free_fn key_fn,
-	data_free_fn,
-	key_equality_fn equality_fn,
-	const allocator_t* zeroed_allocator);
-
-static bool allocation_entry_freed_checker(hash_map_entry_t* entry, void* context);
+static bool allocation_entry_freed_checker(void *key, void *value, void* context);
 static bool allocation_memory_corruption_checker(allocation_t* allocation);
-
-static inline void* untracked_calloc(size_t size);
 
 static const size_t allocation_hash_map_size = 1024;
 static const char* canary = "tinybird";
-static const allocator_t untracked_calloc_allocator =
-{
-  untracked_calloc,
-  free
-};
+
 static size_t canary_size = 0;
-static hash_map_t* allocations = NULL;
+static hashmap_t* allocations = NULL;
 static pthread_mutex_t lock;
+
+static bool pointer_key_equals(const void* x, const void* y)
+{
+	return x == y;
+}
 
 void allocation_tracker_init(void)
 {
@@ -93,13 +78,10 @@ void allocation_tracker_init(void)
 	canary_size = strlen(canary);
 	pthread_mutex_init(&lock, NULL);
 	pthread_mutex_lock(&lock);
-	allocations = hash_map_new_internal(
-		allocation_hash_map_size,
-		hash_function_pointer,
-		NULL,
-		free,
-		NULL,
-		&untracked_calloc_allocator);
+	
+	allocations = hashmap_create(allocation_hash_map_size, 
+		hash_function_pointer, NULL, free, pointer_key_equals, NULL);
+
 	pthread_mutex_unlock(&lock);
 }
 
@@ -109,7 +91,7 @@ void allocation_tracker_uninit(void)
 	if (!allocations)
 		return;
 	pthread_mutex_lock(&lock);
-	hash_map_free(allocations);
+	hashmap_free(allocations);
 	allocations = NULL;
 	pthread_mutex_unlock(&lock);
 
@@ -121,7 +103,7 @@ void allocation_tracker_reset(void)
 	if (!allocations)
 		return;
 	pthread_mutex_lock(&lock);
-	hash_map_clear(allocations);
+	hashmap_clear(allocations);
 	pthread_mutex_unlock(&lock);
 }
 
@@ -136,7 +118,7 @@ size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report, vo
 		.report_fn_user_data = report_fn_user_data
 	};
 	pthread_mutex_lock(&lock);
-	hash_map_foreach(allocations, allocation_entry_freed_checker, &context);
+	hashmap_foreach(allocations, allocation_entry_freed_checker, &context);
 	pthread_mutex_unlock(&lock);
 
 	return context.unfreed_memory_size;
@@ -151,7 +133,7 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 	return_ptr += canary_size;
 
 	pthread_mutex_lock(&lock);
-	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, return_ptr);
+	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, return_ptr);
 	if (allocation)
 	{
 		ASSERT_ABORT(allocation->freed); // Must have been freed before
@@ -160,7 +142,7 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 	{
 		allocation = (allocation_t*)calloc(1, sizeof(allocation_t));
 		ASSERT_ABORT(allocation);
-		hash_map_set(allocations, return_ptr, allocation);
+		hashmap_put(allocations, return_ptr, allocation);
 	}
 	pthread_mutex_unlock(&lock);
 	allocation->allocator_id = allocator_id;
@@ -188,7 +170,7 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 	if (!allocations || !ptr)
 		return ptr;
 	pthread_mutex_lock(&lock);
-	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, ptr);
+	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
 	ASSERT_ABORT(allocation);                               // Must have been tracked before
 	ASSERT_ABORT(!allocation->freed);                       // Must not double free
 	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
@@ -197,7 +179,7 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 	// Free the hash map entry to avoid unlimited memory usage growth.
 	// Double-free of memory is detected with "ASSERT_ABORT(allocation)" above
 	// as the allocation entry will not be present.
-	hash_map_erase(allocations, ptr);
+	hashmap_remove(allocations, ptr);
 	pthread_mutex_unlock(&lock);
 	return ((char*)ptr) - canary_size;
 }
@@ -209,7 +191,7 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 
 	size_t ptr_size = 0;
 	pthread_mutex_lock(&lock);
-	allocation_t* allocation = (allocation_t*)hash_map_get(allocations, ptr);
+	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
 	pthread_mutex_unlock(&lock);
 	ASSERT_ABORT(allocation);                               // Must have been tracked before
 	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
@@ -243,9 +225,9 @@ static bool allocation_memory_corruption_checker(allocation_t* allocation)
 	return true;
 }
 
-static bool allocation_entry_freed_checker(hash_map_entry_t* entry, void* context)
+static bool allocation_entry_freed_checker(void *key, void *value, void* context)
 {
-	allocation_t* allocation = (allocation_t*)entry->data;
+	allocation_t* allocation = (allocation_t*)value;
 	if (!allocation->freed)
 	{
 		allocation_free_checker_context* checker_ctx = (allocation_free_checker_context*)context;
@@ -265,9 +247,4 @@ static bool allocation_entry_freed_checker(hash_map_entry_t* entry, void* contex
 		}
 	}
 	return true;
-}
-
-static inline void* untracked_calloc(size_t size)
-{
-	return calloc(size, 1);
 }

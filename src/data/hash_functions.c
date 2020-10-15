@@ -18,21 +18,21 @@
  ******************************************************************************/
 #include "data/hash_functions.h"
 
-hash_index_t hash_function_naive(const void* key)
+int hash_function_naive(const void* key)
 {
-	return (hash_index_t)key;
+	return (int)key;
 }
 
 // 2^32 = 2654435761 
 
-hash_index_t hash_function_integer(const void* key)
+int hash_function_integer(const void* key)
 {
-	return ((hash_index_t)key) * 2654435761;
+	return ((int)key) * 2654435761;
 }
 
-hash_index_t hash_function_pointer(const void* key)
+int hash_function_pointer(const void* key)
 {
-	return ((hash_index_t)key) * 2654435761;
+	return ((int)key) * 2654435761;
 }
 
 /**
@@ -44,9 +44,9 @@ hash_index_t hash_function_pointer(const void* key)
  * 3. deficient number
  * 4. 001/010/100/000/101 b
  */
-hash_index_t hash_function_string(const void* key)
+int hash_function_string(const void* key)
 {
-	hash_index_t hash = 5381;
+	int hash = 5381;
 	const char* str = (const char*)key;
 	char c;
 	while ((c = *str) != '\0')

@@ -18,8 +18,8 @@
  *
  ******************************************************************************/
 #pragma once
-#ifndef __LCU_ALLOCATION_TRACKER_H__
-#define __LCU_ALLOCATION_TRACKER_H__
+#ifndef LCU_ALLOCATION_TRACKER_H
+#define LCU_ALLOCATION_TRACKER_H
 
 #include <stdint.h> /* for uint8_t */
 #include <stddef.h> /* for size_t */
@@ -77,4 +77,4 @@ size_t allocation_tracker_resize_for_canary(size_t size);
 }
 #endif
 
-#endif //__LCU_ALLOCATION_TRACKER_H__
+#endif // LCU_ALLOCATION_TRACKER_H

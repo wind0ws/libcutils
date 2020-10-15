@@ -54,11 +54,7 @@ void list_free(list_t* list)
 
 bool list_is_empty(const list_t* list) 
 {
-	if (list == NULL)
-	{
-		return false;
-	}
-	return (list->length == 0);
+	return list && (list->length == 0);
 }
 
 bool list_contains(const list_t* list, const void* data) 
@@ -79,11 +75,7 @@ bool list_contains(const list_t* list, const void* data)
 
 size_t list_length(const list_t* list) 
 {
-	if (list == NULL)
-	{
-		return 0;
-	}
-	return list->length;
+	return list ? list->length : 0;
 }
 
 void* list_front(const list_t* list) 

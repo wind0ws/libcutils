@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "mem/stringbuilder.h"
 #include "mem/strings.h"
 #include "common_macro.h"
@@ -77,8 +78,24 @@ static int strtrim_test()
 	return 0;
 }
 
+static int strdup_test()
+{
+	const char* test_str_fordup = "nihao,hello";
+	char *dup0 = strndup(test_str_fordup, 0);
+	ASSERT(strcmp("", dup0) == 0);
+	free(dup0);
+	char *dup5 = strndup(test_str_fordup, 5);
+	ASSERT(strncmp(test_str_fordup, dup5, 5) == 0);
+	free(dup5);
+	return 0;
+}
+
 int string_test()
 {
+	LOGD("--> test strdup");
+	strdup_test();
+	LOGD("<-- strdup test finished\n");
+
 	LOGD("--> test stringbuilder");
 	stringbuilder_test();
 	LOGD("<-- stringbuilder test finished\n");

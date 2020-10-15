@@ -24,7 +24,7 @@ int allocator_test()
 	char* str2 = calloc(1, 32);
 	strcpy(str2, "This is str2.");
 	TLOGD(LOG_TAG_ALLOC_TEST, "str2 => %s", str2);
-	//lcu_free(str2);
+	//free(str2);
 	//oops, str2 is leaked, here we should report str2 leak.
 	allocation_tracker_expect_no_allocations(report_leak_memory, NULL);
 

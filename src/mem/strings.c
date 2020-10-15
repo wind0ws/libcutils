@@ -10,14 +10,19 @@ char* strndup(const char* s, size_t n)
 	}
 	// n == 0 is acceptable: just empty string.
 	const size_t target_len = strnlen(s, n);
-	char *target_str = (char *)malloc(target_len + sizeof(char));
+	char *target_str = (char *)malloc(target_len + 1);
 	if (!target_str)
 	{
 		return NULL;
 	}
 	if (target_len)
 	{
+		//for now(2020.10.15), the VS2019 16.7.6 report C6386 warning,
+		//but I'm sure there is no buffer overrun problem, so disable it.
+#pragma warning(push)
+#pragma warning(disable: 6386)
 		memcpy(target_str, s, target_len);
+#pragma warning(pop)
 	}
 	target_str[target_len] = '\0';
 	return target_str;

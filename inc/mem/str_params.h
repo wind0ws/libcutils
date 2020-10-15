@@ -11,8 +11,22 @@ extern "C" {
 
 typedef struct str_params *str_params_ptr;
 
-str_params_ptr str_params_create(void);
-str_params_ptr str_params_create_str(const char *param_str);
+/**
+ * create str_params.
+ * you should call str_params_destroy after use!
+ * @param delimiter: can be NULL, default delimiter is semicolon(";")
+ */
+str_params_ptr str_params_create(const char *delimiter);
+/**
+ * create str_params with exists param_str.
+ * see more details in str_params_create function.
+ * @param delimiter: can be NULL, default delimiter is semicolon(";")
+ * @param param_str: the exists param str to parse
+ */
+str_params_ptr str_params_create_str(const char *delimiter, const char *param_str);
+/**
+ * destroy str_params and free memory.
+ */
 void str_params_destroy(str_params_ptr params);
 
 /**
@@ -42,7 +56,7 @@ int str_params_get_double(str_params_ptr params, const char* key, double* out_va
 int str_params_get_float(str_params_ptr params, const char *key, float *out_val);
 
 /**
- * combine params to string.
+ * combine key value pair params to string.
  * the return string is malloc on heap, so you should free after use!
  * or memory leak will occur!
  */

@@ -78,42 +78,45 @@ void file_logger_log(file_logger_handle handle, void* log_msg)
 {
 #define MAX_RETRY_LOG_TIMES (2)
 	queue_msg_t msg = { 0 };
-	strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY);
+	if (strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY) < 1)
+	{
+		return;
+	}
 	int status;
 	int retry_counter = 0;
 
 	FILE_LOGGER_LOCK(handle)
-	do
-	{
-		if ((status = QueueHandler_send(handle->msg_queue, &msg)) == 0)
+		do
 		{
-			break;//send complete
-		}
-		RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
-		if (handle->cfg.is_try_my_best_to_keep_log == false)
+			if ((status = QueueHandler_send(handle->msg_queue, &msg)) == 0)
+			{
+				break;//send complete
+			}
+			RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
+			if (handle->cfg.is_try_my_best_to_keep_log == false)
+			{
+				break;
+			}
+			RING_LOGE("try again after 2ms");
+			retry_counter++;
+			usleep(2000);
+		} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_to_keep_log);
+		//final safety
+		if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
 		{
-			break;
+			char cur_time[TIME_STR_LEN];
+			time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
+			char path_buffer[MAX_FULL_PATH_BUFFER];
+			snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log",
+				handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
+			FILE* f_lost = fopen(path_buffer, "wb");
+			if (f_lost)
+			{
+				fprintf(f_lost, "%s\n", (char*)log_msg);
+				fclose(f_lost);
+			}
 		}
-		RING_LOGE("try again after 2ms");
-		retry_counter++;
-		usleep(2000);
-	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_to_keep_log);
-	//final safety
-	if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
-	{
-		char cur_time[TIME_STR_LEN];
-		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
-		char path_buffer[MAX_FULL_PATH_BUFFER];
-		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log", 
-			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
-		FILE* f_lost = fopen(path_buffer, "wb");
-		if (f_lost)
-		{
-			fprintf(f_lost, "%s\n", (char*)log_msg);
-			fclose(f_lost);
-		}
-	}
-	FILE_LOGGER_UNLOCK(handle)
+		FILE_LOGGER_UNLOCK(handle)
 }
 
 void file_logger_deinit(file_logger_handle* handle_p)
@@ -143,7 +146,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	{
 		file_util_mkdirs(handle->cfg.log_folder_path);
 		char cur_time[TIME_STR_LEN];
-		time_util_get_current_time_str(cur_time, handle->timezone_hour);
+		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");
@@ -151,15 +154,12 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	}
 	if (!handle->cur_fp)
 	{
+#if(!defined(NDEBUG) || defined(_DEBUG))
+		printf("[DEBUG] log file handle still null at [%s:%d]!!\n", __FILE__, __LINE__);
+#endif // !NDEBUG || _DEBUG
 		return;
 	}
-	size_t log_msg_len = strnlen(msg_p->obj.data, MSG_OBJ_MAX_CAPACITY);//strlen(msg_p->obj.data);
-	if (log_msg_len == 0 || log_msg_len > MSG_OBJ_MAX_CAPACITY - 1)
-	{
-		//message is invalid or corrupted!
-		return;
-	}
-	int write_len = fprintf(handle->cur_fp, "%.*s\n",MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
+	int write_len = fprintf(handle->cur_fp, "%.*s\n", MSG_OBJ_MAX_CAPACITY, msg_p->obj.data);
 	if (write_len)
 	{
 		handle->cur_log_file_size_counter += write_len;

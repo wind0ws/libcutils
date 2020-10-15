@@ -219,7 +219,7 @@ typedef intptr_t ssize_t;
         if (!is_expr_true##line)                                                     \
         {                                                                            \
            EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
-                  #expr, __func__, __FILE__, __LINE__);                              \
+                  #expr, __func__, __FILE__, line);                              \
            abort();                                                                  \
         }                                                                            \
      }

@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 	//ASSERT_ABORT(1 == 0);
 
-	//RUN_TEST(memleak_test);//this will report mem leak.
+	RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
 	//RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
-	RUN_TEST(str_params_test);
+	//RUN_TEST(str_params_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

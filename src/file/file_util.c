@@ -1,6 +1,5 @@
 #include "file/file_util.h"
 #include "mem/strings.h"
-#include "common_macro.h"
 #include <sys/stat.h>
 
 #ifdef _WIN32
@@ -13,17 +12,16 @@
 #define MAX_FOLDER_PATH_LEN (256)
 
 #ifdef _WIN32
-#define ACCESS(fileName, accessMode) _access(fileName, accessMode)
-#define MKDIR(path)                  _mkdir(path)
-#define READ_FUNC                    _read
-#define WRITE_FUNC                   _write
+#define ACCESS(fileName, access_mode) _access(fileName, access_mode)
+#define MKDIR(path)                   _mkdir(path)
+#define READ_FUNC                     _read
+#define WRITE_FUNC                    _write
 #else
-#define ACCESS(fileName, accessMode) access(fileName, accessMode)
-#define MKDIR(path)                  mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
-#define READ_FUNC                    read
-#define WRITE_FUNC                   write
+#define ACCESS(fileName, access_mode) access(fileName, access_mode)
+#define MKDIR(path)                   mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
+#define READ_FUNC                     read
+#define WRITE_FUNC                    write
 #endif // WIN32
-
 
 typedef ssize_t(*pfunc_rw)(int file_handle, void* buffer, size_t max_char_count);
 

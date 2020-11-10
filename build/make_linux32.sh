@@ -8,7 +8,11 @@ else
 	rm -rf build_linux32/*
 fi
 
-cmake -H. -B./build_linux32 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32
+cmake -H. -B./build_linux32 -DCMAKE_BUILD_TYPE=Release \
+                            -DCMAKE_C_FLAGS="-m32" \
+							-DCMAKE_CXX_FLAGS="-m32" \
+							-DCMAKE_SHARED_LINKER_FLAGS="-m32" \
+							-DCMAKE_EXE_LINKER_FLAGS="-m32" 
 cmake --build build_linux32 --config Release
 
 mkdir -p ./output/linux/build_linux32

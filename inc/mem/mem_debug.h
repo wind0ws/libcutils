@@ -11,6 +11,10 @@
 #ifndef LCU_MEM_DEBUG_H
 #define LCU_MEM_DEBUG_H
 
+ //define this macro will enable memory check feature
+ //suggest user add it to compiler on build if you really want to debug memory.
+//#define _ENABLE_LCU_MEM_CHECK_FEATURE
+
 #ifdef _WIN32
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -18,7 +22,8 @@
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
 #endif // !__PRETTY_FUNCTION__
-#ifdef _DEBUG
+
+#if(defined(_DEBUG) && !defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
  // must keep next 3 line on your top source file,
  // otherwise it won't tell you leak memory on which file with line number.
 #define _CRTDBG_MAP_ALLOC
@@ -41,7 +46,7 @@
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
 }
 #define DEINIT_MEM_CHECK() 
-#endif // _DEBUG
+#endif // _DEBUG && !_ENABLE_LCU_MEM_CHECK_FEATURE
 #endif // _WIN32
 
 //common header
@@ -59,10 +64,6 @@
 #include <string.h>
 #endif // __cplusplus
 #include <malloc.h>
-
-//define this macro will enable memory check feature
-//suggest user add it to compiler on build if you really want to debug memory.
-//#define _ENABLE_LCU_MEM_CHECK_FEATURE
 
 #if(!defined(_CRTDBG_MAP_ALLOC) && defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
 //to mark we really use lcu mem check feature
@@ -112,16 +113,13 @@ void operator delete[](void* ptr) noexcept
 #define INIT_MEM_CHECK()   allocation_tracker_init()
 #define DEINIT_MEM_CHECK() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
 
-#if(defined(free) || defined(malloc) || defined(calloc) || defined(realloc))
-#error free/malloc/calloc/realloc is defined. you should put mem_debug.h on your source file first line.
-#endif // free || malloc || calloc || realloc
+#if(defined(free) || defined(malloc) || defined(calloc) || defined(realloc) || defined(strdup) || defined(strndup))
+#error free/malloc/calloc/realloc/strdup/strndup is defined. you should put "mem_debug.h" on your source file first line.
+#endif 
 #define free(p)            lcu_free(p)
 #define malloc(s)          lcu_malloc_trace(s, __FILE__, __func__, __LINE__)
 #define calloc(c, s)       lcu_calloc_trace(c, s, __FILE__, __func__, __LINE__)
 #define realloc(p, s)      lcu_realloc_trace(p, s, __FILE__, __func__, __LINE__)
-#if(defined(strdup) || defined(strndup))
-#error strdup or strndup is defined. you should put mem_debug.h on your source file first line.
-#endif // strdup || strndup
 #define strdup(p)          lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
 #define strndup(p, s)      lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
 

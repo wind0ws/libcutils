@@ -17,11 +17,21 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
-#include "mem/mem_debug.h"
 #include "data/hashmap.h"
 #include "common_macro.h"
 #include <string.h>
 #include <errno.h>
+
+ //we define alloc function to lcu_alloc, 
+ //so here we should undef it to avoid Recursive call. 
+#ifdef _USE_LCU_MEM_CHECK 
+#undef malloc
+#undef free
+#undef calloc
+#undef realloc
+#undef strdup
+#undef strndup
+#endif // _USE_LCU_MEM_CHECK
 
 typedef struct Entry Entry;
 struct Entry 
@@ -44,10 +54,10 @@ struct Hashmap
 };
 
 #define hashmap_enter(handle)    if((handle != NULL) &&        \
-        ((handle)->lock.acquire != NULL))                    \
+        ((handle)->lock.acquire != NULL))                      \
         { (handle)->lock.acquire((handle)->lock.arg); }
 #define hashmap_leave(handle)    if((handle != NULL) &&        \
-        ((handle)->lock.release != NULL))                    \
+        ((handle)->lock.release != NULL))                      \
         { (handle)->lock.release((handle)->lock.arg); }
 
 hashmap_t* hashmap_create(size_t initial_capacity,

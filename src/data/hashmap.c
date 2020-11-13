@@ -34,14 +34,14 @@
 #endif // _USE_LCU_MEM_CHECK
 
 typedef struct Entry Entry;
-struct Entry 
+struct Entry
 {
 	void* key;
 	int hash;
 	void* value;
 	Entry* next;
 };
-struct Hashmap 
+struct Hashmap
 {
 	Entry** buckets;
 	size_t bucketCount;
@@ -204,7 +204,7 @@ __attribute__((no_sanitize("integer")))
 /* FIXME: relies on signed integer overflow, which is undefined behavior */
 int hashmap_hash(void* key, size_t keySize)
 {
-	int h = keySize;
+	int h = (int)keySize;
 	char* data = (char*)key;
 	size_t i;
 	for (i = 0; i < keySize; i++)

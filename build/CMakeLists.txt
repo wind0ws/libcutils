@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.3.2 LANGUAGES C CXX)
+project(libcutils VERSION 1.3.3 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -53,21 +53,23 @@ endif(WIN32)
 #add compile/optimize options for DEBUG/RELEASE
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /Ot /MT")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /MTd /DEBUG")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /Ot /MT")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MTd /DEBUG /Zi")
+	string(APPEND CMAKE_C_FLAGS_RELEASE        " /O2 /Ot /MT")
+	string(APPEND CMAKE_C_FLAGS_DEBUG          " /Od /MTd /DEBUG")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /O2 /Ot /MT")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /Od /MTd /DEBUG /Zi")
+	#string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
+	#string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
 	
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     /utf-8 /W3")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /W3")
+	string(APPEND CMAKE_C_FLAGS   " /utf-8 /W3")
+    string(APPEND CMAKE_CXX_FLAGS " /utf-8 /W3")
 else()
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Og")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
+	string(APPEND CMAKE_C_FLAGS_RELEASE    " -O3")
+	string(APPEND CMAKE_C_FLAGS_DEBUG      " -Og")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE  " -O3")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG    " -Og")
 	
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wall -Wno-unused-local-typedefs -Wno-unused-function")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
+    string(APPEND CMAKE_C_FLAGS   " -Wall -Wno-unused-local-typedefs -Wno-unused-function")
+    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 endif ()
@@ -96,9 +98,9 @@ IF(WIN32)
 ELSE()
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
   # Android 5.0 以上需要在此处设置 PIE
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIC -fPIE")
+  string(APPEND CMAKE_C_FLAGS          " -fPIC")
+  string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
 ENDIF(WIN32)
 
 
@@ -139,7 +141,7 @@ file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/lib
 
 #collect src to "LCU_SRCS" 
 #aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
-file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp")
+file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp" "${LCU_ROOT_DIR}/src/*.cxx")
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
 add_library(lcu_static

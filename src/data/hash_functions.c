@@ -17,22 +17,27 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_functions.c
  ******************************************************************************/
 #include "data/hash_functions.h"
+#include <stdint.h>                /* for intptr_t */
+
+#ifndef PTR_TO_INT
+#define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))
+#endif // !PTR_TO_INT
 
 int hash_function_naive(const void* key)
 {
-	return (int)key;
+	return PTR_TO_INT(key);
 }
 
 // 2^32 = 2654435761 
 
 int hash_function_integer(const void* key)
 {
-	return ((int)key) * 2654435761;
+	return PTR_TO_INT(key) * 2654435761;
 }
 
 int hash_function_pointer(const void* key)
 {
-	return ((int)key) * 2654435761;
+	return PTR_TO_INT(key) * 2654435761;
 }
 
 /**

@@ -1,3 +1,4 @@
+#include "mem/asprintf.h"
 #include "mem/mem_debug.h"
 #include "mem/str_params.h"
 
@@ -6,7 +7,6 @@
 //#define _GNU_SOURCE 1
 #include <errno.h>
 #include <stdint.h>
-#include "mem/asprintf.h"
 #include "mem/strings.h"
 #include "data/hashmap.h"
 #include "log/xlog.h"
@@ -20,9 +20,9 @@
  */
 #ifdef __clang_analyzer__
 static void* released_pointer;
-#define RELEASE_OWNERSHIP(x) { released_pointer = x; released_pointer = 0; }
+#define RELEASE_OWNERSHIP(x) { released_pointer = x; released_pointer = NULL; }
 #else
-#define RELEASE_OWNERSHIP(x)
+#define RELEASE_OWNERSHIP(x) { (void)(x); }
 #endif // __clang_analyzer__
 
 struct str_params
@@ -44,7 +44,9 @@ static int str_hash_fn(const void* str)
 {
 	uint32_t hash = 5381;
 	for (char* p = (char*)(str); p && *p; p++)
+	{
 		hash = ((hash << 5) + hash) + *p;
+	}
 	return (int)hash;
 }
 
@@ -87,11 +89,15 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 	int items = 0;
 	parms = str_params_create(delimiter);
 	if (!parms)
-		goto err_create_str_parms;
+	{
+		goto label_err_create_str_parms;
+	}
 	str = strdup(param_str);
 	if (!str)
-		goto err_strdup;
-	TLOGV(LOG_TAG, "%s: source string == '%s'", __func__, param_str);
+	{
+		goto label_err_strdup;
+	}
+	TLOGV(LOG_TAG, "%s: source string ==> '%s'", __func__, param_str);
 	kvpair = strtok_r(str, parms->delimiter, &tmpstr);
 	while (kvpair && *kvpair)
 	{
@@ -100,14 +106,20 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 		char* key;
 		void* old_val;
 		if (eq == kvpair)
-			goto next_pair;
+		{
+			goto label_next_pair;
+		}
 		if (eq)
 		{
 			key = strndup(kvpair, eq - kvpair);
 			if (*(++eq))
+			{
 				value = strdup(eq);
+			}
 			else
+			{
 				value = strdup("");
+			}
 		}
 		else
 		{
@@ -121,16 +133,18 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 		RELEASE_OWNERSHIP(key);
 
 		items++;
-	next_pair:
+	label_next_pair:
 		kvpair = strtok_r(NULL, parms->delimiter, &tmpstr);
 	}
 	if (!items)
+	{
 		TLOGV(LOG_TAG, "%s: no items found in string", __func__);
+	}
 	free(str);
 	return parms;
-err_strdup:
+label_err_strdup:
 	str_params_destroy(parms);
-err_create_str_parms:
+label_err_create_str_parms:
 	return NULL;
 }
 
@@ -169,7 +183,8 @@ int str_params_add_str(str_params_ptr params, const char* key, const char* value
 	else
 	{
 		// For existing keys, hashmap takes ownership of tmp_val.
-		// (It also gives up ownership of old_val.)
+		// (It also gives up ownership of old_val,because we set free function to it inside(on hashmap_create).
+		//  hashmap free the existing keys and values automatically)
 		RELEASE_OWNERSHIP(tmp_val);
 		RELEASE_OWNERSHIP(old_val);
 		old_val = tmp_val = NULL;
@@ -194,7 +209,9 @@ int str_params_add_long(str_params_ptr params, const char* key, long value)
 	int ret;
 	ret = snprintf(val_str, sizeof(val_str), "%ld", value);
 	if (ret < 0)
+	{
 		return -EINVAL;
+	}
 	ret = str_params_add_str(params, key, val_str);
 	return ret;
 }
@@ -210,7 +227,9 @@ int str_params_add_double(str_params_ptr params, const char* key, double value)
 	int ret;
 	ret = snprintf(val_str, sizeof(val_str), "%.10f", value);
 	if (ret < 0)
+	{
 		return -EINVAL;
+	}
 	ret = str_params_add_str(params, key, val_str);
 	return ret;
 }
@@ -245,10 +264,14 @@ int str_params_get_long(str_params_ptr params, const char* key, long* out_val)
 	char* end;
 	char* value = (char*)(hashmap_get(params->map, (void*)key));
 	if (!value)
+	{
 		return -ENOENT;
+	}
 	long val = strtol(value, &end, 0);
 	if (*value == '\0' || *end != '\0')
+	{
 		return -EINVAL;
+	}
 	*out_val = val;
 	return 0;
 }
@@ -270,10 +293,14 @@ int str_params_get_double(str_params_ptr params, const char* key, double* out_va
 	char* end;
 	char* value = (char*)(hashmap_get(params->map, (void*)(key)));
 	if (!value)
+	{
 		return -ENOENT;
+	}
 	out = strtod(value, &end);
 	if (*value == '\0' || *end != '\0')
+	{
 		return -EINVAL;
+	}
 	*out_val = out;
 	return 0;
 }
@@ -330,7 +357,7 @@ char* str_params_to_str(str_params_ptr params)
 
 static bool dump_entry(void* key, void* value, void* context)
 {
-	TLOGI(LOG_TAG, "key: '%s' value: '%s'", (char*)key, (char*)value);
+	TLOGI(LOG_TAG, "key=\"%s\", value=\"%s\"", (char*)key, (char*)value);
 	return true;
 }
 

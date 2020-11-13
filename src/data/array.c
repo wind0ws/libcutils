@@ -46,7 +46,6 @@ array_t* array_new(size_t element_size)
 
 array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 {
-	ASSERT(element_size > 0);
 	if (init_capacity < 4)
 	{
         init_capacity = 4;

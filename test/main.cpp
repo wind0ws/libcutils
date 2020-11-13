@@ -45,6 +45,16 @@ extern int str_params_test();
 
 EXTERN_C_END
 
+#define SAVE_LOG 1
+
+#if SAVE_LOG && TEST_FILE_LOGGER == 0
+#define STDOUT2FILE() xlog_stdout2file("d:/mylog.log")
+#define BACK2STDOUT() xlog_back2stdout()
+#else
+#define STDOUT2FILE()
+#define BACK2STDOUT()
+#endif
+
 EXTERN_C
 int main(int argc, char* argv[])
 {
@@ -52,11 +62,13 @@ int main(int argc, char* argv[])
 
 	INIT_MEM_CHECK();
 
+	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
+
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_begin() == 0);
 #endif
+	STDOUT2FILE();
 
-	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 	//ASSERT_ABORT(1 == 0);
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
@@ -67,15 +79,16 @@ int main(int argc, char* argv[])
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
-	//RUN_TEST(time_util_test);
+	RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
-	RUN_TEST(str_params_test);
+	//RUN_TEST(str_params_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);
 #endif
+	BACK2STDOUT();
 
 	LOGI("...bye bye...\n");
 

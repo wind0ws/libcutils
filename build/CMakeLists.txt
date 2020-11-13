@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.3.2 LANGUAGES C CXX)
+project(libcutils VERSION 1.3.3 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
 
 # 添加自定义cmake文件目录
@@ -141,7 +141,7 @@ file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/lib
 
 #collect src to "LCU_SRCS" 
 #aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
-file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp")
+file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp" "${LCU_ROOT_DIR}/src/*.cxx")
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
 add_library(lcu_static

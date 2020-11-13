@@ -270,5 +270,9 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #endif // _WIN32
 #define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
 
+#ifndef RANDOM
+#define RANDOM_INIT(seed)  srand(seed)
+#define RANDOM(a,b)        (rand() % (b - a) + a)
+#endif // RANDOM
 
 #endif // LCU_COMMON_MACRO_H

@@ -192,10 +192,6 @@ void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 
 void xlog_set_target(LogTarget target)
 {
-	if (target < 0)
-	{
-		return;
-	}
 	xlog_cfg.target = target;
 }
 

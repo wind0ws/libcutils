@@ -32,8 +32,7 @@ extern "C" {
 	 * gettimeofday port for windows.
 	 * timezone information is stored outside the kernel, so tzp isn't used anymore(should always NULL).
 	 *
-	 * Note: this function is not for Win32 high precision timing purpose. See
-	 * elapsed_time().
+	 * Note: this function is not for Win32 high precision timing purpose. See elapsed_time().
 	 */
 	int gettimeofday(struct timeval* tp, struct timezone* tzp);
 #endif // _WIN32
@@ -70,14 +69,14 @@ extern "C" {
 	 * get current milliseconds. since 1970 Jan 1.
 	 * implement by gettimeofday, so timezone is your current locale.
 	 */
-	void time_util_current_milliseconds(int64_t* p_cur_ms);
+	void time_util_current_milliseconds(uint64_t* p_cur_ms);
 
 	/**
 	 * get current milliseconds tick for compare performance.
 	 * p_cur_ms value unit is milliseconds, but NOT guarantee equal to current milliseconds,
 	 * which means this function is NOT as same as time_util_current_milliseconds.
 	 */
-	void time_util_query_performance_ms(int64_t* p_cur_ms);
+	void time_util_query_performance_ms(uint64_t* p_cur_ms);
 
 #ifdef __cplusplus
 }

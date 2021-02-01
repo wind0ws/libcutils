@@ -64,7 +64,17 @@ static const char* canary = "tinybird";
 
 static size_t canary_size = 0;
 static hashmap_t* allocations = NULL;
-static pthread_mutex_t lock;
+static pthread_mutex_t allocations_lock;
+
+static int lock_allocations_map(void* arg)
+{
+	return pthread_mutex_lock((pthread_mutex_t*)arg);
+}
+
+static int unlock_allocations_map(void* arg)
+{
+	return pthread_mutex_unlock((pthread_mutex_t*)arg);
+}
 
 static bool pointer_key_equals(const void* x, const void* y)
 {
@@ -74,53 +84,58 @@ static bool pointer_key_equals(const void* x, const void* y)
 void allocation_tracker_init(void)
 {
 	if (allocations)
+	{
 		return;
+	}
 	canary_size = strlen(canary);
-	pthread_mutex_init(&lock, NULL);
-	pthread_mutex_lock(&lock);
+	pthread_mutex_init(&allocations_lock, NULL);
 	
+	hashmap_lock_t map_lock = 
+	{
+       .arg = &allocations_lock,
+       .acquire = lock_allocations_map,
+       .release = unlock_allocations_map
+	};
 	allocations = hashmap_create(allocation_hash_map_size, 
-		hash_function_pointer, NULL, free, pointer_key_equals, NULL);
-
-	pthread_mutex_unlock(&lock);
+		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock);
 }
 
 // Test function only. Do not call in the normal course of operations.
 void allocation_tracker_uninit(void)
 {
 	if (!allocations)
+	{
 		return;
-	pthread_mutex_lock(&lock);
+	}
+
 	hashmap_free(allocations);
 	allocations = NULL;
-	pthread_mutex_unlock(&lock);
 
-	pthread_mutex_destroy(&lock);
+	pthread_mutex_destroy(&allocations_lock);
 }
 
 void allocation_tracker_reset(void)
 {
 	if (!allocations)
+	{
 		return;
-	pthread_mutex_lock(&lock);
+	}
 	hashmap_clear(allocations);
-	pthread_mutex_unlock(&lock);
 }
 
 size_t allocation_tracker_expect_no_allocations(report_leak_mem_fn fn_report, void* report_fn_user_data)
 {
 	if (!allocations)
+	{
 		return 0;
+	}
 	allocation_free_checker_context context =
 	{
 		.unfreed_memory_size = 0,
 		.fn_report = fn_report,
 		.report_fn_user_data = report_fn_user_data
 	};
-	pthread_mutex_lock(&lock);
 	hashmap_foreach(allocations, allocation_entry_freed_checker, &context);
-	pthread_mutex_unlock(&lock);
-
 	return context.unfreed_memory_size;
 }
 
@@ -128,11 +143,12 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 	const char* file_path, const char* func_name, int file_line)
 {
 	if (!allocations || !ptr)
+	{
 		return ptr;
+	}
 	char* return_ptr = (char*)ptr;
 	return_ptr += canary_size;
 
-	pthread_mutex_lock(&lock);
 	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, return_ptr);
 	if (allocation)
 	{
@@ -144,7 +160,6 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 		ASSERT_ABORT(allocation);
 		hashmap_put(allocations, return_ptr, allocation);
 	}
-	pthread_mutex_unlock(&lock);
 	allocation->allocator_id = allocator_id;
 	allocation->freed = false;
 	allocation->size = requested_size;
@@ -168,8 +183,9 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 {
 	if (!allocations || !ptr)
+	{
 		return ptr;
-	pthread_mutex_lock(&lock);
+	}
 	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
 	ASSERT_ABORT(allocation);                               // Must have been tracked before
 	ASSERT_ABORT(!allocation->freed);                       // Must not double free
@@ -180,24 +196,19 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 	// Double-free of memory is detected with "ASSERT_ABORT(allocation)" above
 	// as the allocation entry will not be present.
 	hashmap_remove(allocations, ptr);
-	pthread_mutex_unlock(&lock);
 	return ((char*)ptr) - canary_size;
 }
 
 size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 {
 	if (!allocations || !ptr)
+	{
 		return 0;
-
-	size_t ptr_size = 0;
-	pthread_mutex_lock(&lock);
+	}
 	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
-	pthread_mutex_unlock(&lock);
 	ASSERT_ABORT(allocation);                               // Must have been tracked before
 	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
-	ptr_size = allocation->size;
-
-	return ptr_size;
+	return allocation->size;
 }
 
 size_t allocation_tracker_resize_for_canary(size_t size)
@@ -215,9 +226,9 @@ static bool allocation_memory_corruption_checker(allocation_t* allocation)
 		if (beginning_canary[i] != canary[i] ||
 			end_canary[i] != canary[i])
 		{
-			EMERGENCY_LOG("detect corrupted memory at '%s' (%s:%d), address: 0x%zx size: %zd bytes",
-				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), allocation->file_line,
-				(uintptr_t)allocation->ptr, allocation->size);
+			EMERGENCY_LOG("detect corrupted memory at '%s' (%s:%d), address: 0x%zx, size: %zd bytes",
+				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), 
+				allocation->file_line, (uintptr_t)allocation->ptr, allocation->size);
 			abort();
 			return false;
 		}

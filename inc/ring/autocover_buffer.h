@@ -1,12 +1,12 @@
 #pragma once
-#ifndef __LCU_AUTOCOVER_BUFFER_H
-#define __LCU_AUTOCOVER_BUFFER_H
+#ifndef LCU_AUTOCOVER_BUFFER_H
+#define LCU_AUTOCOVER_BUFFER_H
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
 	typedef enum 
 	{
@@ -20,7 +20,8 @@ extern "C" {
 		AUTO_COVER_BUF_ERROR_DATA_NOT_ENOUGH = -4
 	}auto_cover_buf_error_code;
 
-	typedef struct auto_cover_buf_lock {
+	typedef struct auto_cover_buf_lock 
+	{
 		void* arg; /**< Argument to be passed to acquire and release function pointers */
 		int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
 		int (*release)(void* arg); /**< Function pointer to release a lock */
@@ -70,6 +71,6 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
-#endif // __LCU_AUTOCOVER_BUFFER_H
+#endif // LCU_AUTOCOVER_BUFFER_H

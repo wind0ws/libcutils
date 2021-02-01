@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
 project(libcutils VERSION 1.3.3 LANGUAGES C CXX)
-message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION} \n")
+message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -19,7 +19,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
 #get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
 get_filename_component(LCU_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
-message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n LCU_ROOT_DIR=${LCU_ROOT_DIR}\n")
+message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n LCU_ROOT_DIR => ${LCU_ROOT_DIR}\n")
 
 # 获取当前的GIT_HASH
 set(GIT_HASH "unknown")

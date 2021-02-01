@@ -18,6 +18,7 @@ struct __auto_cover_buf
 {\
 	buf_handle->buf_lock.acquire(buf_handle->buf_lock.arg);\
 };
+
 #define AUTOCOVER_UNLOCK(buf_handle) 	if (buf_handle->buf_lock.release)\
 {\
 	buf_handle->buf_lock.release(buf_handle->buf_lock.arg);\

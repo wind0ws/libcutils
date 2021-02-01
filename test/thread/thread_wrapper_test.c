@@ -3,6 +3,7 @@
 
 static void* thread_func(void* args) {
 	int code;
+	pthread_setname_np(pthread_self(), "thr_func");
 	LOGI("Hello pthread. id:%d", gettid());
 	sem_t* psem = args;
 	if ((code = sem_wait(psem)))

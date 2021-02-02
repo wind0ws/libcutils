@@ -9,6 +9,7 @@ set cmake_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 set ninja_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set tool_chain_file=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 
+set output_dir=.\\output\\android\\armeabi-v7a
 rmdir /S /Q build_android_v7a 2>nul
 mkdir build_android_v7a
 %cmake_bin% -H.\ -B.\build_android_v7a ^
@@ -20,14 +21,16 @@ mkdir build_android_v7a
 			-DCMAKE_TOOLCHAIN_FILE=%tool_chain_file% ^
 			-DCMAKE_MAKE_PROGRAM=%ninja_bin% ^
 			-DANDROID_PLATFORM=android-19 ^
-			-DANDROID_STL=c++_static
+			-DANDROID_STL=c++_static ^
+			-DARG_LCU_OUTPUT_DIR=%output_dir% 
 %ninja_bin% -C .\build_android_v7a
-mkdir .\output\android\armeabi-v7a
-copy /Y .\build_android_v7a\libcutils_test .\output\android\armeabi-v7a\
-copy /Y .\build_android_v7a\liblcu_a.a .\output\android\armeabi-v7a\
-copy /Y .\build_android_v7a\liblcu.so .\output\android\armeabi-v7a\
+
+mkdir %output_dir%
+copy /Y .\build_android_v7a\libcutils_test %output_dir%\\
+copy /Y .\build_android_v7a\liblcu_a.a %output_dir%\\
+copy /Y .\build_android_v7a\liblcu.so %output_dir%\\
 
 @echo.
-@echo "compile complete. Press any key to exit..."
+@echo "Compile complete. Press any key to exit..."
 @pause>nul
 color 0F

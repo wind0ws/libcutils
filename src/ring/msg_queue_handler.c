@@ -25,7 +25,7 @@ struct __queue_handler
 static void* thread_fun_handle_msg(void* thread_context)
 {
 	queue_handler handler_p = (queue_handler)thread_context;
-	handler_msg_t handler_msg = {0};
+	handler_msg_t handler_msg = { {0},0 };
 	for (;;)
 	{
 		sem_wait(&handler_p->sem_handler);

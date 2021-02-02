@@ -9,6 +9,7 @@ set cmake_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 set ninja_bin=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set tool_chain_file=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 
+set output_dir=.\\output\\android\\armeabi-v8a
 rmdir /S /Q build_android_v8a 2>nul
 mkdir build_android_v8a
 %cmake_bin% -H.\ -B.\build_android_v8a ^
@@ -22,12 +23,13 @@ mkdir build_android_v8a
 			-DANDROID_PLATFORM=android-19 ^
 			-DANDROID_STL=c++_static
 %ninja_bin% -C .\build_android_v8a
-mkdir .\output\android\arm64-v8a
-copy /Y .\build_android_v8a\libcutils_test .\output\android\arm64-v8a\
-copy /Y .\build_android_v8a\liblcu_a.a .\output\android\arm64-v8a\
-copy /Y .\build_android_v8a\liblcu.so .\output\android\arm64-v8a\
+
+mkdir %output_dir%
+copy /Y .\build_android_v8a\libcutils_test %output_dir%\\
+copy /Y .\build_android_v8a\liblcu_a.a %output_dir%\\
+copy /Y .\build_android_v8a\liblcu.so %output_dir%\\
 
 @echo.
-@echo "compile complete. Press any key to exit..."
+@echo "Compile complete. Press any key to exit..."
 @pause>nul
 color 0F

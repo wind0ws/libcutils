@@ -15,7 +15,7 @@ struct __queue_handler
 	void* callback_userdata;
 	pthread_t thread_handler;
 	sem_t sem_handler;
-	bool flag_exit_thread;
+	volatile bool flag_exit_thread;
 
 	handler_msg_t msg_send_cache;
 	size_t token_counter;
@@ -25,8 +25,8 @@ struct __queue_handler
 static void* thread_fun_handle_msg(void* thread_context)
 {
 	queue_handler handler_p = (queue_handler)thread_context;
-	handler_msg_t handler_msg;
-	while (!(handler_p->flag_exit_thread))
+	handler_msg_t handler_msg = { {0},0 };
+	for (;;)
 	{
 		sem_wait(&handler_p->sem_handler);
 		if (handler_p->flag_exit_thread)
@@ -66,6 +66,9 @@ queue_handler QueueHandler_create(__in uint32_t max_msg_capacity,
 	sem_init(&(handler_p->sem_handler), 0, 0);
 	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
 	{
+		char thr_name[32] = { 0 };
+		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
+		pthread_setname_np(handler_p->thread_handler, thr_name);
 		handler_p->msg_queue_p = RingMsgQueue_create(sizeof(handler_msg_t), max_msg_capacity);
 	}
 	else

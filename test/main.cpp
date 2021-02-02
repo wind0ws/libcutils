@@ -48,7 +48,12 @@ EXTERN_C_END
 #define SAVE_LOG 1
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
-#define STDOUT2FILE() xlog_stdout2file("d:/mylog.log")
+#ifdef _WIN32
+#define LOG_PATH ("d:/mylog.log")
+#else
+#define LOG_PATH ("mylog.log")
+#endif // _WIN32
+#define STDOUT2FILE() xlog_stdout2file(LOG_PATH)
 #define BACK2STDOUT() xlog_back2stdout()
 #else
 #define STDOUT2FILE()
@@ -79,8 +84,8 @@ int main(int argc, char* argv[])
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
-	RUN_TEST(time_util_test);
-	//RUN_TEST(thread_wrapper_test);
+	//RUN_TEST(time_util_test);
+	RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
 	//RUN_TEST(str_params_test);

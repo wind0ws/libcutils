@@ -6,10 +6,10 @@
 #ifndef TAKE_MIN
 /* take min value of a,b */
 #define TAKE_MIN(a, b) (((a) > (b)) ? (b) : (a))
-#endif
+#endif // TAKE_MIN
 
 //config try read/write if no enough data or space
-#define RINGBUFFER_CONFIG_TRY_RW_IF_NOT_ENOUGH (0)
+#define RINGBUFFER_CONFIG_TRY_RW_IF_NOT_ENOUGH (1)
 
 /*
 ** the bitwise version :

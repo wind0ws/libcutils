@@ -2,31 +2,31 @@
 #ifndef LCU_COMMON_MACRO_H
 #define LCU_COMMON_MACRO_H
 
-#include <stdbool.h>      /* for true/false    */
-#include <stddef.h>       /* for size_t        */
-#include <stdint.h>       /* for int32_t       */
-#include <stdlib.h>       /* for abort         */
-#include <stdio.h>        /* for FILE          */
-#include <assert.h>       /* for assert        */
-#include <sys/types.h>    /* for ssize_t       */
+#include <stdbool.h>      /* for true/false                    */
+#include <stddef.h>       /* for size_t                        */
+#include <stdint.h>       /* for int32_t                       */
+#include <stdlib.h>       /* for abort                         */
+#include <stdio.h>        /* for FILE                          */
+#include <assert.h>       /* for assert                        */
+#include <sys/types.h>    /* for ssize_t                       */
 
 #if(defined(__linux__) || defined(__ANDROID__))
-#include <sys/cdefs.h>    /* for __BEGIN_DECLS */
+#include <sys/cdefs.h>    /* for __BEGIN_DECLS                 */
 #endif
 
 #ifdef __ANDROID__
-#include <android/log.h>  /* for log error     */
+#include <android/log.h>  /* for log msg on logcat             */
 #endif // __ANDROID__
 
 #ifdef _WIN32
+#include <crtdbg.h>       /* for _ASSERT_AND_INVOKE_WATSON     */
+#include <sal.h>          /* for annotation: mark parameters   */
 #ifndef __func__
 #define __func__ __FUNCTION__
 #endif // !__func__
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
 #endif // !__PRETTY_FUNCTION__
-#include <crtdbg.h> /* for _ASSERT_AND_INVOKE_WATSON */
-#include <sal.h>
 #else
 typedef void*               HANDLE;
 typedef void*               PVOID;
@@ -48,7 +48,7 @@ typedef float               FLOAT;
 #endif // _WIN32
 #endif // !UNUSED_ATTR
 
-//for mark parameters
+// annotation: for mark parameters
 #ifndef __in
 #define __in
 #endif
@@ -68,6 +68,7 @@ typedef float               FLOAT;
 #define __inout_opt
 #endif
 
+// for API_EXPORT/IMPORT
 #if defined(_MSC_VER) //  Microsoft 
 #define API_EXPORT __declspec(dllexport)
 #define API_IMPORT __declspec(dllimport)
@@ -144,7 +145,7 @@ typedef intptr_t ssize_t;
 
 #ifndef FREE
 #define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
-#endif
+#endif // !FREE
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -218,8 +219,8 @@ typedef intptr_t ssize_t;
         bool is_expr_true##line = !!(expr);                                          \
         if (!is_expr_true##line)                                                     \
         {                                                                            \
-           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
-                  #expr, __func__, __FILE__, line);                              \
+           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                      \
+                  #expr, __func__, __FILE__, line);                                  \
            abort();                                                                  \
         }                                                                            \
      }
@@ -268,7 +269,7 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif // _WIN32
-#define fclose(fp) if(fp){ fclose(fp); (fp) = NULL; }
+#define fclose(fp) do{if(fp){ fclose(fp); (fp) = NULL; }}while(0)
 
 #ifndef RANDOM
 #define RANDOM_INIT(seed)  srand(seed)

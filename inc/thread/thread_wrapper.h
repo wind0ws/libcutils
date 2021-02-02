@@ -4,10 +4,6 @@
 
 #include "config/lcu_build_config.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef _WIN32
 	#if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB         /* use posix-win32 lib          */
 	  #include "thread/pthread_win_lib/pthread_win_lib.h"
@@ -17,8 +13,8 @@ extern "C" {
 	  #include "thread/pthread_win_simple/pthread_win_simple.h"
 	  #include "thread/pthread_win_simple/semaphore_win_simple.h"
 	#else
-	  #error "unknow _LCU_CFG_WIN32_PTHREAD_MODE "
-	#endif // LCU_WIN_PTHREAD_MODE
+	  #error " unknow _LCU_CFG_WIN32_PTHREAD_MODE "
+	#endif // _LCU_CFG_WIN_PTHREAD_MODE
 
 	#define usleep(micro_seconds)    Sleep((micro_seconds) / 1000)
 	#define sleep(seconds) Sleep((seconds) * 1000)
@@ -44,6 +40,15 @@ extern "C" {
 #elif defined(_WIN32)
 	#include <windows.h>
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef _WIN32
+	int pthread_setname_np(pthread_t thr, const char* name);
+#endif // _WIN32
+
 // No definition needed for Android because we'll just pick up bionic's copy.
 #ifndef __ANDROID__
 	#ifndef __pid_t_defined

@@ -18,16 +18,17 @@ goto main
 set /p user_choose_win_pthread_mode="please choose LCU pthread mode:"
 
 :main
+set output_dir=.\\output\\windows\\win64
 rmdir /S /Q build_win64 2>nul
 mkdir build_win64 & pushd build_win64
 :: VS2019 添加 arch 方式与其他版本不同，默认不加 -A 选项就是Win64(而且不能显式的添加Win64)
-%cmake_bin% -G "Visual Studio 16 2019" .. -DCMAKE_BUILD_TYPE=Release -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode%
-IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 15 2017 Win64" .. -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode%
-IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 14 2015 Win64" .. -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode%
+%cmake_bin% -G "Visual Studio 16 2019" .. -DCMAKE_BUILD_TYPE=Release -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode% -DARG_LCU_OUTPUT_DIR=%output_dir% 
+IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 15 2017 Win64" .. -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode% -DARG_LCU_OUTPUT_DIR=%output_dir% 
+IF %ERRORLEVEL% NEQ 0 %cmake_bin% -G "Visual Studio 14 2015 Win64" .. -DARG_LCU_WIN_PTHREAD_MODE=%user_choose_win_pthread_mode% -DARG_LCU_OUTPUT_DIR=%output_dir% 
 popd
 %cmake_bin% --build build_win64 --config Release
-mkdir .\output\windows\build_win64\
-copy /Y .\build_win64\Release\* .\output\windows\build_win64\
+mkdir %output_dir%
+copy /Y .\\build_win64\\Release\\* %output_dir%\\
 
 @echo.
 @echo "compile complete. Press any key to exit..."

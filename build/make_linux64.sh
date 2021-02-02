@@ -8,13 +8,15 @@ else
 	rm -rf build_linux64/*
 fi
 
-cmake -H./ -B./build_linux64 -DCMAKE_BUILD_TYPE=Release
+LCU_OUTPUT_DIR=./output/linux/linux64
+
+cmake -H./ -B./build_linux64 -DCMAKE_BUILD_TYPE=Release -DARG_LCU_OUTPUT_DIR="${LCU_OUTPUT_DIR}" 
 cmake --build ./build_linux64 --config Release
 
-mkdir -p ./output/linux/build_linux64
-cp ./build_linux64/libcutils_test ./output/linux/build_linux64/
-cp ./build_linux64/liblcu_a.a ./output/linux/build_linux64/
-cp ./build_linux64/liblcu.so ./output/linux/build_linux64/
+mkdir -p ${LCU_OUTPUT_DIR}
+cp ./build_linux64/libcutils_test ${LCU_OUTPUT_DIR}/
+cp ./build_linux64/liblcu_a.a ${LCU_OUTPUT_DIR}/
+cp ./build_linux64/liblcu.so ${LCU_OUTPUT_DIR}/
 
 echo .
 echo Build finished...

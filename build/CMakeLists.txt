@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.3.3 LANGUAGES C CXX)
+project(libcutils VERSION 1.3.4 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录
@@ -49,6 +49,19 @@ if(WIN32)
 	message(STATUS "LCU_WIN_PTHREAD_MODE => ${LCU_WIN_PTHREAD_MODE}")
 endif(WIN32)  
 
+set(LCU_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
+if(ARG_LCU_OUTPUT_DIR)
+    message(STATUS "ARG_LCU_OUTPUT_DIR is set, value is ${ARG_LCU_OUTPUT_DIR}")
+	if(("${ARG_LCU_OUTPUT_DIR}" STREQUAL  ""))
+		message(WARNING "ARG_LCU_OUTPUT_DIR value is empty.")
+	else()
+	    get_filename_component(LCU_OUTPUT_DIR ${ARG_LCU_OUTPUT_DIR} ABSOLUTE)
+		#set(LCU_OUTPUT_DIR ${ARG_LCU_OUTPUT_DIR})
+	endif()
+else()
+   message(STATUS "ARG_LCU_OUTPUT_DIR is not set.")
+endif(ARG_LCU_OUTPUT_DIR)
+message(STATUS "current LCU_OUTPUT_DIR => ${LCU_OUTPUT_DIR}")
 
 #add compile/optimize options for DEBUG/RELEASE
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
@@ -95,12 +108,14 @@ IF(WIN32)
   #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
-ELSE()
+ELSE() # for unix
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
   # Android 5.0 以上需要在此处设置 PIE
   string(APPEND CMAKE_C_FLAGS          " -fPIC")
   string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
   string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
+  #add _GNU_SOURCE for pthread
+  add_compile_options(-D_GNU_SOURCE)
 ENDIF(WIN32)
 
 
@@ -129,12 +144,13 @@ include_directories(${LCU_HEADER_ROOT_DIR}
 #file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #method2: copy header dir to output dir, and remove cmake configure_file, and copy generate configure_file.
-file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/)
-file(GLOB_RECURSE OUT_H_IN_FILES ${CMAKE_CURRENT_LIST_DIR}/output/inc/config/*.h.in)
+#file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/)
+file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${LCU_OUTPUT_DIR}/)
+file(GLOB_RECURSE OUT_H_IN_FILES ${LCU_OUTPUT_DIR}/inc/config/*.h.in)
 file(REMOVE ${OUT_H_IN_FILES})
 file(GLOB_RECURSE GENERATE_H_FILES ${CMAKE_BINARY_DIR}/generate/*.h)
-file(COPY ${GENERATE_H_FILES} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/inc/config/)
-file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/libs/)
+file(COPY ${GENERATE_H_FILES} DESTINATION ${LCU_OUTPUT_DIR}/inc/config/)
+file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${LCU_OUTPUT_DIR}/libs/)
 
 #add_library(mplite ../../src/mplite.c)
 #target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)

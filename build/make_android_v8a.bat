@@ -21,7 +21,9 @@ mkdir build_android_v8a
 			-DCMAKE_TOOLCHAIN_FILE=%tool_chain_file% ^
 			-DCMAKE_MAKE_PROGRAM=%ninja_bin% ^
 			-DANDROID_PLATFORM=android-19 ^
-			-DANDROID_STL=c++_static
+			-DANDROID_STL=c++_static 
+			
+::			-DARG_LCU_OUTPUT_DIR=%output_dir%
 %ninja_bin% -C .\build_android_v8a
 
 mkdir %output_dir%

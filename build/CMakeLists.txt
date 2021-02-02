@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.3.4 LANGUAGES C CXX)
+project(libcutils VERSION 1.3.5 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录
@@ -144,7 +144,6 @@ include_directories(${LCU_HEADER_ROOT_DIR}
 #file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #method2: copy header dir to output dir, and remove cmake configure_file, and copy generate configure_file.
-#file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/output/)
 file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${LCU_OUTPUT_DIR}/)
 file(GLOB_RECURSE OUT_H_IN_FILES ${LCU_OUTPUT_DIR}/inc/config/*.h.in)
 file(REMOVE ${OUT_H_IN_FILES})

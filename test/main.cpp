@@ -12,10 +12,10 @@ static void setup_console();
 
 #define RUN_TEST(func_name) do                                             \
 {                                                                          \
-   LOGD("\n%s\nNow run --> %s()\n", LOG_LINE_STAR, #func_name);            \
+   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);            \
    int ret = func_name();                                                  \
    printf("\n");                                                           \
-   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret, LOG_LINE_STAR);   \
+   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret, XLOG_STAR_LINE);   \
    ASSERT(ret == 0);                                                       \
 } while (0)
 
@@ -125,4 +125,10 @@ static void setup_console()
 
 	//_CrtSetBreakAlloc(104);
 #endif // _WIN32
+	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
+	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL);
+	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
+	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP);
+	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL);
+	//xlog_set_format(LOG_FORMAT_RAW);
 }

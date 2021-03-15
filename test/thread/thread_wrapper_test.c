@@ -45,7 +45,7 @@ static int sem_test()
 
 static void test_log()
 {
-	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", LOG_LINE_STAR, xlog_get_min_level(), xlog_get_target(), LOG_LINE_STAR);
+	LOGD("\n%s\nHello! current log_priority=%d, log_target=%d\n%s", XLOG_STAR_LINE, xlog_get_min_level(), xlog_get_target(), XLOG_STAR_LINE);
 
 	LOGV("this log is printed by LOGV");
 	LOGD("this log is printed by LOGD");

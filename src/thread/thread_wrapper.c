@@ -18,7 +18,7 @@ typedef struct tagTHREADNAME_INFO
 //so that the memory for the threadName parameter can be released after the SetThreadName call is completed.
 static void SetThreadName(DWORD dwThreadID, const char* threadName) 
 {
-	THREADNAME_INFO info;
+	THREADNAME_INFO info = {0};
 	info.dwType = 0x1000;
 	info.szName = threadName;
 	info.dwThreadID = dwThreadID;

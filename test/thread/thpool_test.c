@@ -9,12 +9,12 @@
 //===============================TEST POOL==========================================BEGIN
 static void task1(void* param) 
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task1\n", (unsigned int)gettid());
+	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task1", (unsigned int)gettid());
 }
 
 static void task2(void* param) 
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task2\n", (unsigned int)gettid());
+	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task2", (unsigned int)gettid());
 }
 
 static int thpool_test_basic()

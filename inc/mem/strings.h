@@ -85,7 +85,7 @@ extern "C" {
 
 	/**
 	 * replace the "pattern" to "replacement" from "original".
-	 * WARN: return string is malloced, need free after use!
+	 * WARN: return string is allocated, need free after use!
 	 * @param original: the str to replace
 	 * @param pattern: the replace pattern
 	 * @param replacement: replace pattern to this

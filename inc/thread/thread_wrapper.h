@@ -54,8 +54,8 @@ extern "C" {
 	#ifndef __pid_t_defined
 		typedef int __pid_t;
 		typedef __pid_t pid_t;
-	# define __pid_t_defined
-#endif
+	#define __pid_t_defined
+	#endif
 	pid_t gettid();
 #endif  // __ANDROID__
 

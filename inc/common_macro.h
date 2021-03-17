@@ -144,21 +144,21 @@ typedef intptr_t ssize_t;
 #endif // !__abs
 
 #ifndef FREE
-#define FREE(ptr) if(ptr) { free(ptr); (ptr) = NULL; }
+#define FREE(ptr) do{ if(ptr) { free(ptr); (ptr) = NULL; } }while(0)
 #endif // !FREE
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif // !ARRAY_SIZE
+#ifndef ARRAY_LEN
+#define ARRAY_LEN(x) (sizeof(x) / sizeof((x)[0]))
+#endif // !ARRAY_LEN
 #ifndef INVALID_FD
 #define INVALID_FD (-1)
 #endif // !INVALID_FD
 #ifndef CONCAT
 #define CONCAT(a, b) a##b
 #endif // !CONCAT
-#ifndef STRINGFY
-#define STRINGFY(a) #a
-#endif // !STRINGFY
+#ifndef STRINGIFY
+#define STRINGIFY(a) #a
+#endif // !STRINGIFY
 #ifndef NULLABLE_STRING
 #define NULLABLE_STRING(a) ((a) ? (a) : "(null)")
 #endif // !NULLABLE_STRING
@@ -272,8 +272,31 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #define fclose(fp) do{if(fp){ fclose(fp); (fp) = NULL; }}while(0)
 
 #ifndef RANDOM
-#define RANDOM_INIT(seed)  srand(seed)
-#define RANDOM(a,b)        (rand() % (b - a) + a)
+#define RANDOM_INIT(seed)  srand((seed))
+#define RANDOM(a, b)        (rand() % ((b) - (a)) + (a))
 #endif // RANDOM
+
+//================================DECLARE ENUM AND STRINGS================================
+/** how to use:
+
+#define ENUM_STATES(GENERATOR)           \
+         GENERATOR(STATE_START)          \
+         GENERATOR(STATE_STOP)
+DECLARE_ENUM(STATES, ENUM_STATES);
+DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
+
+ */
+#define __GENERATOR_ENUM_ITEM(item) item,
+#define __GENERATOR_ENUM_STRING(item) #item,
+#define __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, generator_enum_item)   \
+        typedef enum name##_ {                                    \
+           foreach_enum(generator_enum_item)                      \
+        } name;
+#define DECLARE_ENUM(name, foreach_enum) __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, __GENERATOR_ENUM_ITEM)
+#define __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, generator_enum_string)              \
+        static const char *name##_STRINGS[] = {  foreach_enum(generator_enum_string) };
+#define DEFINITION_ENUM_STRINGS(name, foreach_enum) __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, __GENERATOR_ENUM_STRING)
+ //================================DECLARE ENUM AND STRINGS================================
+
 
 #endif // LCU_COMMON_MACRO_H

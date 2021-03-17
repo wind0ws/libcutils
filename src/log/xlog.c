@@ -5,6 +5,31 @@
 #include "mem/strings.h"
 #include "time/time_util.h"
 
+// For gettid.
+#if defined(__APPLE__)
+#include "AvailabilityMacros.h"  // For MAC_OS_X_VERSION_MAX_ALLOWED
+#include <stdint.h>
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <sys/time.h>
+#include <unistd.h>
+#elif defined(__linux__) || defined(__ANDROID__)
+#include <syscall.h>
+#include <unistd.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+
+#ifdef __ANDROID__
+#define XLOG_GETTID()      (int)gettid()
+#elif defined(__APPLE__)
+#define XLOG_GETTID()      (int)syscall(SYS_thread_selfid)
+#elif defined(__linux__)
+#define XLOG_GETTID()      (int)syscall(__NR_gettid)
+#elif defined(_WIN32)
+#define XLOG_GETTID()      (int)GetCurrentThreadId()
+#endif
+
 #define LOG_LEVLE_CHAR_V ('V')
 #define LOG_LEVLE_CHAR_D ('D')
 #define LOG_LEVLE_CHAR_I ('I')
@@ -36,10 +61,12 @@ typedef struct xlog_config
 	LogLevel trigger_up_level;
 	/* the file pointer after redirect stdout */
 	FILE* fp_stdout;
-	/* min log level: only log if current level bigger or equal than this. */
+	/* min log level: if current level bigger or equal than this. */
 	LogLevel min_level;
-	/* log target */
-	LogTarget target;
+	/* LogTarget: log target */
+	int target;
+	/* LogFormat: log format */
+	int format;
 	/* for calculate locale time */
 	int timezone_hour;
 }xlog_config_t;
@@ -57,13 +84,14 @@ static xlog_config_t xlog_cfg =
 #else
 	(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE), // NOLINT(hicpp-signed-bitwise)
 #endif // _WIN32
+	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
 	DEFAULT_TIMEZONE_HOUR
 };
 
-#define XLOG_IS_TARGET_ABLE(log_target) (xlog_cfg.target & log_target)
-#define XLOG_IS_CONSOLE_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_CONSOLE)
-#define XLOG_IS_ANDROID_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_ANDROID)
-#define XLOG_IS_USER_CALLBACK_ABLE XLOG_IS_TARGET_ABLE(LOG_TARGET_USER_CALLBACK)
+#define XLOG_IS_TARGET_LOGABLE(log_target) (xlog_cfg.target & log_target)
+#define XLOG_IS_CONSOLE_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
+#define XLOG_IS_ANDROID_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
+#define XLOG_IS_USER_CALLBACK_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
 #define XLOG_IS_LOGABLE(level) (xlog_cfg.min_level && level >= xlog_cfg.min_level)
 
@@ -113,8 +141,8 @@ static inline int convert_to_android_log_level(int level)
 	case LOG_LEVEL_WARN:
 		android_log_level = ANDROID_LOG_WARN;
 		break;
-	default:
 	case LOG_LEVEL_ERROR:
+	default:
 		android_log_level = ANDROID_LOG_ERROR;
 		break;
 	}
@@ -139,8 +167,8 @@ void xlog_stdout2file(char* file_path)
 	}
 	if (xlog_cfg.fp_stdout)
 	{
+		printf("WARN: did you forgot to close stdout file stream?");
 		fclose(xlog_cfg.fp_stdout);
-		xlog_cfg.fp_stdout = NULL;
 	}
 	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
 	if (!xlog_cfg.fp_stdout)
@@ -155,6 +183,7 @@ void xlog_back2stdout()
 	{
 		return;
 	}
+	// must close current stream first, and then reopen it
 	fclose(xlog_cfg.fp_stdout);
 	xlog_cfg.fp_stdout = NULL;
 	if (!freopen(STDOUT, "w", stdout))
@@ -190,12 +219,12 @@ void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 	xlog_cfg.cb_pack.cb_user_data = user_data;
 }
 
-void xlog_set_target(LogTarget target)
+void xlog_set_target(int target)
 {
 	xlog_cfg.target = target;
 }
 
-LogTarget xlog_get_target()
+int xlog_get_target()
 {
 	return xlog_cfg.target;
 }
@@ -214,10 +243,20 @@ LogLevel xlog_get_min_level()
 	return xlog_cfg.min_level;
 }
 
+void xlog_set_format(int format)
+{
+	xlog_cfg.format = format;
+}
+
+int xlog_get_format()
+{
+	return xlog_cfg.format;
+}
+
 void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list args;
-	char buffer_log[1024];
+	char buffer_log[1024] = { 0 };
 	int header_len = 0;
 	int header_with_trace_fun_len;
 	bool is_log2console;
@@ -235,22 +274,33 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		tag = xlog_cfg.default_tag;
 	}
 
-	is_log2console = XLOG_IS_CONSOLE_ABLE;
-	is_log2usercb = XLOG_IS_USER_CALLBACK_ABLE;
-	if (is_log2console || is_log2usercb)
+	is_log2console = XLOG_IS_CONSOLE_LOGABLE;
+	is_log2usercb = XLOG_IS_USER_CALLBACK_LOGABLE;
+	if (xlog_cfg.format && (is_log2console || is_log2usercb))
 	{
-		char level_char = get_log_level_char(level);
-		buffer_log[0] = '[';
-		time_util_get_current_time_str(buffer_log + 1, xlog_cfg.timezone_hour);
-		header_len = (int)strnlen(buffer_log, TIME_STR_LEN);
-		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "][%c][%s]: ", level_char, tag);
-		header_len = (int)strlen(buffer_log);
+		if (xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP)
+		{
+			time_util_get_current_time_str(buffer_log, xlog_cfg.timezone_hour);
+			header_len = (int)strnlen(buffer_log, TIME_STR_LEN);
+		}
+		if (xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
+		{
+			snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, " %c/%-8s", get_log_level_char(level), tag);
+			header_len += (int)strlen(buffer_log + header_len);
+		}
+		if (xlog_cfg.format & LOG_FORMAT_WITH_TID)
+		{
+			snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "(%5d)", XLOG_GETTID());
+			header_len += (int)strlen(buffer_log + header_len);
+		}
+		strcpy(buffer_log + header_len, ": ");
+		header_len += 2;
 	}
 
 	if (func_name && file_line > 0)
 	{
-		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "[%s:%d] ", func_name, file_line);
-		header_with_trace_fun_len = (int)strlen(buffer_log);
+		snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "(%s:%d) ", func_name, file_line);
+		header_with_trace_fun_len = header_len + (int)strlen(buffer_log + header_len);
 	}
 	else
 	{
@@ -267,7 +317,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	}
 
 #if defined(__ANDROID__)
-	if (XLOG_IS_ANDROID_ABLE)
+	if (XLOG_IS_ANDROID_LOGABLE)
 	{
 		__android_log_print(convert_to_android_log_level(level), tag, "%s", buffer_log + header_len);
 	}
@@ -296,7 +346,7 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	}
 }
 
-void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
+void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
 {
 	char hexs[1024];
 	if (!XLOG_IS_LOGABLE(level))

@@ -5,7 +5,7 @@
 #include <stddef.h>  /* for size_t */
 
 #ifdef _WIN32
-//sigh: wish some day visual studio support __func__ AND __PRETTY_FUNCTION__
+//sigh: wish some day windows support __func__ AND __PRETTY_FUNCTION__
 #ifndef __func__
 #define __func__ __FUNCTION__
 #endif // !__func__
@@ -16,7 +16,7 @@
 #include <android/log.h>
 #endif // _WIN32
 
-#define LOG_LINE_STAR "****************************************************************"
+#define XLOG_STAR_LINE "****************************************************************"
 
 typedef enum
 {
@@ -39,6 +39,18 @@ typedef enum
 	LOG_TARGET_USER_CALLBACK = (0x1 << 3)  // NOLINT(hicpp-signed-bitwise)
 } LogTarget;
 
+typedef enum
+{
+	/* only output pure log message */
+	LOG_FORMAT_RAW = 0,
+	/* output log message with timestamp */
+	LOG_FORMAT_WITH_TIMESTAMP = (0x1 << 1),
+	/* output log message with tag and level */
+	LOG_FORMAT_WITH_TAG_LEVEL = (0x1 << 2),
+	/* output log message with thread id */
+	LOG_FORMAT_WITH_TID = (0x1 << 3)
+} LogFormat;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -55,19 +67,20 @@ extern "C" {
 	void xlog_stdout2file(char* file_path);
 
 	/**
-	 * let stdout print on console window.
+	 * let stdout print on console window if current redirect to file.
 	 */
 	void xlog_back2stdout();
 
 	/**
-	 * set default log tag. use this tag if you not passed TAG.
+	 * set default log tag. use this tag if you call LOGX.
+	 * note: tag length should below 31.
 	 */
 	void xlog_set_default_tag(char* tag);
 
 	/**
 	 * timezone_hour used by generate log time.
 	 * default timezone_hour is 8.
-	 * eg: In china, we are in +8 timezone area, so here set it to 8.
+	 * example: In china, we are in +8 timezone area, so here set it to 8.
 	 */
 	void xlog_set_timezone(int timezone_hour);
 
@@ -79,25 +92,37 @@ extern "C" {
 	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
 
 	/**
-	 * set log target which you want to output.
-	 */
-	void xlog_set_target(LogTarget target);
-
-	LogTarget xlog_get_target();
-
-	/**
-	 * set the min log level. only log if current level greater or equal to this min_level
-	 */
+	* set the min log level. only output log if current level greater or equal to this min_level
+	*/
 	void xlog_set_min_level(LogLevel min_level);
 
 	LogLevel xlog_get_min_level();
 
 	/**
-	 * transform char to hex.
-	 * @param str: place hex result
-	 * @param str_capacity: the length of str you provide.
+	 * set log target which you want to output.
+	 * default: on Android: target is LOG_TARGET_ANDROID, other platform target is LOG_TARGET_CONSOLE
 	 */
-	void xlog_chars2hex(char* str, size_t str_capacity, const char* chars, size_t chars_len);
+	void xlog_set_target(int target);
+
+	int xlog_get_target();
+
+	/**
+	 * set log format.
+	 * default format is (LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL)
+	 */
+	void xlog_set_format(int format);
+
+	int xlog_get_format();
+
+	/**
+	 * transform char to hex.
+	 * note: just transform for you, not print.
+	 * @param out_hex_str: place hex result, should provide (3 * chars_len + 1) memory
+	 * @param out_hex_str_capacity: the length of out_hex_str you provide, should include NULL terminator
+	 * @param chars: the chars you want to transform to hex
+	 * @param chars_len: the length of chars
+	 */
+	void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* chars, size_t chars_len);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
@@ -107,25 +132,13 @@ extern "C" {
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
-	 * USE TLOGX_HEX or LOGX_HEX macro instead.
+	 * USE LOGX_HEX or TLOGX_HEX macro instead.
 	 */
-	void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
+	void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
 
 #ifdef __cplusplus
 }
 #endif
-
-#define LOGV(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, NULL, 0, fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL, NULL, 0, fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, NULL, 0, fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, NULL, 0, fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, NULL, 0, fmt, ##__VA_ARGS__)
-
-#define LOGV_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define LOGD_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, NULL,__func__, __LINE__, fmt, ##__VA_ARGS__)
-#define LOGI_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define LOGW_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define LOGE_TRACE(fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, NULL, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 #define TLOGV(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGD(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
@@ -133,17 +146,29 @@ extern "C" {
 #define TLOGW(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__)
 
+#define LOGV(fmt, ...) TLOGV(NULL, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...) TLOGD(NULL, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) TLOGI(NULL, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) TLOGW(NULL, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) TLOGE(NULL, fmt, ##__VA_ARGS__)
+
 #define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGD_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_DEBUG, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGI_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_INFO, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_log(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define TLOGV_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
-#define TLOGD_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)
-#define TLOGI_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_len)
-#define TLOGW_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_WARN, tag, chars, chars_len)
-#define TLOGE_HEX(tag, chars, chars_len) __xlog_hex_helper(LOG_LEVEL_ERROR, tag, chars, chars_len)
+#define LOGV_TRACE(fmt, ...) TLOGV_TRACE(NULL, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...) TLOGD_TRACE(NULL, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...) TLOGI_TRACE(NULL, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...) TLOGW_TRACE(NULL, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...) TLOGE_TRACE(NULL, fmt, ##__VA_ARGS__)
+
+#define TLOGV_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
+#define TLOGD_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)
+#define TLOGI_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_len)
+#define TLOGW_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_WARN, tag, chars, chars_len)
+#define TLOGE_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_ERROR, tag, chars, chars_len)
 
 #define LOGV_HEX(chars, chars_len) TLOGV_HEX(NULL, chars, chars_len)
 #define LOGD_HEX(chars, chars_len) TLOGD_HEX(NULL, chars, chars_len)

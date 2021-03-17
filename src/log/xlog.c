@@ -167,8 +167,8 @@ void xlog_stdout2file(char* file_path)
 	}
 	if (xlog_cfg.fp_stdout)
 	{
+		printf("WARN: did you forgot to close stdout file stream?");
 		fclose(xlog_cfg.fp_stdout);
-		xlog_cfg.fp_stdout = NULL;
 	}
 	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
 	if (!xlog_cfg.fp_stdout)
@@ -183,6 +183,7 @@ void xlog_back2stdout()
 	{
 		return;
 	}
+	// must close current stream first, and then reopen it
 	fclose(xlog_cfg.fp_stdout);
 	xlog_cfg.fp_stdout = NULL;
 	if (!freopen(STDOUT, "w", stdout))
@@ -345,7 +346,7 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	}
 }
 
-void __xlog_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
+void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len)
 {
 	char hexs[1024];
 	if (!XLOG_IS_LOGABLE(level))

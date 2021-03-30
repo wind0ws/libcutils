@@ -1,6 +1,6 @@
 #include <malloc.h>
 #include "log/file_logger.h"
-#include "ring/msg_queue_handler.h"
+#include "ring/fixed_msg_queue_handler.h"
 #include "mem/strings.h"
 #include "common_macro.h"
 //for mkdir
@@ -13,7 +13,7 @@
 typedef struct file_logger
 {
 	file_logger_cfg cfg;
-	queue_handler msg_queue;
+	fixed_msg_queue_handler msg_queue;
 	size_t cur_log_file_size_counter;
 	FILE* cur_fp;
 	int timezone_hour;
@@ -29,11 +29,15 @@ typedef struct file_logger
 };
 
 #define MAX_FULL_PATH_BUFFER (256)
-static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
+static void handle_log_queue_msg(fixed_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg cfg)
 {
 	if (strlen(cfg.log_folder_path) < 2) //log folder path is abnormal
+	{
+		return NULL;
+	}
+	if (cfg.max_log_queue_size < 2)
 	{
 		return NULL;
 	}
@@ -42,7 +46,7 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 	{
 		return NULL;
 	}
-	handle->msg_queue = QueueHandler_create((uint32_t)cfg.max_log_queue_size, handle_log_queue_msg, handle);
+	handle->msg_queue = fixed_msg_queue_handler_create((uint32_t)cfg.max_log_queue_size, handle_log_queue_msg, handle);
 	if (NULL == handle->msg_queue)
 	{
 		free(handle);
@@ -76,47 +80,47 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 
 void file_logger_log(file_logger_handle handle, void* log_msg)
 {
-#define MAX_RETRY_LOG_TIMES (2)
-	queue_msg_t msg = { 0 };
+#define MAX_RETRY_LOG_TIMES_IF_FAIL (2)
+	fixed_msg_t msg = { 0 };
 	if (strlcpy(msg.obj.data, log_msg, MSG_OBJ_MAX_CAPACITY) < 1)
 	{
 		return;
 	}
-	int status;
+	int status = 0;
 	int retry_counter = 0;
 
-	FILE_LOGGER_LOCK(handle)
-		do
+	FILE_LOGGER_LOCK(handle);
+	do
+	{
+		if ((status = fixed_msg_queue_handler_send(handle->msg_queue, &msg)) == 0)
 		{
-			if ((status = QueueHandler_send(handle->msg_queue, &msg)) == 0)
-			{
-				break;//send complete
-			}
-			RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
-			if (handle->cfg.is_try_my_best_to_keep_log == false)
-			{
-				break;
-			}
-			RING_LOGE("try again after 2ms");
-			retry_counter++;
-			usleep(2000);
-		} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES && handle->cfg.is_try_my_best_to_keep_log);
-		//final safety
-		if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
-		{
-			char cur_time[TIME_STR_LEN];
-			time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
-			char path_buffer[MAX_FULL_PATH_BUFFER];
-			snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log",
-				handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
-			FILE* f_lost = fopen(path_buffer, "wb");
-			if (f_lost)
-			{
-				fprintf(f_lost, "%s\n", (char*)log_msg);
-				fclose(f_lost);
-			}
+			break;//send complete
 		}
-		FILE_LOGGER_UNLOCK(handle)
+		RING_LOGE("failed on send log to queue. maybe queue is full! %d", status);
+		if (handle->cfg.is_try_my_best_to_keep_log == false)
+		{
+			break;
+		}
+		RING_LOGE("try again after 1ms");
+		++retry_counter;
+		usleep(1000);
+	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL && handle->cfg.is_try_my_best_to_keep_log);
+	//final safety
+	if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
+	{
+		char cur_time[TIME_STR_LEN];
+		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
+		char path_buffer[MAX_FULL_PATH_BUFFER];
+		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log",
+			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
+		FILE* f_lost = fopen(path_buffer, "wb");
+		if (f_lost)
+		{
+			fprintf(f_lost, "%s\n", (char*)log_msg);
+			fclose(f_lost);
+		}
+	}
+	FILE_LOGGER_UNLOCK(handle);
 }
 
 void file_logger_deinit(file_logger_handle* handle_p)
@@ -128,7 +132,7 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	file_logger_handle handle = *handle_p;
 	if (handle->msg_queue)
 	{
-		QueueHandler_destroy(&(handle->msg_queue));
+		fixed_msg_queue_handler_destroy(&(handle->msg_queue));
 	}
 	if (handle->cur_fp)
 	{
@@ -139,7 +143,7 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	*handle_p = NULL;
 }
 
-static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
+static void handle_log_queue_msg(fixed_msg_t* msg_p, void* user_data)
 {
 	file_logger_handle handle = (file_logger_handle)user_data;
 	if (!handle->cur_fp)

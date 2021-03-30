@@ -32,7 +32,7 @@ EXTERN_C_START
 
 extern int allocator_test();
 
-#define TEST_FILE_LOGGER (0)
+#define TEST_FILE_LOGGER (1)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
 extern int ini_test();
@@ -51,7 +51,7 @@ extern int str_params_test();
 
 EXTERN_C_END
 
-#define SAVE_LOG 1
+#define SAVE_LOG 0
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
 #ifdef _WIN32

@@ -17,7 +17,7 @@ typedef struct
 static logger_config_t g_logger_cfg;
 
 #ifdef _WIN32
-#define FILE_LOGGER_PATH ("D:\\log") 
+#define FILE_LOGGER_PATH ("D:\\temp\\log") 
 #define STDOUT_FILE_PATH ("D:/stdout2file.log")
 #else
 #define FILE_LOGGER_PATH ("./log/") 

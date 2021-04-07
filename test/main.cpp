@@ -10,13 +10,13 @@
 
 static void setup_console();
 
-#define RUN_TEST(func_name) do                                             \
-{                                                                          \
-   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);           \
-   int ret = func_name();                                                  \
-   printf("\n");                                                           \
-   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret, XLOG_STAR_LINE);  \
-   ASSERT(ret == 0);                                                       \
+#define RUN_TEST(func_name) do                                                        \
+{                                                                                     \
+   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);                      \
+   int ret_##func_name = func_name();                                                  \
+   printf("\n");                                                                      \
+   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE);  \
+   ASSERT(ret_##func_name == 0);                                                       \
 } while (0)
 
 //#define ENUM_STATES(GENERATOR)           \

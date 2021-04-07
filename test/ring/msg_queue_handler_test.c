@@ -3,7 +3,7 @@
 #include "thread/thread_wrapper.h"
 #include "log/xlog.h"
 
-#define LOG_TAG "HANDLER"
+#define LOG_TAG "HDL_TEST"
 
 typedef struct 
 {

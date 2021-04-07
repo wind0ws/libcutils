@@ -120,5 +120,6 @@ void msg_queue_destroy(__in msg_queue* msg_queue_pp)
 		return;
 	}
 	RingBuffer_destroy(&((*msg_queue_pp)->ring_buf_p));
+	free(*msg_queue_pp);
 	*msg_queue_pp = NULL;
 }

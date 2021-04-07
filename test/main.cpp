@@ -32,7 +32,7 @@ EXTERN_C_START
 
 extern int allocator_test();
 
-#define TEST_FILE_LOGGER (1)
+#define TEST_FILE_LOGGER (0)
 extern int file_logger_test_begin();
 extern int file_logger_test_end();
 extern int ini_test();
@@ -48,6 +48,7 @@ extern int time_util_test();
 extern int url_encoder_decoder_test();
 extern int base64_test();
 extern int str_params_test();
+extern int msg_queue_handler_test();
 
 EXTERN_C_END
 
@@ -91,10 +92,11 @@ int main(int argc, char* argv[])
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
-	RUN_TEST(thread_wrapper_test);
+	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
 	//RUN_TEST(str_params_test);
+	RUN_TEST(msg_queue_handler_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_FIXED_MSG_QUEUE_H
-#define __LCU_FIXED_MSG_QUEUE_H
+#ifndef LCU_FIXED_MSG_QUEUE_H
+#define LCU_FIXED_MSG_QUEUE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,4 +81,4 @@ void fixed_msg_queue_destroy(__in fixed_msg_queue *fixed_msg_queue_pp);
 }
 #endif
 
-#endif //__LCU_FIXED_MSG_QUEUE_H
+#endif // LCU_FIXED_MSG_QUEUE_H

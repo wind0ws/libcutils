@@ -54,12 +54,12 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 		return NULL;
 	}
 	char* log_folder_path_formatted = strreplace(cfg.log_folder_path, "\\", "/");
-	strlcpy(cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_LEN);
+	strlcpy(cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
 	free(log_folder_path_formatted);
 	size_t log_folder_path_len = strlen(cfg.log_folder_path);
 	if (cfg.log_folder_path[log_folder_path_len - 1] != '/')
 	{
-		size_t slash_location = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_LEN ?
+		size_t slash_location = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_SIZE ?
 			log_folder_path_len : (log_folder_path_len - 1);
 		cfg.log_folder_path[slash_location] = '/';
 		cfg.log_folder_path[slash_location + 1] = '\0';

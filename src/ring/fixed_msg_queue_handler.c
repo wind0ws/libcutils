@@ -19,7 +19,7 @@ struct __fixed_msg_queue_handler
 
 	fixed_handler_msg_t msg_send_cache;
 	size_t token_counter;
-	size_t min_valid_token;
+	volatile size_t min_valid_token;
 };
 
 static void* thread_fun_handle_msg(void* thread_context)

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_MSG_fixed_msg_queue_handler_H
-#define __LCU_MSG_fixed_msg_queue_handler_H
+#ifndef LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H
+#define LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +47,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
  * @param msg_p msg ptr
  * @return 0 succeed. otherwise failed
  */
-int fixed_msg_queue_handler_send(__in fixed_msg_queue_handler handler_p,__in fixed_msg_t *msg_p);
+int fixed_msg_queue_handler_send(__in fixed_msg_queue_handler handler_p, __in fixed_msg_t *msg_p);
 
 /**
  * current can send msg max amount
@@ -94,4 +94,4 @@ void fixed_msg_queue_handler_destroy(__inout fixed_msg_queue_handler *handler_pp
 }
 #endif
 
-#endif //__LCU_MSG_fixed_msg_queue_handler_H
+#endif // LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H

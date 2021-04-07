@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_RINGBUFFER_H
-#define __LCU_RINGBUFFER_H
+#ifndef LCU_RINGBUFFER_H
+#define LCU_RINGBUFFER_H
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -26,13 +26,13 @@
 #define __inout_opt
 #endif
 
-#define __RING_LOG_TAG                     "RING_BUFFER"
+#define _RING_LOG_TAG                     "RING_BUF"
 
-#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {
@@ -154,4 +154,4 @@ extern "C" {
 }
 #endif
 
-#endif //__LCU_RINGBUFFER_H
+#endif // LCU_RINGBUFFER_H

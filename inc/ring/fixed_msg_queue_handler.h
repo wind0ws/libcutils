@@ -1,12 +1,32 @@
 #pragma once
-#ifndef LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H
-#define LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H
+#ifndef LCU_FIXED_MSG_QUEUE_HANDLER_H
+#define LCU_FIXED_MSG_QUEUE_HANDLER_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifndef __in
+#define __in
+#endif
+#ifndef __out
+#define __out
+#endif
+#ifndef __inout
+#define __inout
+#endif
+#ifndef __in_opt
+#define __in_opt
+#endif
+#ifndef __out_opt
+#define __out_opt
+#endif
+#ifndef __inout_opt
+#define __inout_opt
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "fixed_msg_queue.h"
 
 #define MSG_OBJ_MAX_CAPACITY (1024)
 typedef char MSG_OBJ_DATA_TYPE;
@@ -94,4 +114,4 @@ void fixed_msg_queue_handler_destroy(__inout fixed_msg_queue_handler *handler_pp
 }
 #endif
 
-#endif // LCU_MSG_FIXED_MSG_QUEUE_HANDLER_H
+#endif // LCU_FIXED_MSG_QUEUE_HANDLER_H

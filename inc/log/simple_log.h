@@ -35,19 +35,19 @@
 
 #include <android/log.h>
 #define _LOG_HELPER_V(tag, fmt,...)       __android_log_print(ANDROID_LOG_VERBOSE, tag, fmt, ##__VA_ARGS__)
-#define _LOG_HELPER_D(tag, fmt,...)       __android_log_print(ANDROID_LOG_DEBUG, tag, fmt, ##__VA_ARGS__)
-#define _LOG_HELPER_I(tag, fmt,...)       __android_log_print(ANDROID_LOG_INFO, tag, fmt, ##__VA_ARGS__)
-#define _LOG_HELPER_W(tag, fmt,...)       __android_log_print(ANDROID_LOG_WARN, tag, fmt, ##__VA_ARGS__)
-#define _LOG_HELPER_E(tag, fmt,...)       __android_log_print(ANDROID_LOG_ERROR, tag, fmt, ##__VA_ARGS__)
+#define _LOG_HELPER_D(tag, fmt,...)       __android_log_print(ANDROID_LOG_DEBUG,   tag, fmt, ##__VA_ARGS__)
+#define _LOG_HELPER_I(tag, fmt,...)       __android_log_print(ANDROID_LOG_INFO,    tag, fmt, ##__VA_ARGS__)
+#define _LOG_HELPER_W(tag, fmt,...)       __android_log_print(ANDROID_LOG_WARN,    tag, fmt, ##__VA_ARGS__)
+#define _LOG_HELPER_E(tag, fmt,...)       __android_log_print(ANDROID_LOG_ERROR,   tag, fmt, ##__VA_ARGS__)
 
 #else //unix printf
 
 #define _LOG_HELPER(...)                  printf(__VA_ARGS__)
-#define _LOG_HELPER_V(tag, fmt,...)       _LOG_HELPER("[V][%s] "fmt"\n", tag, ##__VA_ARGS__)
-#define _LOG_HELPER_D(tag, fmt,...)       _LOG_HELPER("[D][%s] "fmt"\n", tag, ##__VA_ARGS__)
-#define _LOG_HELPER_I(tag, fmt,...)       _LOG_HELPER("[I][%s] "fmt"\n", tag, ##__VA_ARGS__)
-#define _LOG_HELPER_W(tag, fmt,...)       _LOG_HELPER("[W][%s] "fmt"\n", tag, ##__VA_ARGS__)
-#define _LOG_HELPER_E(tag, fmt,...)       _LOG_HELPER("[E][%s] "fmt"\n", tag, ##__VA_ARGS__)
+#define _LOG_HELPER_V(tag, fmt,...)       _LOG_HELPER("[V][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define _LOG_HELPER_D(tag, fmt,...)       _LOG_HELPER("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define _LOG_HELPER_I(tag, fmt,...)       _LOG_HELPER("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define _LOG_HELPER_W(tag, fmt,...)       _LOG_HELPER("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define _LOG_HELPER_E(tag, fmt,...)       _LOG_HELPER("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
 
 #endif // _WIN32
 

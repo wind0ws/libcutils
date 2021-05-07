@@ -1,20 +1,23 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.4.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.4.1 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
-
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # 使用utility.cmake
 include(utility)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-set(CMAKE_VERBOSE_MAKEFILE ON)
+
+option(BUILD_STATIC_LIBS "Build the static library" ON)
+option(BUILD_SHARED_LIBS "Build the shared library" OFF)
+option(BUILD_TESTS "Build test programs" ON)
 
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
 #get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
@@ -44,7 +47,7 @@ if(WIN32)
 		endif()
 	else()
 		message(STATUS "ARG_LCU_WIN_PTHREAD_MODE is not set.")
-	endif()
+	endif(ARG_LCU_WIN_PTHREAD_MODE)
 	
 	message(STATUS "LCU_WIN_PTHREAD_MODE => ${LCU_WIN_PTHREAD_MODE}")
 endif(WIN32)  
@@ -83,8 +86,6 @@ else()
 	
     string(APPEND CMAKE_C_FLAGS   " -Wall -Wno-unused-local-typedefs -Wno-unused-function")
     string(APPEND CMAKE_CXX_FLAGS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 endif ()
 
 # 小知识
@@ -136,8 +137,7 @@ configure_file(
 include_directories(${LCU_HEADER_ROOT_DIR}
 					${CMAKE_BINARY_DIR}/generate/)
 
-#for publish library: copy header to output dir
-
+#=====================PUBLISH HEADER BEGIN=====================
 #method1: collect all header files, and copy to output dir. the flaw is can't keep dir structure.
 #collect header files, exclude cmake configure_file(.h.in)
 #file(GLOB_RECURSE HEADER_FILES "${LCU_ROOT_DIR}/inc/*.h" "${LCU_ROOT_DIR}/inc/*.hpp")
@@ -150,29 +150,12 @@ file(REMOVE ${OUT_H_IN_FILES})
 file(GLOB_RECURSE GENERATE_H_FILES ${CMAKE_BINARY_DIR}/generate/*.h)
 file(COPY ${GENERATE_H_FILES} DESTINATION ${LCU_OUTPUT_DIR}/inc/config/)
 file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${LCU_OUTPUT_DIR}/libs/)
-
-#add_library(mplite ../../src/mplite.c)
-#target_include_directories(mplite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc/)
+#=====================PUBLISH HEADER END=====================
 
 #collect src to "LCU_SRCS" 
 #aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
 file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp" "${LCU_ROOT_DIR}/src/*.cxx")
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
-
-add_library(lcu_static
-			STATIC
-			${LCU_SRCS})
-add_library(lcu_shared
-			SHARED
-			${LCU_SRCS})
-# 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu_a")
-set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
-# 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
-#set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-#set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-# 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
 
 #set(LCU_TEST_SRCS
 #		${LCU_ROOT_DIR}/test/file_util_test.c
@@ -181,11 +164,8 @@ set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION
 #)
 file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp" "${LCU_ROOT_DIR}/test/*.hpp")
 message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
-add_executable(libcutils_test
-		${LCU_TEST_SRCS}
-		)
-		
-#============================================================================SOURCE_GROUP BEGIN		
+
+#====================SOURCE_GROUP BEGIN====================
 # make Source tree as same as your folder structure.		
 # Reference: https://stackoverflow.com/a/56496104 		
 # Create the source groups for source tree with root at LCU_ROOT_DIR. 
@@ -210,7 +190,27 @@ source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
 #set(all_files ${HEADER_FILE_LIST} ${LCU_TEST_SRCS} ${LCU_SRCS})
 #其中all_files是保存了所有文件名的变量。注意，这里用的是变量名，而没有引用其值。
 #source_group_by_dir(all_files)
-#============================================================================SOURCE_GROUP END	
+#====================SOURCE_GROUP   END====================
+
+add_library(lcu_static
+			STATIC
+			${LCU_SRCS})
+			
+add_library(lcu_shared
+			SHARED
+			${LCU_SRCS})
+			
+# 指定库的输出名称(静态库和动态库可以用相同的名称)
+set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu_a")
+set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
+# 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
+#set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+# 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
+set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+			
+add_executable(libcutils_test
+		${LCU_TEST_SRCS})			
 
 if(ANDROID)
 # Searches for a specified prebuilt library and stores the path as a
@@ -265,6 +265,7 @@ ENDIF(UNIX)
 
 message(STATUS "pthread-lib now is: ${pthread-lib}")	
 
+#================declare dependencies of build target BEGIN================
 target_link_libraries( # Specifies the target library.
         lcu_static PUBLIC
 
@@ -286,4 +287,4 @@ target_link_libraries( # Specifies the target library.
 		#${pthread-lib}
 		#${log-lib}
         )		
-
+#================declare dependencies of build target END================

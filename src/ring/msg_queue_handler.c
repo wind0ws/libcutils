@@ -38,6 +38,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 	char* poped_msg_buf = (char *)malloc(cur_msg_buf_size);
 	if (!poped_msg_buf)
 	{
+		SIMPLE_LOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg, now thread exit...", cur_msg_buf_size);
 		return NULL;
 	}
 	MSG_Q_CODE last_status = MSG_Q_CODE_SUCCESS;
@@ -57,13 +58,14 @@ static void* thread_fun_handle_msg(void* thread_context)
 		{
 			if (last_status == MSG_Q_CODE_BUF_NOT_ENOUGH)
 			{
+				free(poped_msg_buf);
 				size_t next_msg_size = msg_queue_next_msg_size(handler_p->msg_queue_p);
 				ASSERT_ABORT(next_msg_size > 0);
 				size_t expect_buf_size = roundup_power2(next_msg_size);
-				free(poped_msg_buf);
 				poped_msg_buf = (char*)malloc(expect_buf_size);
 				if (!poped_msg_buf)
 				{
+					SIMPLE_LOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg", expect_buf_size);
 					break;
 				}
 				cur_msg_buf_size = expect_buf_size;
@@ -110,16 +112,16 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	return handler_p;
 }
 
-int msg_queue_handler_send(__in msg_queue_handler msg_queue_handler_p, __in queue_msg_t* msg_p)
+MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler_p, __in queue_msg_t* msg_p)
 {
-	if (!msg_queue_handler_p || msg_queue_handler_p->msg_queue_p == NULL || msg_queue_handler_p->flag_exit_thread)
+	if (!handler_p || handler_p->msg_queue_p == NULL || handler_p->flag_exit_thread)
 	{
 		return MSG_Q_CODE_NULL_HANDLE;
 	}
-	MSG_Q_CODE push_status = msg_queue_push(msg_queue_handler_p->msg_queue_p, msg_p, (sizeof(queue_msg_t) + msg_p->obj_len));
+	MSG_Q_CODE push_status = msg_queue_push(handler_p->msg_queue_p, msg_p, (sizeof(queue_msg_t) + msg_p->obj_len));
 	if (push_status == MSG_Q_CODE_SUCCESS)
 	{
-		sem_post(&(msg_queue_handler_p->sem_handler));
+		sem_post(&(handler_p->sem_handler));
 	}
 	return push_status;
 }

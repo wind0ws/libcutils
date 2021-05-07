@@ -1,6 +1,16 @@
 #include <malloc.h>
 #include "thread/thread_wrapper.h"
+#include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
+#include "log/simple_log.h"
+
+#define _RING_LOG_TAG                     "FIXED_Q_HDL"
+
+#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct
 {

@@ -289,14 +289,14 @@ DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
 #define __GENERATOR_ENUM_ITEM(item) item,
 #define __GENERATOR_ENUM_STRING(item) #item,
 #define __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, generator_enum_item)   \
-        typedef enum name##_ {                                    \
-           foreach_enum(generator_enum_item)                      \
+        typedef enum name##_ {                                             \
+           foreach_enum(generator_enum_item)                               \
         } name;
 #define DECLARE_ENUM(name, foreach_enum) __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, __GENERATOR_ENUM_ITEM)
 #define __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, generator_enum_string)              \
         static const char *name##_STRINGS[] = {  foreach_enum(generator_enum_string) };
 #define DEFINITION_ENUM_STRINGS(name, foreach_enum) __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, __GENERATOR_ENUM_STRING)
- //================================DECLARE ENUM AND STRINGS================================
+//================================DECLARE ENUM AND STRINGS================================
 
 
 #endif // LCU_COMMON_MACRO_H

@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "log/simple_log.h"
 
 #ifndef __in
 #define __in
@@ -26,14 +25,6 @@
 #define __inout_opt
 #endif
 
-#define _RING_LOG_TAG                     "RING_BUF"
-
-#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,6 +38,15 @@ extern "C" {
 	 * @return RingBuffer pointer
 	 */
 	ring_buf_handle RingBuffer_create(__in uint32_t buf_size);
+
+	/**
+	 * create RingBuffer with you provided memory.
+	 * if the memory allocated on heap, you should free it after call RingBuffer_destory
+	 * <p>WARN: The ring buffer real size is not always as same as you provided.</p>
+	 * @param buf_size RingBuffer size, must be pow of 2. if not, will change size to previous pow of it automatically.
+	 * @return RingBuffer pointer
+	 */
+	ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size);
 
 	/**
 	 * destroy RingBuffer and free memory
@@ -119,7 +119,7 @@ extern "C" {
 	 * @param size copy specified size memory
 	 * @return the real wrote data size
 	 */
-	uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void* source, uint32_t size);
+	uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void* source, __in uint32_t size);
 
 	/**
 	 * current read position of ringbuffer

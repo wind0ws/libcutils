@@ -2,11 +2,22 @@
 #ifndef LCU_FIXED_MSG_QUEUE_H
 #define LCU_FIXED_MSG_QUEUE_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifndef __in
+#define __in
+#endif
+#ifndef __out
+#define __out
+#endif
+#ifndef __inout
+#define __inout
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "ringbuffer.h"
 
 typedef struct __fixed_msg_queue *fixed_msg_queue;
 
@@ -75,7 +86,7 @@ bool fixed_msg_queue_is_full(__in fixed_msg_queue fixed_msg_queue_p);
  * <p>Warn: you should stop call push/pop first before call this method</p>
  * @param fixed_msg_queue_p fixed_msg_queue
  */
-void fixed_msg_queue_destroy(__in fixed_msg_queue *fixed_msg_queue_pp);
+void fixed_msg_queue_destroy(__inout fixed_msg_queue *fixed_msg_queue_pp);
 
 #ifdef __cplusplus
 }

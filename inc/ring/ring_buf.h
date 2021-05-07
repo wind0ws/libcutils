@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_RING_BUF_HEADER_H
-#define __LCU_RING_BUF_HEADER_H
+#ifndef LCU_RING_BUF_H
+#define LCU_RING_BUF_H
 
 #include <stddef.h>
 #ifdef __cplusplus
@@ -93,4 +93,4 @@ extern "C" {
 }
 #endif
 
-#endif // __LCU_RING_BUF_HEADER_H
+#endif // LCU_RING_BUF_H

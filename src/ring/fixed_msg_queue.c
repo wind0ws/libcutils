@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include "ring/fixed_msg_queue.h"
+#include "ring/ringbuffer.h"
 
 struct __fixed_msg_queue 
 {
@@ -10,8 +11,6 @@ struct __fixed_msg_queue
 fixed_msg_queue fixed_msg_queue_create(__in uint32_t one_msg_byte_size,
                                        __in uint32_t max_msg_capacity) 
 {
-    RING_LOGD("create ring msg queue. one_msg_byte_size=%d, max_msg_capacity=%d",
-         one_msg_byte_size, max_msg_capacity);
     if (one_msg_byte_size < 1 || max_msg_capacity < 1)
     {
         return NULL;

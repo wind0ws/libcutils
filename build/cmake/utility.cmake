@@ -1,5 +1,5 @@
 # get git hash
-macro(get_git_hash _git_hash _work_dir)
+MACRO(get_git_hash _git_hash _work_dir)
     find_package(Git QUIET)
     if(GIT_FOUND)
 	  #execute_process(COMMAND ${GIT_EXECUTABLE} log -1 --format=%H
@@ -16,12 +16,12 @@ macro(get_git_hash _git_hash _work_dir)
         )
 	  #message(STATUS "Git found!!! git_hash=${_git_hash}, work_dir=>${_work_dir}")	
 	else()
-	  message(STATUS "Git not found!!!")
+	  message(STATUS "Git not found! can't get_git_hash")
     endif()
-endmacro()
+ENDMACRO()
 
 # get git branch
-macro(get_git_branch _git_branch _work_dir)
+MACRO(get_git_branch _git_branch _work_dir)
     find_package(Git QUIET)
     if(GIT_FOUND)
       execute_process(
@@ -33,9 +33,9 @@ macro(get_git_branch _git_branch _work_dir)
         )
 	   #message(STATUS "Git found!!! git_branch=${_git_branch}, work_dir=>${_work_dir}")	
 	else()
-	  message(STATUS "Git not found!!!")
+	  message(STATUS "Git not found! can't get_git_branch")
     endif()
-endmacro()
+ENDMACRO(get_git_branch)
 
 #扫描指定scan_dir 目录及其子目录下的 .h 文件所在目录，存放到 return_list 中
 MACRO(scan_header_dirs scan_dir return_list)
@@ -47,7 +47,7 @@ MACRO(scan_header_dirs scan_dir return_list)
     ENDFOREACH ()
     LIST(REMOVE_DUPLICATES dir_list)
     SET(${return_list} ${dir_list})
-ENDMACRO()
+ENDMACRO(scan_header_dirs)
 
 #这里src_files是外部变量名，而不是其引用值，foreach会进行二次解引用
 MACRO(copy_file_on_post_build target src_files)
@@ -74,7 +74,7 @@ MACRO(copy_file_on_post_build_to_all_targets src_files)
     endforeach(_target)
 ENDMACRO()
 
-macro(source_group_by_dir source_files)
+MACRO(source_group_by_dir source_files)
     if(MSVC)
         set(sgbd_cur_dir ${CMAKE_CURRENT_SOURCE_DIR})
         foreach(sgbd_file ${${source_files}})
@@ -88,7 +88,7 @@ macro(source_group_by_dir source_files)
             source_group(${sgbd_group_name} FILES ${sgbd_file})
         endforeach(sgbd_file)
     endif(MSVC)
-endmacro(source_group_by_dir)
+ENDMACRO(source_group_by_dir)
 
 #Reference:  https://stackoverflow.com/questions/28344564/cmake-remove-a-compile-flag-for-a-single-translation-unit
 #

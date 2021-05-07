@@ -1,4 +1,3 @@
-#include <malloc.h>
 #include "log/file_logger.h"
 #include "ring/fixed_msg_queue_handler.h"
 #include "mem/strings.h"
@@ -9,6 +8,15 @@
 #include "thread/thread_wrapper.h"
 //for timestamp file name
 #include "time/time_util.h"
+#include "log/simple_log.h"
+
+#define _RING_LOG_TAG                     "RING_BUF"
+
+#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct file_logger
 {

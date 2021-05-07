@@ -184,6 +184,7 @@ void ring_buf_destroy(ring_handle* handle_p)
 	}
 	if (handle->is_internal_malloced) 
 	{
+		handle->pbuf = NULL;// buf memory is in handle
 		free(handle);
 	}
 	*handle_p = NULL;

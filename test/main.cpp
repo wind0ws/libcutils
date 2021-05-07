@@ -19,12 +19,13 @@ static void setup_console();
    ASSERT(ret_##func_name == 0);                                                       \
 } while (0)
 
-//#define ENUM_STATES(GENERATOR)           \
-//         GENERATOR(STATE_START)          \
-//         GENERATOR(STATE_STOP)           
-//DECLARE_ENUM(STATES, ENUM_STATES);
-//DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
-
+/*
+#define ENUM_STATES(GENERATOR)           \
+         GENERATOR(STATE_START)          \
+         GENERATOR(STATE_STOP)           
+DECLARE_ENUM(STATES, ENUM_STATES);
+DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
+*/
 
 static int memleak_test();
 

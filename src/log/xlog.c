@@ -167,7 +167,7 @@ void xlog_stdout2file(char* file_path)
 	}
 	if (xlog_cfg.fp_stdout)
 	{
-		printf("WARN: did you forgot to close stdout file stream?");
+		printf("[XLog] [%s:%d] WARN: did you forgot to close stdout file stream?", __func__, __LINE__);
 		fclose(xlog_cfg.fp_stdout);
 	}
 	xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
@@ -353,7 +353,7 @@ void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t c
 	{
 		return;
 	}
-	xlog_chars2hex(hexs, 1024, chars, chars_len);
+	xlog_chars2hex(hexs, sizeof(hexs), chars, chars_len);
 	switch (level)
 	{
 	case LOG_LEVEL_VERBOSE:

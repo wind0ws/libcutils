@@ -10,21 +10,22 @@
 
 static void setup_console();
 
-#define RUN_TEST(func_name) do                                             \
-{                                                                          \
-   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);           \
-   int ret = func_name();                                                  \
-   printf("\n");                                                           \
-   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret, XLOG_STAR_LINE);  \
-   ASSERT(ret == 0);                                                       \
+#define RUN_TEST(func_name) do                                                        \
+{                                                                                     \
+   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);                      \
+   int ret_##func_name = func_name();                                                  \
+   printf("\n");                                                                      \
+   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE);  \
+   ASSERT(ret_##func_name == 0);                                                       \
 } while (0)
 
-//#define ENUM_STATES(GENERATOR)           \
-//         GENERATOR(STATE_START)          \
-//         GENERATOR(STATE_STOP)           
-//DECLARE_ENUM(STATES, ENUM_STATES);
-//DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
-
+/*
+#define ENUM_STATES(GENERATOR)           \
+         GENERATOR(STATE_START)          \
+         GENERATOR(STATE_STOP)           
+DECLARE_ENUM(STATES, ENUM_STATES);
+DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
+*/
 
 static int memleak_test();
 
@@ -48,10 +49,11 @@ extern int time_util_test();
 extern int url_encoder_decoder_test();
 extern int base64_test();
 extern int str_params_test();
+extern int msg_queue_handler_test();
 
 EXTERN_C_END
 
-#define SAVE_LOG 1
+#define SAVE_LOG 0
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
 #ifdef _WIN32
@@ -91,10 +93,11 @@ int main(int argc, char* argv[])
 	//RUN_TEST(thpool_test);
 	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
-	RUN_TEST(thread_wrapper_test);
+	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
 	//RUN_TEST(str_params_test);
+	RUN_TEST(msg_queue_handler_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

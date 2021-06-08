@@ -36,10 +36,10 @@
 
 * **1.4.1**
   > 1. Add msg_queue/msg_queue_handler: support various msg
-  2. rename old msg_queue/msg_queue_handler to fixed_msg_queue/fixed_msg_queue_handler
-  3. extract msg_queue_errno to header.
+  > 2. rename old msg_queue/msg_queue_handler to fixed_msg_queue/fixed_msg_queue_handler
+  > 3. extract msg_queue_errno to header.
 
-* ** 1.0.0 ~ 1.4.0 **
-> 1. Release log not write here, see commit for more details. btw: suggest use latest code
+* **1.0.0 ~ 1.4.0**
+  > 1. Release log not write here, see commit for more details. btw: suggest use latest code
 
 

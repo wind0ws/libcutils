@@ -27,7 +27,7 @@ static int run_msg_queue_handler_testcase()
 	for (int i = 0; i < 256; ++i)
 	{
 		msg_p->what = i;
-		msg_p->obj_len = snprintf(msg_p->obj, MSG_OBJ_MAX_SIZE, "hello, I'm queue msg %zd", i) + 1;
+		msg_p->obj_len = snprintf(msg_p->obj, MSG_OBJ_MAX_SIZE, "hello, I'm queue msg %d", i) + 1;
 		MSG_Q_CODE status_send;
 		int retry_counter = 0;
 		do

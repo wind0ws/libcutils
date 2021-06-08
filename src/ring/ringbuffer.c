@@ -28,7 +28,7 @@
 */
 static inline int is_power_of_2(uint32_t n)
 {
-	return (n > 0 && !(n & (n - 1)));
+	return (n > 1 && !(n & (n - 1)));
 }
 
 static inline uint32_t roundup_pow_of_two(uint32_t x)
@@ -52,7 +52,7 @@ struct __ring_buffer_t
 	uint32_t out;              /* position of reader  */
 	uint32_t size;             /* ring buffer size    */
 	char* buf;                 /* ring buffer pointer, buf size must be power of 2 */
-	bool is_internal_malloced; /* mark bufffer is allocated by ourself */
+	bool is_internal_malloced; /* mark buffer whether is allocated by ourself */
 };
 
 //buf_size must be power of 2.
@@ -70,13 +70,14 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 		RING_LOGW("RingBuffer_create changed buf_size to %u ", buf_size);
 	}
 
-	const uint32_t need_memory_size = sizeof(struct __ring_buffer_t) + buf_size;
-	char *raw_memory = (char *)calloc(1, need_memory_size);
+	const uint32_t expect_memory_size = sizeof(struct __ring_buffer_t) + buf_size;
+	char *raw_memory = (char *)calloc(1, expect_memory_size);
 	if (raw_memory == NULL)
 	{
+		RING_LOGE("failed alloc %u size for RingBuffer", expect_memory_size);
 		return NULL;
 	}
-	ring_buf_handle ring_buffer_p = RingBuffer_create_with_mem(raw_memory, need_memory_size);
+	ring_buf_handle ring_buffer_p = RingBuffer_create_with_mem(raw_memory, expect_memory_size);
 	if (!ring_buffer_p)
 	{
 		free(raw_memory);

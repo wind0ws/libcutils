@@ -4,12 +4,16 @@
 
 //reference https://stackoverflow.com/questions/40159892/using-asprintf-on-windows/49873938#49873938
 
-#if defined(__GNUC__) && ! defined(_GNU_SOURCE)
+#if defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE /* needed for (v)asprintf, affects '#include <stdio.h>' */
 #endif
 #include <stdio.h>  /* needed for vsnprintf    */
-#include <stdlib.h> /* needed for malloc, free */
+#include <malloc.h> /* needed for malloc, free */
 #include <stdarg.h> /* needed for va_*         */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * vscprintf:
@@ -42,12 +46,18 @@ int vasprintf(char** strp, const char* format, va_list ap)
 {
     int len = vscprintf(format, ap);
     if (len == -1)
+    {
         return -1;
+    } 
     char* str = (char*)malloc((size_t)len + 1);
     if (!str)
+    {
         return -1;
+    }
+        
     int retval = vsnprintf(str, len + 1, format, ap);
-    if (retval == -1) {
+    if (retval == -1) 
+    {
         free(str);
         return -1;
     }
@@ -64,5 +74,9 @@ int asprintf(char** strp, const char* format, ...)
     return retval;
 }
 #endif // _MSC_VER
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !LCU_ASPRINTF_H

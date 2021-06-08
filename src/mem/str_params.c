@@ -33,7 +33,7 @@ struct str_params
 
 static bool str_eq(const void* key_a, const void* key_b)
 {
-	return !strcmp((const char*)key_a, (const char*)key_b);
+	return strcmp((const char*)key_a, (const char*)key_b) == 0;
 }
 
 /* use djb hash unless we find it inadequate */
@@ -325,7 +325,7 @@ typedef struct
 static bool combine_strings(void* key, void* value, void* context)
 {
 	combine_strings_ctx* combine_ctx = (combine_strings_ctx*)context;
-	char* new_str;
+	char* new_str = NULL;
 	int ret = asprintf(&new_str, "%s%s%s=%s",
 		combine_ctx->str ? combine_ctx->str : "",
 		combine_ctx->str ? combine_ctx->params_ptr->delimiter : "",
@@ -339,6 +339,11 @@ static bool combine_strings(void* key, void* value, void* context)
 	{
 		combine_ctx->str = new_str;
 		return true;
+	}
+	if (new_str)
+	{
+		free(new_str);
+		new_str = NULL;
 	}
 	combine_ctx->str = NULL;
 	return false;

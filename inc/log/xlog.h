@@ -29,7 +29,8 @@ typedef enum
 	LOG_LEVEL_UNKNOWN
 } LogLevel;
 
-typedef void (*xlog_user_callback_fn)(void* log_msg, void* user_data);
+//user log callback. log_msg do not contain '\n'. msg_size contain NUL terminator
+typedef void (*xlog_user_callback_fn)(void* log_msg, size_t msg_size, void* user_data);
 
 typedef enum
 {
@@ -79,7 +80,7 @@ extern "C" {
 
 	/**
 	 * timezone_hour used by generate log time.
-	 * default timezone_hour is 8.
+	 * timezone_hour should between -12 ~ 12. default timezone_hour is 8. 
 	 * example: In china, we are in +8 timezone area, so here set it to 8.
 	 */
 	void xlog_set_timezone(int timezone_hour);
@@ -120,9 +121,9 @@ extern "C" {
 	 * @param out_hex_str: place hex result, should provide (3 * chars_len + 1) memory
 	 * @param out_hex_str_capacity: the length of out_hex_str you provide, should include NULL terminator
 	 * @param chars: the chars you want to transform to hex
-	 * @param chars_len: the length of chars
+	 * @param chars_size: the size of chars
 	 */
-	void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* chars, size_t chars_len);
+	void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* chars, size_t chars_size);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
@@ -134,7 +135,7 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX_HEX or TLOGX_HEX macro instead.
 	 */
-	void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_len);
+	void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_size);
 
 #ifdef __cplusplus
 }
@@ -164,16 +165,16 @@ extern "C" {
 #define LOGW_TRACE(fmt, ...) TLOGW_TRACE(NULL, fmt, ##__VA_ARGS__)
 #define LOGE_TRACE(fmt, ...) TLOGE_TRACE(NULL, fmt, ##__VA_ARGS__)
 
-#define TLOGV_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_len)
-#define TLOGD_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_len)
-#define TLOGI_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_len)
-#define TLOGW_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_WARN, tag, chars, chars_len)
-#define TLOGE_HEX(tag, chars, chars_len) __xlog_internal_hex_helper(LOG_LEVEL_ERROR, tag, chars, chars_len)
+#define TLOGV_HEX(tag, chars, chars_size) __xlog_internal_hex_helper(LOG_LEVEL_VERBOSE, tag, chars, chars_size)
+#define TLOGD_HEX(tag, chars, chars_size) __xlog_internal_hex_helper(LOG_LEVEL_DEBUG, tag, chars, chars_size)
+#define TLOGI_HEX(tag, chars, chars_size) __xlog_internal_hex_helper(LOG_LEVEL_INFO, tag, chars, chars_size)
+#define TLOGW_HEX(tag, chars, chars_size) __xlog_internal_hex_helper(LOG_LEVEL_WARN, tag, chars, chars_size)
+#define TLOGE_HEX(tag, chars, chars_size) __xlog_internal_hex_helper(LOG_LEVEL_ERROR, tag, chars, chars_size)
 
-#define LOGV_HEX(chars, chars_len) TLOGV_HEX(NULL, chars, chars_len)
-#define LOGD_HEX(chars, chars_len) TLOGD_HEX(NULL, chars, chars_len)
-#define LOGI_HEX(chars, chars_len) TLOGI_HEX(NULL, chars, chars_len)
-#define LOGW_HEX(chars, chars_len) TLOGW_HEX(NULL, chars, chars_len)
-#define LOGE_HEX(chars, chars_len) TLOGE_HEX(NULL, chars, chars_len)
+#define LOGV_HEX(chars, chars_size) TLOGV_HEX(NULL, chars, chars_size)
+#define LOGD_HEX(chars, chars_size) TLOGD_HEX(NULL, chars, chars_size)
+#define LOGI_HEX(chars, chars_size) TLOGI_HEX(NULL, chars, chars_size)
+#define LOGW_HEX(chars, chars_size) TLOGW_HEX(NULL, chars, chars_size)
+#define LOGE_HEX(chars, chars_size) TLOGE_HEX(NULL, chars, chars_size)
 
 #endif // LCU_XLOG_H

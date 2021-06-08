@@ -6,7 +6,7 @@
 
 #define RING_BUF_TAKE_MIN(a, b) ((a) > (b) ? (b) : (a))
 
-#define __RING_LOG_TAG                     "RING_BUF"
+#define __RING_LOG_TAG                     "R_BUF"
 
 #define RING_LOGV(fmt,...)                 SIMPLE_LOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGD(fmt,...)                 SIMPLE_LOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
@@ -25,13 +25,14 @@ struct __ring_buf_t
 
 ring_handle ring_buf_create(const size_t size) 
 {
-	char* pbuf = (char*)malloc(size);
+	const size_t expect_mem_size = size + sizeof(struct __ring_buf_t);
+	char* pbuf = (char*)malloc(expect_mem_size);
 	if (!pbuf) 
 	{
-		RING_LOGE("failed alloc %zu size for ring_buf", size);
+		RING_LOGE("failed alloc %zu size for ring_buf", expect_mem_size);
 		return NULL;
 	}
-	ring_handle handle = ring_buf_create_with_mem(pbuf, size);
+	ring_handle handle = ring_buf_create_with_mem(pbuf, expect_mem_size);
 	if (!handle) 
 	{
 		RING_LOGE("failed alloc ring_handle");
@@ -50,7 +51,7 @@ ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 	{
 		return NULL;
 	}
-	size_t ring_struct_size = sizeof(struct __ring_buf_t);
+	const size_t ring_struct_size = sizeof(struct __ring_buf_t);
 	if (buf_size < ring_struct_size + 3)
 	{
 		RING_LOGE("buf_size(%zu) is too small", buf_size);
@@ -152,7 +153,7 @@ size_t ring_buf_write(ring_handle handle, void* source, size_t len)
 	if (0 == second_part_len) 
 	{
 		size_t new_offset_write = handle->offset_write + first_part_len;
-		if (new_offset_write == handle->size) 
+		if (new_offset_write == handle->size)
 		{
 			new_offset_write = 0;
 		}

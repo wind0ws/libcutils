@@ -1,6 +1,7 @@
 #include "thread/pthread_win_simple/pthread_win_simple.h"
 
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
+
 static DWORD WINAPI WinThreadStart(LPVOID lpParam);
 
 int pthread_create(pthread_t* tid, const pthread_attr_t* attr, void* (*start)(void*), void* arg)

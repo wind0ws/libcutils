@@ -3,13 +3,14 @@
 #include "thread/thread_wrapper.h"
 #include "common_macro.h"
 
-#define LOG_TAG "TIME_TEST"
+#define LOG_TAG          "TIME_TEST"
+#define HOUR_TO_SECONDS  (3600)
 
 static void* thread_worker(void *param) 
 {
 	const pid_t tid = gettid();
 	TLOGI(LOG_TAG, "mytid=%d", tid);
-	char time_str[TIME_STR_LEN];
+	char time_str[TIME_STR_SIZE];
 	int counter = 0;
 	TLOGI(LOG_TAG, "tid=%d start!", tid);
 	uint64_t cur_millis;
@@ -31,8 +32,8 @@ int time_util_test()
 	time_t t;
 	RANDOM_INIT((unsigned int)time(&t));
 
-	const int timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
-	char time_str[TIME_STR_LEN];
+	const int timezone_hour = time_util_zone_offset_seconds_to_utc() / HOUR_TO_SECONDS;
+	char time_str[TIME_STR_SIZE];
 	time_util_get_current_time_str(time_str, timezone_hour);
 	TLOGD(LOG_TAG, "timezone:%d, current time str is：%s", timezone_hour, time_str);
 

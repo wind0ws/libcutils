@@ -7,7 +7,7 @@
 
 #ifdef _WIN32
 
-// gettimeofday taken from https://git.postgresql.org/gitweb/?p=postgresql.git;a=tree;h=refs/heads/master;hb=refs/heads/master
+// gettimeofday taken from https://doxygen.postgresql.org/gettimeofday_8c_source.html
 
 /* FILETIME of Jan 1 1970 00:00:00, the PostgreSQL epoch */
 static const unsigned __int64 epoch = 116444736000000000UL;
@@ -115,7 +115,7 @@ int time_util_zone_offset_seconds_to_utc()
 }
 
 /**
- * use fast_second2date instead of localtime_r, because locatime_r have performance issue on multi thread.
+ * use fast_second2date instead of localtime_r, because locatime_r have performance issue on multi-thread.
  * take from https://www.cnblogs.com/westfly/p/5139645.html
  */
 int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int timezone_hour)
@@ -145,7 +145,7 @@ int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int time
 	return 0;
 }
 
-static inline int get_current_time_str(char str[TIME_STR_LEN], const char* time_format, const int timezone_hour)
+static inline int get_current_time_str(char str[TIME_STR_SIZE], const char* time_format, const int timezone_hour)
 {
 	struct tm lt;
 	struct timeval tv;
@@ -157,17 +157,17 @@ static inline int get_current_time_str(char str[TIME_STR_LEN], const char* time_
 	time_util_fast_second2date((const time_t*)(&cur_time), &lt, timezone_hour);
 	//return tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 
-	const size_t ftime_len = strftime(str, TIME_STR_LEN, time_format, &lt);
-	snprintf(str + ftime_len, TIME_STR_LEN - ftime_len, ".%03ld", tv.tv_usec / 1000);
-	return 0;
+	int ftime_len = (int)strftime(str, TIME_STR_SIZE, time_format, &lt);
+	ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tv.tv_usec / 1000);
+	return ftime_len;
 }
 
-int time_util_get_current_time_str(char str[TIME_STR_LEN], int timezone_hour)
+int time_util_get_current_time_str(char str[TIME_STR_SIZE], int timezone_hour)
 {
 	return get_current_time_str(str, TIME_STAMP_FORMAT, timezone_hour);
 }
 
-int time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN], int timezone_hour)
+int time_util_get_current_time_str_for_file_name(char str[TIME_STR_SIZE], int timezone_hour)
 {
 	return get_current_time_str(str, TIME_STAMP_FORMAT_FOR_FILE_NAME, timezone_hour);
 }

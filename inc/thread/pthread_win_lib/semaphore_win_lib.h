@@ -37,6 +37,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 #pragma once
+#ifdef _WIN32
 #if !defined( SEMAPHORE_H )
 #define SEMAPHORE_H
 
@@ -104,9 +105,6 @@
 #  endif
 #endif
 
-/*
- *
- */
 
 #if PTW32_SEMAPHORE_LEVEL >= PTW32_SEMAPHORE_LEVEL_MAX
 #if defined(NEED_ERRNO)
@@ -126,7 +124,6 @@ extern "C"
 #if !defined(HAVE_MODE_T)
 typedef unsigned int mode_t;
 #endif
-
 
 typedef struct sem_t_ * sem_t;
 
@@ -168,3 +165,5 @@ PTW32_DLLPORT int __cdecl sem_getvalue (sem_t * sem,
 #undef PTW32_SEMAPHORE_LEVEL_MAX
 
 #endif				/* !SEMAPHORE_H */
+
+#endif // _WIN32

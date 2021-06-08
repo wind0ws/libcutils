@@ -3,7 +3,7 @@
 #include "log/xlog.h"
 #include "mem/strings.h"
 
-static void xlog_custom_user_cb(void* log_msg, void* user_data);
+static void xlog_custom_user_cb(void* log_msg, size_t msg_size, void* user_data);
 static void my_file_logger_lock(void* arg);
 static void my_file_logger_unlock(void* arg);
 
@@ -27,7 +27,8 @@ static logger_config_t g_logger_cfg;
 int file_logger_test_begin()
 {
 	memset(&g_logger_cfg, 0, sizeof(logger_config_t));
-	g_logger_cfg.f_logger_cfg.max_log_queue_size = 128;
+	g_logger_cfg.f_logger_cfg.log_queue_size = 128;
+	g_logger_cfg.f_logger_cfg.is_try_my_best_to_keep_log = true;
 	//g_logger_cfg.f_logger_cfg.one_piece_file_max_len = 1024;//auto slice log file
 	strcpy(g_logger_cfg.f_logger_cfg.log_folder_path, FILE_LOGGER_PATH);
 	strcpy(g_logger_cfg.f_logger_cfg.log_file_name_prefix, "libcutils");
@@ -77,12 +78,12 @@ static void my_file_logger_unlock(void* arg)
 	pthread_mutex_unlock((pthread_mutex_t*)arg);
 }
 
-static void xlog_custom_user_cb(void* log_msg, void* user_data)
+static void xlog_custom_user_cb(void* log_msg, size_t msg_size, void* user_data)
 {
 	file_logger_handle f_logger_hdl = (file_logger_handle)user_data;
 	if (NULL == f_logger_hdl || NULL == log_msg)
 	{
 		return;
 	}
-	file_logger_log(f_logger_hdl, log_msg);
+	file_logger_log(f_logger_hdl, log_msg, msg_size);
 }

@@ -16,12 +16,15 @@ extern "C" {
 #endif // __cplusplus
 
 #ifdef _WIN32
+
+	// transform gmtime_s to gmtime_r
 	static struct tm* gmtime_r(const time_t* timerp, struct tm* result)
 	{
 		gmtime_s(result, timerp);
 		return result;
 	}
 
+	// transform localtime_s to localtime_r
 	static struct tm* localtime_r(const time_t* timerp, struct tm* result)
 	{
 		localtime_s(result, timerp);
@@ -47,23 +50,30 @@ extern "C" {
 	 * timezone_hour is the offset hour to UTC.
 	 * this function just like localtime_r, but need caller provide timezone for calculate.
 	 * use this function instead of localtime_r, because localtime_r have performance issue on multi thread.
+	 * 
+	 * @param p_unix_sec UTC seconds since 1970,1,1
+	 * @param lt local time
+	 * @param timezone_hour timezone, should between -12 ~ 12
+	 * @return 0 for succeed
 	 */
 	int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int timezone_hour);
 
-#define TIME_STR_LEN (24)
+#define TIME_STR_SIZE (24)
 
 	/**
 	 * get current time str, contains milliseconds.
 	 * timezone_hour is the offset hour to UTC.
+	 * @return time string length.
 	 */
-	int time_util_get_current_time_str(char str[TIME_STR_LEN], int timezone_hour);
+	int time_util_get_current_time_str(char str[TIME_STR_SIZE], int timezone_hour);
 
 	/**
 	 * get current time str for file name.
 	 * this function just like time_util_get_current_time_str,
 	 * but replace colon to underline, because file name can not contains colon.
+	 * @return time string length.
 	 */
-	int time_util_get_current_time_str_for_file_name(char str[TIME_STR_LEN], int timezone_hour);
+	int time_util_get_current_time_str_for_file_name(char str[TIME_STR_SIZE], int timezone_hour);
 
 	/**
 	 * get current milliseconds. since 1970 Jan 1.

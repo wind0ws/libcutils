@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.4.1 LANGUAGES C CXX)
+project(libcutils VERSION 1.5.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -16,8 +16,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
-option(BUILD_SHARED_LIBS "Build the shared library" OFF)
+option(BUILD_SHARED_LIBS "Build the shared library" ON)
 option(BUILD_TESTS "Build test programs" ON)
+
+#detect current TARGET_ABI
+IF(ANDROID)
+  set(TARGET_ABI ${ANDROID_ABI})
+ELSEIF(WIN32)
+  IF(CMAKE_CL_64)
+    set(TARGET_ABI x64)
+  ELSE(CMAKE_CL_64)
+    set(TARGET_ABI x86)
+  ENDIF(CMAKE_CL_64)
+ELSE()
+  IF(CMAKE_C_FLAGS MATCHES "m32")
+    set(TARGET_ABI x86)
+  ELSE()
+    set(TARGET_ABI x64)
+  ENDIF()
+ENDIF(ANDROID)
 
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
 #get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
@@ -66,6 +83,32 @@ else()
 endif(ARG_LCU_OUTPUT_DIR)
 message(STATUS "current LCU_OUTPUT_DIR => ${LCU_OUTPUT_DIR}")
 
+IF (WIN32)
+  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/windows")
+ELSEIF (ANDROID)
+  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/android")
+ELSE()
+  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/linux")
+ENDIF (WIN32)
+set(DEPLOY_DIR "${DEPLOY_DIR}/${TARGET_ABI}")
+message(STATUS  "DEPLOY_DIR => ${DEPLOY_DIR}")
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DEPLOY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${DEPLOY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${DEPLOY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${DEPLOY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${DEPLOY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${DEPLOY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${DEPLOY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${DEPLOY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${DEPLOY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
+
+
 #add compile/optimize options for DEBUG/RELEASE
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
@@ -97,15 +140,15 @@ endif ()
 #add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
 #add_definitions("-DCURL_STATICLIB")
 IF(WIN32)
-  if(NOT "${CMAKE_CL_64}" MATCHES "0") 
-	message(STATUS "current build for WIN x64")
-  	set(WIN_ABI "x64")
-  else()
-    message(STATUS "current build for WIN x86")
-    set(WIN_ABI "x86")	
-  endif()
   #supress warnings for VS
   add_compile_options( /wd4819 )
+  #add optimiziation options
+  add_compile_options(/bigobj /nologo /EHsc /GF /MP)
+  #solution folder
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  #put ZERO_CHECK/ALL_BUILD in all_targets folder
+  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
+  
   #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
@@ -118,7 +161,6 @@ ELSE() # for unix
   #add _GNU_SOURCE for pthread
   add_compile_options(-D_GNU_SOURCE)
 ENDIF(WIN32)
-
 
 set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
 configure_file(
@@ -149,12 +191,14 @@ file(GLOB_RECURSE OUT_H_IN_FILES ${LCU_OUTPUT_DIR}/inc/config/*.h.in)
 file(REMOVE ${OUT_H_IN_FILES})
 file(GLOB_RECURSE GENERATE_H_FILES ${CMAKE_BINARY_DIR}/generate/*.h)
 file(COPY ${GENERATE_H_FILES} DESTINATION ${LCU_OUTPUT_DIR}/inc/config/)
-file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${LCU_OUTPUT_DIR}/libs/)
+#file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${LCU_OUTPUT_DIR}/libs/)
 #=====================PUBLISH HEADER END=====================
 
+#=====================COLLECT SRC BEGIN=====================
 #collect src to "LCU_SRCS" 
 #aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
-file(GLOB_RECURSE LCU_SRCS "${LCU_ROOT_DIR}/src/*.c" "${LCU_ROOT_DIR}/src/*.cpp" "${LCU_ROOT_DIR}/src/*.hpp" "${LCU_ROOT_DIR}/src/*.cxx")
+set(LCU_SRC_DIR "${LCU_ROOT_DIR}/src")
+file(GLOB_RECURSE LCU_SRCS "${LCU_SRC_DIR}/*.c" "${LCU_SRC_DIR}/*.cpp" "${LCU_SRC_DIR}/*.hpp" "${LCU_SRC_DIR}/*.cxx")
 message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 
 #set(LCU_TEST_SRCS
@@ -162,8 +206,10 @@ message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
 #		${LCU_ROOT_DIR}/test/file_logger_test.c
 #		${LCU_ROOT_DIR}/test/main.c
 #)
-file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_ROOT_DIR}/test/*.c" "${LCU_ROOT_DIR}/test/*.cpp" "${LCU_ROOT_DIR}/test/*.hpp")
+set(LCU_TEST_SRC_DIR "${LCU_ROOT_DIR}/test")
+file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_TEST_SRC_DIR}/*.c" "${LCU_TEST_SRC_DIR}/*.cpp" "${LCU_TEST_SRC_DIR}/*.hpp")
 message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
+#=====================COLLECT SRC END=====================
 
 #====================SOURCE_GROUP BEGIN====================
 # make Source tree as same as your folder structure.		
@@ -192,68 +238,74 @@ source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
 #source_group_by_dir(all_files)
 #====================SOURCE_GROUP   END====================
 
-add_library(lcu_static
+set(target_lcu_static "lcu_static")
+set(target_lcu_shared "lcu_shared")
+set(target_lcu_test   "libcutils_test")
+
+add_library(${target_lcu_static}
 			STATIC
 			${LCU_SRCS})
 			
-add_library(lcu_shared
+add_library(${target_lcu_shared}
 			SHARED
 			${LCU_SRCS})
 			
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(lcu_static PROPERTIES OUTPUT_NAME "lcu_a")
-set_target_properties(lcu_shared PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
+set_target_properties(${target_lcu_shared} PROPERTIES OUTPUT_NAME "lcu")
 # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
-#set_target_properties(lcu_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-#set_target_properties(lcu_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(${target_lcu_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(${target_lcu_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-set_target_properties(lcu_shared PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+set_target_properties(${target_lcu_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
 			
-add_executable(libcutils_test
+add_executable(${target_lcu_test}
 		${LCU_TEST_SRCS})			
 
-if(ANDROID)
-# Searches for a specified prebuilt library and stores the path as a
-# variable. Because CMake includes system libraries in the search path by
-# default, you only need to specify the name of the public NDK library
-# you want to add. CMake verifies that the library exists before
-# completing its build.
-
-find_library( # Sets the name of the path variable.
-        log-lib
-
-        # Specifies the name of the NDK library that
-        # you want CMake to locate.
-        log)
-
-#find_library( # Sets the name of the path variable.
-#        z-lib
-#
-#        # Specifies the name of the NDK library that
-#        # you want CMake to locate.
-#        z)
-else()
-set(log-lib "")
-endif(ANDROID)
-
 IF(UNIX)
-  message(STATUS "Current build system is unix!!!")
+  message(STATUS "Current build system is unix!")
   find_package(Threads REQUIRED)
   set(pthread-lib ${CMAKE_THREAD_LIBS_INIT})
   #target_link_libraries(my_app Threads::Threads)
+
+  if(ANDROID)
+    # Searches for a specified prebuilt library and stores the path as a
+    # variable. Because CMake includes system libraries in the search path by
+    # default, you only need to specify the name of the public NDK library
+    # you want to add. CMake verifies that the library exists before
+    # completing its build.
+    
+    find_library( # Sets the name of the path variable.
+            log-lib
+    
+            # Specifies the name of the NDK library that
+            # you want CMake to locate.
+            log)
+    
+    #find_library( # Sets the name of the path variable.
+    #        z-lib
+    #
+    #        # Specifies the name of the NDK library that
+    #        # you want CMake to locate.
+    #        z)
+  else()
+    set(log-lib "")
+  endif(ANDROID)
 ELSEIF(WIN32)
-  message(STATUS "Current build system is WIN32!!!")
+  message(STATUS "Current build system is WIN32!")
+  # set vs startup project
+  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_lcu_test})
+  #set_property(TARGET ${target_lcu_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   if("${LCU_WIN_PTHREAD_MODE}" MATCHES "0")
 	 message(STATUS "use pthread_win_lib")
 	 #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
-	 set(pthread-lib "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.lib")
+	 set(pthread-lib "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.lib")
 	 
-	 #copy_file_on_post_build(libcutils_test "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll")
-	 #copy_file_on_post_build_to_all_targets("${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll")
-	 #set(dll_files "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll" "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadGC2.dll")
-	 set(dll_files "${LCU_ROOT_DIR}/libs/win/${WIN_ABI}/pthreadVC2.dll")
-	 message(STATUS "dll_files=>${dll_files}")
+	 #copy_file_on_post_build(${target_lcu_test} "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build_to_all_targets("${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 set(dll_files "${pthread-lib}" "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 message(STATUS "dll_files => ${dll_files}")
 	 #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
 	 copy_file_on_post_build_to_all_targets(dll_files)
   else()
@@ -261,29 +313,35 @@ ELSEIF(WIN32)
   endif()
 ELSE()
   set(pthread-lib "")
-ENDIF(UNIX)	
+  set(log-lib "")
+ENDIF(UNIX)
 
-message(STATUS "pthread-lib now is: ${pthread-lib}")	
+message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
+
+#依赖的动态库目录
+#link_directories(
+#     /xxx/xxx/lib
+#)	
 
 #================declare dependencies of build target BEGIN================
 target_link_libraries( # Specifies the target library.
-        lcu_static PUBLIC
+        ${target_lcu_static} PUBLIC
 
 		${pthread-lib}
         ${log-lib}
         )
 		
 target_link_libraries( # Specifies the target library.
-        lcu_shared PUBLIC
+        ${target_lcu_shared} PUBLIC
 
 		${pthread-lib}
         ${log-lib}
         )		
 
 target_link_libraries( # Specifies the target library.
-        libcutils_test
+        ${target_lcu_test}
 
-		lcu_static
+		${target_lcu_static}
 		#${pthread-lib}
 		#${log-lib}
         )		

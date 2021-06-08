@@ -79,7 +79,7 @@ extern inline bool fixed_msg_queue_is_full(__in fixed_msg_queue fixed_msg_queue_
     return fixed_msg_queue_available_push_msg_amount(fixed_msg_queue_p) == 0;
 }
 
-void fixed_msg_queue_destroy(__in fixed_msg_queue *fixed_msg_queue_pp) 
+void fixed_msg_queue_destroy(__inout fixed_msg_queue *fixed_msg_queue_pp) 
 {
     if (NULL == fixed_msg_queue_pp || NULL == *fixed_msg_queue_pp)
     {

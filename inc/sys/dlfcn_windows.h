@@ -18,18 +18,22 @@
  * Reference: https://github.com/dlfcn-win32/dlfcn-win32
  */
 #pragma once
-#ifndef __LCU_DLFCN_WINDOWS_H
-#define __LCU_DLFCN_WINDOWS_H
+#ifndef LCU_DLFCN_WINDOWS_H
+#define LCU_DLFCN_WINDOWS_H
 
-//do not include this header directly, you should include "dlfcn_wrapper.h" instead!
+ //do not include this header directly, you should include "dlfcn_wrapper.h" instead!
 #ifdef _WIN32
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if defined(DLFCN_WIN32_SHARED)
 #if defined(DLFCN_WIN32_EXPORTS)
 #   define DLFCN_EXPORT __declspec(dllexport)
+#else
+#   define DLFCN_EXPORT __declspec(dllimport)
+#endif
 #else
 #   define DLFCN_EXPORT
 #endif
@@ -43,7 +47,7 @@ extern "C" {
  */
 #define RTLD_LAZY   RTLD_NOW
 
-/* All symbols are available for relocation processing of other modules. */
+ /* All symbols are available for relocation processing of other modules. */
 #define RTLD_GLOBAL (1 << 1)
 
 /* All symbols are not made available for relocation processing by other modules. */
@@ -53,23 +57,35 @@ extern "C" {
  * Note: All other RTLD_* flags in any dlfcn.h are not standard compliant.
  */
 
-/* The symbol lookup happens in the normal global scope. */
+ /* The symbol lookup happens in the normal global scope. */
 #define RTLD_DEFAULT    ((void *)0)
 
 /* Specifies the next object after this one that defines name. */
 #define RTLD_NEXT       ((void *)-1)
 
+/* Structure filled in by dladdr() */
+typedef struct dl_info
+{
+	const char* dli_fname;  /* Filename of defining object (thread unsafe and reused on every call to dladdr) */
+	void* dli_fbase;  /* Load address of that object */
+	const char* dli_sname;  /* Name of nearest lower symbol */
+	void* dli_saddr;  /* Exact value of nearest symbol */
+} Dl_info;
+
 /* Open a symbol table handle. */
-DLFCN_EXPORT void *dlopen(const char *file, int mode);
+DLFCN_EXPORT void* dlopen(const char* file, int mode);
 
 /* Close a symbol table handle. */
-DLFCN_EXPORT int dlclose(void *handle);
+DLFCN_EXPORT int dlclose(void* handle);
 
 /* Get the address of a symbol from a symbol table handle. */
-DLFCN_EXPORT void *dlsym(void *handle, const char *name);
+DLFCN_EXPORT void* dlsym(void* handle, const char* name);
 
 /* Get diagnostic information. */
-DLFCN_EXPORT char *dlerror(void);
+DLFCN_EXPORT char* dlerror(void);
+
+/* Translate address to symbolic information (no POSIX standard) */
+DLFCN_EXPORT int dladdr(const void* addr, Dl_info* info);
 
 #ifdef __cplusplus
 }
@@ -77,4 +93,4 @@ DLFCN_EXPORT char *dlerror(void);
 
 #endif // _WIN32
 
-#endif /* __LCU_DLFCN_WINDOWS_H */
+#endif /* LCU_DLFCN_WINDOWS_H */

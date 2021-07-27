@@ -24,18 +24,29 @@ struct __auto_cover_buf
 	buf_handle->buf_lock.release(buf_handle->buf_lock.arg);\
 };
 
-
 auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_buf_lock_t *buf_lock_p)
 {
-	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)malloc(sizeof(struct __auto_cover_buf));
-	ASSERT(buf_handle);
+	const size_t expect_mem_size = capacity_size + sizeof(struct __auto_cover_buf);
+	char * raw_mem = (char *)malloc(expect_mem_size);
+	if (!raw_mem)
+	{
+		return NULL;
+	}
+	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)(raw_mem);
+#ifdef _WIN32
+#pragma warning(suppress:6386)
+#endif // _WIN32
 	memset(buf_handle, 0, sizeof(struct __auto_cover_buf));
 	if (buf_lock_p)
 	{
 		memcpy(&buf_handle->buf_lock, buf_lock_p, sizeof(auto_cover_buf_lock_t));
 	}
-	buf_handle->ring = RingBuffer_create(capacity_size);
-	ASSERT(buf_handle->ring);
+	buf_handle->ring = RingBuffer_create_with_mem(raw_mem + sizeof(struct __auto_cover_buf), capacity_size);
+	if (!buf_handle->ring)
+	{
+		free(buf_handle);
+		return NULL;
+	}
 	buf_handle->ring_buffer_size = RingBuffer_real_capacity(buf_handle->ring);
 	return buf_handle;
 }

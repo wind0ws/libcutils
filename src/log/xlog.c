@@ -37,9 +37,9 @@
 #define LEVEL_CHAR_E ('E')
 
 #ifdef _WIN32
-#define STDOUT ("CON")
+#define STDOUT_NODE ("CON")
 #else
-#define STDOUT ("/dev/tty")
+#define STDOUT_NODE ("/dev/tty")
 #endif // _WIN32
 
 #define CONSOLE_LOG_CONFIG_METHOD          printf
@@ -141,7 +141,7 @@ void xlog_back2stdout()
 	fflush(g_xlog_cfg.fp_stdout);
 	fclose(g_xlog_cfg.fp_stdout);
 	g_xlog_cfg.fp_stdout = NULL;
-	if (!freopen(STDOUT, "w", stdout))
+	if (!freopen(STDOUT_NODE, "w", stdout))
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
 	}
@@ -248,7 +248,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	{
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP)
 		{
-			header_len += time_util_get_current_time_str(buffer_log, g_xlog_cfg.timezone_hour);
+			header_len += time_util_get_time_str_current(buffer_log, g_xlog_cfg.timezone_hour);
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
 		{

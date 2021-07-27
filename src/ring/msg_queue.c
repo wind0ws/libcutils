@@ -18,15 +18,17 @@ msg_queue msg_queue_create(__in uint32_t buf_size)
 	{
 		return NULL;
 	}
-	msg_queue msg_queue_p = calloc(1, sizeof(struct __msg_queue));
-	if (!msg_queue_p)
+	const size_t expect_mem_size = buf_size + sizeof(struct __msg_queue);
+	char *raw_mem = (char *)malloc(expect_mem_size);
+	if (!raw_mem)
 	{
 		return NULL;
 	}
-	msg_queue_p->ring_buf_p = RingBuffer_create(buf_size);
+	msg_queue msg_queue_p = (msg_queue)raw_mem;
+	msg_queue_p->ring_buf_p = RingBuffer_create_with_mem(raw_mem + sizeof(struct __msg_queue), buf_size);
 	if (!msg_queue_p->ring_buf_p)
 	{
-		free(msg_queue_p);
+		free(raw_mem);
 		return NULL;
 	}
 	return msg_queue_p;

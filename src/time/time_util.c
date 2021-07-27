@@ -1,9 +1,32 @@
 #include "time/time_util.h"
+#include "mem/strings.h"
 #include <stdio.h>
 #include "common_macro.h"
 
+#define USE_TIME_CAHE   (1)
+
 #define TIME_STAMP_FORMAT ("%m-%d %H:%M:%S")
 #define TIME_STAMP_FORMAT_FOR_FILE_NAME ("%m-%d %H_%M_%S")
+
+#if(defined(USE_TIME_CAHE) && USE_TIME_CAHE)
+#define GET_TIME_FORMAT_TYPE(fmt) ((fmt[8] == ':') ? 0 : 1) 
+//static char const* g_time_formats[] = { TIME_STAMP_FORMAT, TIME_STAMP_FORMAT_FOR_FILE_NAME };
+typedef enum 
+{
+	TIME_FMT_WRITE_CACHE_STATUS_IDLE = 0,
+	TIME_FMT_WRITE_CACHE_STATUS_WRITING 
+}time_fmt_write_cache_status;
+
+typedef struct
+{
+	long    tv_sec;
+	int     timezone_hour;
+	char    format_cache[TIME_STR_SIZE];
+	volatile time_fmt_write_cache_status write_status;
+}time_cache_t;
+
+static time_cache_t g_time_caches[2] = { 0 };
+#endif // USE_TIME_CAHE
 
 #ifdef _WIN32
 
@@ -81,8 +104,8 @@ static void WINAPI init_gettimeofday(LPFILETIME lpSystemTimeAsFileTime)
 int gettimeofday(struct timeval* tp, struct timezone* tzp)
 {
 	UNUSED(tzp);
-	FILETIME    file_time;
-	ULARGE_INTEGER ularge;
+	FILETIME    file_time = {0};
+	ULARGE_INTEGER ularge = {0};
 
 	(*lcu_get_system_time) (&file_time);
 	ularge.LowPart = file_time.dwLowDateTime;
@@ -116,7 +139,7 @@ int time_util_zone_offset_seconds_to_utc()
 
 /**
  * use fast_second2date instead of localtime_r, because locatime_r have performance issue on multi-thread.
- * take from https://www.cnblogs.com/westfly/p/5139645.html
+ * taken from https://www.cnblogs.com/westfly/p/5139645.html
  */
 int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int timezone_hour)
 {
@@ -145,38 +168,72 @@ int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int time
 	return 0;
 }
 
-static inline int get_current_time_str(char str[TIME_STR_SIZE], const char* time_format, const int timezone_hour)
+static inline int get_time_str(struct timeval *tval_p, char str[TIME_STR_SIZE], const char* time_format, const int timezone_hour)
 {
-	struct tm lt;
-	struct timeval tv;
-	time_t cur_time;
+	int ftime_len = 0;
+	time_t cur_time = (time_t)(tval_p->tv_sec);
 
-	gettimeofday(&tv, NULL); // get current time
-	cur_time = (time_t)(tv.tv_sec);
-	//localtime_r((const time_t*)(&cur_time), &lt);//here has performance issues on multithread.
-	time_util_fast_second2date((const time_t*)(&cur_time), &lt, timezone_hour);
-	//return tv.tv_sec * 1000LL + tv.tv_usec / 1000;
-
-	int ftime_len = (int)strftime(str, TIME_STR_SIZE, time_format, &lt);
-	ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tv.tv_usec / 1000);
+#if(defined(USE_TIME_CAHE) && USE_TIME_CAHE)
+	time_cache_t *cache_p = &g_time_caches[GET_TIME_FORMAT_TYPE(time_format)];
+	if (cache_p->timezone_hour == timezone_hour && cache_p->tv_sec == tval_p->tv_sec)
+	{	// hit cache, just copy cached time string
+		ftime_len = strlcpy(str, cache_p->format_cache, TIME_STR_SIZE);
+	}
+	else
+	{
+#endif // USE_TIME_CAHE
+		struct tm lt;
+		//localtime_r((const time_t*)(&cur_time), &lt);//here has performance issues on multithread.
+		time_util_fast_second2date((const time_t*)(&cur_time), &lt, timezone_hour);
+		ftime_len = (int)strftime(str, TIME_STR_SIZE, time_format, &lt);
+#if(defined(USE_TIME_CAHE) && USE_TIME_CAHE)
+		if (cache_p->timezone_hour == 0)
+		{	// only cache one timezone
+			cache_p->timezone_hour = timezone_hour;
+		}
+		if (cache_p->timezone_hour == timezone_hour && cache_p->tv_sec != tval_p->tv_sec &&
+			cache_p->write_status == TIME_FMT_WRITE_CACHE_STATUS_IDLE)
+		{
+			cache_p->write_status = TIME_FMT_WRITE_CACHE_STATUS_WRITING;
+			strlcpy(cache_p->format_cache, str, TIME_STR_SIZE);
+			cache_p->tv_sec = tval_p->tv_sec;
+			cache_p->write_status = TIME_FMT_WRITE_CACHE_STATUS_IDLE;
+		}
+	}
+#endif // USE_TIME_CAHE
+	ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
 	return ftime_len;
 }
 
-int time_util_get_current_time_str(char str[TIME_STR_SIZE], int timezone_hour)
+int time_util_get_time_str(struct timeval* tval_p, char str[TIME_STR_SIZE], int timezone_hour)
 {
-	return get_current_time_str(str, TIME_STAMP_FORMAT, timezone_hour);
+	return get_time_str(tval_p, str, TIME_STAMP_FORMAT, timezone_hour);
 }
 
-int time_util_get_current_time_str_for_file_name(char str[TIME_STR_SIZE], int timezone_hour)
+int time_util_get_time_str_current(char str[TIME_STR_SIZE], int timezone_hour)
 {
-	return get_current_time_str(str, TIME_STAMP_FORMAT_FOR_FILE_NAME, timezone_hour);
+	struct timeval tv;
+	gettimeofday(&tv, NULL); // get current time
+	return get_time_str(&tv, str, TIME_STAMP_FORMAT, timezone_hour);
 }
 
-void time_util_current_milliseconds(uint64_t* p_cur_ms)
+int time_util_get_time_str_for_file_name(struct timeval* tval_p, char str[TIME_STR_SIZE], int timezone_hour)
 {
-	STATIC_ASSERT(sizeof(uint64_t) == sizeof(struct timeval));
-	gettimeofday((struct timeval*)p_cur_ms, NULL);
-	*p_cur_ms = ((struct timeval*)p_cur_ms)->tv_sec * 1000LL + ((struct timeval*)p_cur_ms)->tv_usec / 1000;
+	return get_time_str(tval_p, str, TIME_STAMP_FORMAT_FOR_FILE_NAME, timezone_hour);
+}
+
+int time_util_get_time_str_for_file_name_current(char str[TIME_STR_SIZE], int timezone_hour)
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL); // get current time
+	return get_time_str(&tv, str, TIME_STAMP_FORMAT_FOR_FILE_NAME, timezone_hour);
+}
+
+void time_util_current_ms(uint64_t* p_cur_ms)
+{
+	struct timeval cur_time;
+	gettimeofday(&cur_time, NULL);
+	*p_cur_ms = (cur_time.tv_sec * 1000 + cur_time.tv_usec / 1000);
 }
 
 void time_util_query_performance_ms(uint64_t* p_cur_ms)
@@ -196,6 +253,6 @@ void time_util_query_performance_ms(uint64_t* p_cur_ms)
 	QueryPerformanceCounter((LARGE_INTEGER*)p_cur_ms);
 	*p_cur_ms = (*p_cur_ms) / mill_frequency;
 #else
-	time_util_current_milliseconds(p_cur_ms);
+	time_util_current_ms(p_cur_ms);
 #endif // _WIN32
 }

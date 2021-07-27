@@ -4,13 +4,13 @@
 #include <malloc.h> /* for malloc/free */
 #include <string.h> /* for memcpy */
 
-#define _RING_LOG_TAG                     "RING_BUF"
+#define _RING_LOG_TAG         "RING_BUF"
 
-#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)    SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)    SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)    SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)    SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)    SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #ifndef TAKE_MIN
 /* take min value of a,b */
@@ -48,14 +48,41 @@ static inline uint32_t roundup_pow_of_two(uint32_t x)
 
 struct __ring_buffer_t
 {
-	uint32_t in;               /* position of writer  */
-	uint32_t out;              /* position of reader  */
-	uint32_t size;             /* ring buffer size    */
-	char* buf;                 /* ring buffer pointer, buf size must be power of 2 */
-	bool is_internal_malloced; /* mark buffer whether is allocated by ourself */
+	bool need_free_myself; /* mark struct and buffer whether is allocated by ourself */
+	uint32_t in;           /* position of writer  */
+	uint32_t out;          /* position of reader  */
+	uint32_t size;         /* ring buffer size    */
+	char* buf;             /* ring buffer pointer, buf size must be power of 2 */
 };
 
-//buf_size must be power of 2.
+ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
+{
+	if (!buf)
+	{
+		return NULL;
+	}
+	uint32_t ring_buffer_struct_size = (uint32_t)sizeof(struct __ring_buffer_t);
+	if (buf_size < ring_buffer_struct_size + 4)
+	{
+		RING_LOGE("invalid buf_size: %u", buf_size);
+		return NULL;
+	}
+	uint32_t ring_buf_size = buf_size - ring_buffer_struct_size;
+	if (!is_power_of_2(ring_buf_size))
+	{
+		RING_LOGW("RingBuffer_create_with_mem buf_size=%u is not power of 2", ring_buf_size);
+		ring_buf_size = roundup_pow_of_two(ring_buf_size) >> 1;
+		RING_LOGW("RingBuffer_create_with_mem changed buf_size to %u ", ring_buf_size);
+	}
+	ring_buf_handle ring_buffer_p = (ring_buf_handle)buf;
+	ring_buffer_p->need_free_myself = false;
+	ring_buffer_p->buf = buf + ring_buffer_struct_size;
+	ring_buffer_p->size = ring_buf_size;
+	ring_buffer_p->in = 0;
+	ring_buffer_p->out = 0;
+	return ring_buffer_p;
+}
+
 ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 {
 	if (buf_size < 2)
@@ -83,36 +110,7 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 		free(raw_memory);
 		return NULL;
 	}
-	ring_buffer_p->is_internal_malloced = true;
-	return ring_buffer_p;
-}
-
-ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
-{
-	if (!buf)
-	{
-		return NULL;
-	}
-	uint32_t ring_buffer_struct_size = (uint32_t)sizeof(struct __ring_buffer_t);
-	if (buf_size < ring_buffer_struct_size + 4)
-	{
-		RING_LOGE("invalid buf_size: %u", buf_size);
-		return NULL;
-	}
-	uint32_t ring_buf_size = buf_size - ring_buffer_struct_size;
-	if (!is_power_of_2(ring_buf_size))
-	{
-		RING_LOGW("RingBuffer_create_with_mem buf_size=%u is not power of 2", ring_buf_size);
-		ring_buf_size = roundup_pow_of_two(ring_buf_size) >> 1;
-		RING_LOGW("RingBuffer_create_with_mem changed buf_size to %u ", ring_buf_size);
-	}
-
-	ring_buf_handle ring_buffer_p = (ring_buf_handle)buf;
-	ring_buffer_p->is_internal_malloced = false;
-	ring_buffer_p->buf = buf + ring_buffer_struct_size;
-	ring_buffer_p->size = ring_buf_size;
-	ring_buffer_p->in = 0;
-	ring_buffer_p->out = 0;
+	ring_buffer_p->need_free_myself = true;
 	return ring_buffer_p;
 }
 
@@ -127,9 +125,10 @@ void RingBuffer_destroy(__in ring_buf_handle* ring_buf_pp)
 	ring_buffer_p->out = 0;
 	ring_buffer_p->size = 0;
 
-	if (ring_buffer_p->is_internal_malloced)
+	if (ring_buffer_p->need_free_myself)
 	{
 		ring_buffer_p->buf = NULL; // buf memory is in handle
+		ring_buffer_p->need_free_myself = false;
 		free(ring_buffer_p);
 	}
 	*ring_buf_pp = NULL;
@@ -188,7 +187,7 @@ uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void
 	uint32_t start = 0, first_part_len = 0, rest_len = 0;
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
-#endif
+#endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t available_space = RingBuffer_available_write(ring_buf_p);
 	size = TAKE_MIN(size, available_space);
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
@@ -196,7 +195,7 @@ uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void
 	{
 		return 0;
 	}
-#endif
+#endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	/* first put the data starting from fifo->in to buffer end */
 	start = ring_buf_p->in & (ring_buf_p->size - 1);
 	uint32_t first_part_max_len = ring_buf_p->size - start;
@@ -223,7 +222,7 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_pee
 	uint32_t start = 0, first_part_len = 0, rest_len = 0;
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
-#endif
+#endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t available_data = RingBuffer_available_read(ring_buf_p);
 	size = TAKE_MIN(size, available_data);
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
@@ -231,7 +230,7 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_pee
 	{
 		return 0;
 	}
-#endif
+#endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	/* first get the data from fifo->out until the end of the buffer */
 	start = ring_buf_p->out & (ring_buf_p->size - 1);
 	uint32_t first_part_max_len = ring_buf_p->size - start;

@@ -1,4 +1,4 @@
-@ECHO OFF&PUSHD %~DP0 &TITLE setup_env &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE setup_env &color 0A
 
 set CMAKE_BIN=D:\Env\cmake\bin\cmake.exe
 

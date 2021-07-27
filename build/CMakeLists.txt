@@ -90,7 +90,7 @@ ELSEIF (ANDROID)
 ELSE()
   set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/linux")
 ENDIF (WIN32)
-set(DEPLOY_DIR "${DEPLOY_DIR}/${TARGET_ABI}")
+  set(DEPLOY_DIR "${DEPLOY_DIR}/${TARGET_ABI}")
 message(STATUS  "DEPLOY_DIR => ${DEPLOY_DIR}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DEPLOY_DIR})
@@ -248,11 +248,14 @@ add_library(${target_lcu_static}
 			
 add_library(${target_lcu_shared}
 			SHARED
-			${LCU_SRCS})
+			${LCU_SRCS}
+			)
 			
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
 set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
 set_target_properties(${target_lcu_shared} PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(${target_lcu_static} PROPERTIES LINK_FLAGS_RELEASE -s)
+set_target_properties(${target_lcu_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
 # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
 #set_target_properties(${target_lcu_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 #set_target_properties(${target_lcu_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)

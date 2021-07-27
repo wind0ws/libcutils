@@ -18,14 +18,14 @@ extern "C" {
 #ifdef _WIN32
 
 	// transform gmtime_s to gmtime_r
-	static struct tm* gmtime_r(const time_t* timerp, struct tm* result)
+	static inline struct tm* gmtime_r(const time_t* timerp, struct tm* result)
 	{
 		gmtime_s(result, timerp);
 		return result;
 	}
 
 	// transform localtime_s to localtime_r
-	static struct tm* localtime_r(const time_t* timerp, struct tm* result)
+	static inline struct tm* localtime_r(const time_t* timerp, struct tm* result)
 	{
 		localtime_s(result, timerp);
 		return result;
@@ -51,9 +51,9 @@ extern "C" {
 	 * this function just like localtime_r, but need caller provide timezone for calculate.
 	 * use this function instead of localtime_r, because localtime_r have performance issue on multi thread.
 	 * 
-	 * @param p_unix_sec UTC seconds since 1970,1,1
-	 * @param lt local time
-	 * @param timezone_hour timezone, should between -12 ~ 12
+	 * @param p_unix_sec : UTC seconds since 1970,1,1
+	 * @param lt : local time
+	 * @param timezone_hour : timezone, should between -12 ~ 12
 	 * @return 0 for succeed
 	 */
 	int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int timezone_hour);
@@ -61,25 +61,37 @@ extern "C" {
 #define TIME_STR_SIZE (24)
 
 	/**
+	 * get time str, contains milliseconds. 
+	 * how to get struct timeval : struct timeval tv; gettimeofday(&tv, NULL);
+	 */
+	int time_util_get_time_str(struct timeval* tval_p, char str[TIME_STR_SIZE], int timezone_hour);
+
+	/**
 	 * get current time str, contains milliseconds.
-	 * timezone_hour is the offset hour to UTC.
+	 * @param timezone_hour : the offset hour to UTC.
 	 * @return time string length.
 	 */
-	int time_util_get_current_time_str(char str[TIME_STR_SIZE], int timezone_hour);
+	int time_util_get_time_str_current(char str[TIME_STR_SIZE], int timezone_hour);
+
+	/**
+	 * get time str for file name.
+	 * how to get struct timeval : struct timeval tv; gettimeofday(&tv, NULL);
+	 */
+	int time_util_get_time_str_for_file_name(struct timeval* tval_p, char str[TIME_STR_SIZE], int timezone_hour);
 
 	/**
 	 * get current time str for file name.
-	 * this function just like time_util_get_current_time_str,
+	 * this function just like time_util_get_time_str_current,
 	 * but replace colon to underline, because file name can not contains colon.
 	 * @return time string length.
 	 */
-	int time_util_get_current_time_str_for_file_name(char str[TIME_STR_SIZE], int timezone_hour);
+	int time_util_get_time_str_for_file_name_current(char str[TIME_STR_SIZE], int timezone_hour);
 
 	/**
 	 * get current milliseconds. since 1970 Jan 1.
 	 * implement by gettimeofday, so timezone is your current locale.
 	 */
-	void time_util_current_milliseconds(uint64_t* p_cur_ms);
+	void time_util_current_ms(uint64_t* p_cur_ms);
 
 	/**
 	 * get current milliseconds tick for compare performance.

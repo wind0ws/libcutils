@@ -129,7 +129,7 @@ void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 	if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
 	{
 		char cur_time[TIME_STR_SIZE];
-		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
+		time_util_get_time_str_for_file_name_current(cur_time, handle->timezone_hour);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%slost_%s_%s.log",
 			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
@@ -180,7 +180,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 	{
 		file_util_mkdirs(handle->cfg.log_folder_path);
 		char cur_time[TIME_STR_SIZE];
-		time_util_get_current_time_str_for_file_name(cur_time, handle->timezone_hour);
+		time_util_get_time_str_for_file_name_current(cur_time, handle->timezone_hour);
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");

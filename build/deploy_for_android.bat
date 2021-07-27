@@ -1,11 +1,25 @@
-@ECHO OFF&PUSHD %~DP0 &TITLE deploy_android &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE deploy_android &color 0A
 
+set BUILD_SCRIPT=make_android.bat
 ::param 1 for arch
 ::param 2 for build type
-call make_android.bat armeabi-v7a Release
-call make_android.bat arm64-v8a Release
-call make_android.bat x86 Release
-call make_android.bat x86_64 Release
+call %BUILD_SCRIPT% armeabi-v7a Release
+IF %ERRORLEVEL% NEQ 0 goto label_build_failed
+call %BUILD_SCRIPT% arm64-v8a Release
+IF %ERRORLEVEL% NEQ 0 goto label_build_failed
+call %BUILD_SCRIPT% x86 Release
+IF %ERRORLEVEL% NEQ 0 goto label_build_failed
+call %BUILD_SCRIPT% x86_64 Release
+IF %ERRORLEVEL% NEQ 0 (goto label_build_failed) else (goto label_build_succeed)
 
+:label_build_failed
 @echo.
-@echo deploy finished...
+@echo  ===========Error on build, check log above===========
+@echo.
+@exit /b 1
+
+
+:label_build_succeed
+@echo.
+@echo ...deploy android finished...
+@echo.

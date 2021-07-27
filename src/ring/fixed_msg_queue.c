@@ -15,13 +15,16 @@ fixed_msg_queue fixed_msg_queue_create(__in uint32_t one_msg_byte_size,
     {
         return NULL;
     }
-    fixed_msg_queue msg_queue_p = calloc(1, sizeof(struct __fixed_msg_queue));
-    if (!msg_queue_p)
+    size_t expect_mem_size = sizeof(struct __fixed_msg_queue) + one_msg_byte_size * max_msg_capacity;
+    char *raw_mem = (char *)malloc(expect_mem_size);
+    if (!raw_mem)
     {
         return NULL;
     }
+    fixed_msg_queue msg_queue_p = (fixed_msg_queue)raw_mem;
     msg_queue_p->one_msg_byte_size = one_msg_byte_size;
-    msg_queue_p->ring_buf_p = RingBuffer_create(one_msg_byte_size * max_msg_capacity);
+    msg_queue_p->ring_buf_p = RingBuffer_create_with_mem(raw_mem + sizeof(struct __fixed_msg_queue),
+        expect_mem_size - sizeof(struct __fixed_msg_queue));
     if (!msg_queue_p->ring_buf_p)
     {
         free(msg_queue_p);

@@ -1,4 +1,4 @@
-@ECHO OFF&PUSHD %~DP0 &TITLE deploy_windows &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE deploy_windows &color 0A
 
 ::param 1 for arch
 ::param 2 for build type

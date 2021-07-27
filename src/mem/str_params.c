@@ -2,14 +2,15 @@
 #include "mem/mem_debug.h"
 #include "mem/str_params.h"
 
-#define LOG_TAG "str_params"
-//#define LOG_NDEBUG 0
 //#define _GNU_SOURCE 1
 #include <errno.h>
 #include <stdint.h>
 #include "mem/strings.h"
 #include "data/hashmap.h"
 #include "log/xlog.h"
+
+#define LOG_TAG "str_params"
+//#define LOG_NDEBUG 0
 
 /* When an object is allocated but not freed in a function,
  * because its ownership is released to other object like a hashmap,
@@ -52,7 +53,7 @@ static int str_hash_fn(const void* str)
 
 str_params_ptr str_params_create(const char* delimiter)
 {
-	str_params_ptr s = (str_params_ptr)(calloc(1, sizeof(struct str_params)));
+	str_params_ptr s = (str_params_ptr)calloc(1, sizeof(struct str_params));
 	if (!s) return NULL;
 	s->map = hashmap_create(16, str_hash_fn, free, free, str_eq, NULL);
 	if (!s->map)

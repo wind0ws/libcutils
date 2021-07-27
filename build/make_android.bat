@@ -1,6 +1,6 @@
 call setup_env.bat %*
 
-@ECHO OFF&PUSHD %~DP0 &TITLE android &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE android &color 0A
 
 :label_check_params
 if "%BUILD_ABI%" EQU "armeabi-v7a" goto label_main
@@ -12,8 +12,8 @@ if "%BUILD_ABI%" EQU "x86_64" goto label_main
 
 :label_main
 @echo Your BUILD_ABI=%BUILD_ABI%
-title=%BUILD_ABI%
 set BUILD_DIR=build_android_%BUILD_ABI%
+TITLE=%BUILD_DIR%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%
 ::set output_dir=.\\output\\android\\armeabi-v7a
@@ -31,8 +31,14 @@ mkdir %BUILD_DIR:"=%
 			-DANDROID_STL=c++_static 
 ::			-DARG_LCU_OUTPUT_DIR=%output_dir% 
 
-%NINJA_BIN% -C .\%BUILD_DIR:"=%
+set ERR_CODE=%ERRORLEVEL%
+IF %ERR_CODE% NEQ 0 (
+   @echo "Error on generate project: %ERR_CODE%"
+   @exit /b %ERR_CODE%
+)
 
+%NINJA_BIN% -C .\%BUILD_DIR:"=%
+set ERR_CODE=%ERRORLEVEL%
 ::mkdir %output_dir%
 ::copy /Y .\build_android_v7a\libcutils_test %output_dir%\\
 ::copy /Y .\build_android_v7a\liblcu_a.a %output_dir%\\
@@ -42,3 +48,4 @@ mkdir %BUILD_DIR:"=%
 @echo "compile finished. bye bye..."
 ::@pause>nul
 color 0F
+@exit /b %ERR_CODE%

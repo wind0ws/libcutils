@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
-	//RUN_TEST(ini_test);
+	RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(mplite_test);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 	//RUN_TEST(base64_test);
 	//RUN_TEST(str_params_test);
 	//RUN_TEST(msg_queue_handler_test);
-	RUN_TEST(integer_test);
+	//RUN_TEST(integer_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

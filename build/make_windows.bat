@@ -1,6 +1,6 @@
 call setup_env.bat %*
 
-@ECHO OFF&PUSHD %~DP0 &TITLE windows &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE windows &color 0A
 
 set WIN_PTHREAD_MODE=%3
 if "%WIN_PTHREAD_MODE%" EQU "" (
@@ -39,10 +39,16 @@ set CMAKE_EXTEND_ARGS=" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DARG_LCU_WIN_PTHREAD_MO
 %CMAKE_BIN% -G "Visual Studio 16 2019" %NEW_VS_ARCH:"=% -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
 ::%CMAKE_BIN% -G "Visual Studio 16 2019" -A Win32 -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
 ::-DARG_LCU_OUTPUT_DIR=%output_dir% 
-IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 15 2017 %BUILD_ABI%" -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
-IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 14 2015 %BUILD_ABI%" -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
+::IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 15 2017 %BUILD_ABI:"=%" -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
+::IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 14 2015 %BUILD_ABI:"=%" -H.\ -B.\%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
+set ERR_CODE=%ERRORLEVEL%
+IF %ERR_CODE% NEQ 0 (
+   @echo "Error on generate project: %ERR_CODE%"
+   @exit /b %ERR_CODE%
+)
 
 %CMAKE_BIN% --build %BUILD_DIR:"=% --config %BUILD_TYPE:"=%
+set ERR_CODE=%ERRORLEVEL%
 ::mkdir %output_dir%
 ::copy /Y .\\build_win32\\Release\\* %output_dir%\\
 
@@ -50,3 +56,4 @@ IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 14 2015 %BUILD_ABI%" -H.\ -B
 @echo "compile finished. bye bye..."
 ::@pause>nul
 color 0F
+@exit /b %ERR_CODE%

@@ -35,7 +35,7 @@ static int stringreplace_test()
 {
 	const char* str = "Hello, can you replace this string. can you. can you...";
 	char chars[32];
-	strlcpy(chars, str, 32);
+	strlcpy(chars, str, sizeof(chars));
 	char *replaced_str = strreplace(chars,"can you","i can");
 	LOGD("replaced string => %s", replaced_str);
 	free(replaced_str);
@@ -46,7 +46,7 @@ static int stringsplit_test()
 {
 	const char* str = "Hello, can you split this string by comma, can you, can you...";
 	char chars[64];
-	strlcpy(chars, str, 64);
+	strlcpy(chars, str, sizeof(chars));
 #define STR_TEST_RECEIVE_SPLIT_PTRS (6)
 	size_t receive_split_ptr_nums = STR_TEST_RECEIVE_SPLIT_PTRS;
 	char *receive_splited_str_ptrs[STR_TEST_RECEIVE_SPLIT_PTRS];
@@ -71,7 +71,7 @@ static int strtrim_test()
 {
 	const char* const_str = "AA...AA.a.aa.aHelloWorld     :::";
 	char str[64] = {0};
-	strlcpy(str, const_str, 64);
+	strlcpy(str, const_str, sizeof(str));
 	LOGD("origin_str: %s", str);
 	strtrim(str, "Aa. :");
 	LOGD("trimed_str: %s", str);

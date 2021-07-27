@@ -17,7 +17,7 @@
 #endif // !bzero
 
 #ifdef _WIN32
-// strcasecmp is unix function. suggest to use strcasecmp for cross platform
+// stricmp is win32 function. suggest to use strcasecmp for cross platform
 #define strcasecmp(s1, s2)                   stricmp(s1, s2)
 #define strncasecmp(s1, s2, n)               strnicmp(s1, s2, n)
 //to make MSC happy

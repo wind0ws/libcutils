@@ -1,9 +1,13 @@
 #!/bin/bash
 
+BUILD_SCRIPT=./make_linux.sh
+chmod +x $BUILD_SCRIPT
+
 #param 1 for arch
 #param 2 for build type
-source ./make_linux.sh m32 Release
-source ./make_linux.sh m64 Release
+source $BUILD_SCRIPT m32 Release
+source $BUILD_SCRIPT m64 Release
 
 echo 
 echo ...deploy linux finished...
+echo 

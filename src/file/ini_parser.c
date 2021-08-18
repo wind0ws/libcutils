@@ -226,7 +226,7 @@ INI_PARSER_CODE ini_parser_put_string(ini_parser_ptr parser_p,
 		}
 		if (!map_value)
 		{
-			break;
+			break; // alloc failed
 		}
 		hashmap_put(section_map, map_key, map_value);
 		parser_p->prediction_str_size += (map_value_size + key_len + 6);

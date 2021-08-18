@@ -95,9 +95,11 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	sem_init(&(handler_p->semaphore), 0, 0);
 	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
 	{
+#ifndef _LCU_NOT_SUPPORT_PTHREAD_SETNAME 
 		char thr_name[32] = { 0 };
 		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
 		pthread_setname_np(handler_p->thread_handler, thr_name);
+#endif // !_LCU_NOT_SUPPORT_PTHREAD_SETNAME
 		handler_p->msg_queue_p = msg_queue_create(queue_buf_size);
 	}
 	else

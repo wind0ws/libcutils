@@ -11,8 +11,9 @@
 #ifndef LCU_MEM_DEBUG_H
 #define LCU_MEM_DEBUG_H
 
- //define this macro will enable memory check feature
- //suggest user add it to compiler on build if you really want to debug memory.
+// define this macro(_ENABLE_LCU_MEM_CHECK_FEATURE) will enable memory check feature
+// suggest user add it to compiler on build if you really want to debug memory.
+// don't forget add this file(mem_debug.h) on your source file first line.
 //#define _ENABLE_LCU_MEM_CHECK_FEATURE
 
 #ifdef _WIN32
@@ -31,25 +32,26 @@
 #include <crtdbg.h>
 
 // Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the
-//allocations to be of _CLIENT_BLOCK type
+// allocations to be of _CLIENT_BLOCK type
 #define __MYDEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new __MYDEBUG_NEW
 
 // only need call once on your main function first line!
 // create log file, do not close it at end of main, because crt will write log to it.
-// dump is in warn level. let warn log to file and debug console.
+// dump is in warn level. let warn log to file, debug console and window .
 #define INIT_MEM_CHECK() {\
-    void *hLogFile = CreateFile((LPCSTR)"./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
+    void *_hDbgLogFile = CreateFile((LPCSTR)"./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
 	                             NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); \
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG); \
-    _CrtSetReportFile(_CRT_WARN, hLogFile); \
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW); \
+    _CrtSetReportFile(_CRT_WARN, _hDbgLogFile); \
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
 }
+// nothing to do on deinit
 #define DEINIT_MEM_CHECK() 
 #endif // _DEBUG && !_ENABLE_LCU_MEM_CHECK_FEATURE
 #endif // _WIN32
 
-//common header
+// common header
 #ifdef __cplusplus
 #include <cstdlib>
 #include <cstddef>
@@ -66,7 +68,7 @@
 #include <malloc.h>
 
 #if(!defined(_CRTDBG_MAP_ALLOC) && defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
-//to mark we really use lcu mem check feature
+// to mark we really use lcu memory check feature
 #define _USE_LCU_MEM_CHECK
 #include "mem/allocator.h"
 #include "mem/allocation_tracker.h"
@@ -79,8 +81,8 @@ void  operator delete[](void* ptr) noexcept;
 
 void* operator new(size_t size, const char* fileName, const char* funcName, int line)
 {
-	//here we are not deal with new(0), but it is ok,
-	//because if user change return pointer's memory, it will trigger memory corruption on delete it.
+	// here we are not deal with new(0), but it is ok,
+	// because if user change return pointer's memory, it will trigger memory corruption on delete it.
 	return lcu_malloc_trace(size, fileName, funcName, line);
 }
 

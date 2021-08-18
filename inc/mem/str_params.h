@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LCU_STR_PARMS_H
-#define LCU_STR_PARMS_H
+#ifndef LCU_STR_PARAMS_H
+#define LCU_STR_PARAMS_H
 
 #include <stdbool.h> /* for true/false */
 #include <stddef.h>  /* for size_t     */
@@ -69,4 +69,4 @@ void str_params_dump(str_params_ptr params);
 };
 #endif // __cplusplus
 
-#endif /* LCU_STR_PARMS_H */
+#endif /* LCU_STR_PARAMS_H */

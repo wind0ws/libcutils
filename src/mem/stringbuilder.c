@@ -3,37 +3,53 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 #define STRING_BUILDER_DEFAULT_SIZE (128)
 
 struct stringbuilder
 {
-	char* buffer;     /* buffer */
-	size_t allocated; /* buffer size */
-	size_t length;    /* current buffer string length */
+	bool need_free_myself; /* is buffer alloc by our api */
+	char* buffer;          /* buffer */
+	size_t allocated;      /* buffer size */
+	size_t length;         /* current buffer string length */
 };
 
-stringbuilder_t* stringbuilder_create(size_t init_buf_size)
+stringbuilder_t* stringbuilder_create_with_mem(char* buf, size_t buf_size)
 {
-	stringbuilder_t* sb = calloc(1, sizeof(stringbuilder_t));
-	if (sb == NULL)
+	if (!buf || buf_size < sizeof(stringbuilder_t) + 4)
 	{
 		return NULL;
 	}
+	stringbuilder_t* sb = (stringbuilder_t*)buf;
+	sb->need_free_myself = false;
+	sb->allocated = buf_size - sizeof(stringbuilder_t);
+	sb->buffer = buf + sizeof(stringbuilder_t);
+	sb->buffer[0] = '\0';
+	sb->length = 0;
+	return sb;
+}
+
+stringbuilder_t* stringbuilder_create(size_t init_buf_size)
+{
 	if (init_buf_size < 8)
 	{
 		init_buf_size = STRING_BUILDER_DEFAULT_SIZE;
 	}
-	sb->buffer = (char*)malloc(init_buf_size);
-	if (sb->buffer == NULL)
+	const size_t need_buf_size = init_buf_size + sizeof(stringbuilder_t);
+	char* raw_buf = malloc(need_buf_size);
+	if (!raw_buf)
 	{
-		free(sb);
 		return NULL;
 	}
-	sb->buffer[0] = '\0';
-	sb->allocated = init_buf_size;
-	sb->length = 0;
+	stringbuilder_t* sb = stringbuilder_create_with_mem(raw_buf, need_buf_size);
+	if (!sb)
+	{
+		free(raw_buf);
+		return NULL;
+	}
+	sb->need_free_myself = true;
 	return sb;
 }
 
@@ -44,12 +60,12 @@ void stringbuilder_destroy(stringbuilder_t** sb_p)
 		return;
 	}
 	stringbuilder_t* sb = *sb_p;
-	if (sb->buffer)
+	sb->buffer = NULL;
+	if (sb->need_free_myself)
 	{
-		free(sb->buffer);
-		sb->buffer = NULL;
+		sb->need_free_myself = false;
+		free(sb);
 	}
-	free(sb);
 	*sb_p = NULL;
 }
 

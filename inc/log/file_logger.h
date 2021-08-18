@@ -25,14 +25,14 @@ extern "C" {
 		char log_folder_path[MAX_LOG_FOLDER_PATH_SIZE];
 		char log_file_name_prefix[MAX_LOG_FILE_NAME_PREFIX_SIZE];
 		size_t one_piece_file_max_len;
-		size_t max_log_queue_size;
+		size_t log_queue_size;
 		bool is_try_my_best_to_keep_log;
 		file_logger_lock_t lock;
 	}file_logger_cfg;
 
 	file_logger_handle file_logger_init(file_logger_cfg cfg);
 
-	void file_logger_log(file_logger_handle handle, void* log_msg);
+	void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size);
 
 	void file_logger_deinit(file_logger_handle* handle_p);
 

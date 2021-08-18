@@ -46,15 +46,16 @@ uint32_t msg_queue_next_msg_size(__in msg_queue msg_queue_p);
 
 /**
  * pop msg from queue head
- * @param msg_queue_p msg_queue
- * @param msg_p the msg pointer which will be write(copy memory from msg_queue, so caller should manage msg memory first)
- * @param msg_size_p allocated memory size pointer of msg_p. this size will changed by this function, caller can use this to know real memory size of msg_p
+ * @param msg_queue_p : msg_queue
+ * @param msg_p : the msg pointer which will be write(copy memory from msg_queue, so caller should manage msg memory first)
+ * @param msg_size_p : allocated memory size pointer of msg_p. this size will changed by this function, 
+                       caller can use this to know real memory size of popped msg
  * @return MSG_Q_CODE
  */
 MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __inout void *msg_p, __inout uint32_t *msg_size_p);
 
 /**
- * clear all queue msgs.  
+ * clear all queue msgs.
  * Warn: you should stop call push/pop method first before call this method, otherwise it will have thread safe issue.
  * after call this method, you are free to call push/pop even at same time in two thread just like before. 
  * @param msg_queue_p msg_queue

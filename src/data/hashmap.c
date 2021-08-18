@@ -100,6 +100,7 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 	map->size = 0;
 	return map;
 }
+
 /**
  * Hashes the given key.
  */

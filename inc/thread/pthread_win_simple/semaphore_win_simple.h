@@ -21,6 +21,7 @@
 	Copyright (c) 2015, Daniel Tillett <daniel.tillett @ gmail.com>
 */
 #pragma once
+#ifdef _WIN32
 #ifndef __SEMAPHORE_H
 #define __SEMAPHORE_H   1
 
@@ -49,22 +50,24 @@
 
 /* Support POSIX.1b semaphores.  */
 #ifndef _POSIX_SEMAPHORES
-#define _POSIX_SEMAPHORES       200809L
-#endif
+#define _POSIX_SEMAPHORES       (200809L)
+#endif  // !_POSIX_SEMAPHORES
 
 #ifndef SEM_VALUE_MAX
 #define SEM_VALUE_MAX           INT_MAX
-#endif
+#endif  // !SEM_VALUE_MAX
 
 #ifndef SEM_FAILED
 #define SEM_FAILED              NULL
-#endif
+#endif  // !SEM_FAILED
 
+#ifndef UNUSED
 #define UNUSED(x)				(void)(x)
+#endif // !UNUSED
 
 #ifndef ETIMEDOUT
-#define ETIMEDOUT				138 /* This is the value in VC 2010. */
-#endif
+#define ETIMEDOUT				(138) /* This is the value in VC 2010. */
+#endif  // !ETIMEDOUT
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +82,8 @@ extern "C" {
 #endif
 #endif  /* _MODE_T_ */
 
-	typedef struct {
+	typedef struct 
+	{
 		HANDLE handle;
 		char is_internal_malloc;
 	} sem_t;
@@ -87,13 +91,15 @@ extern "C" {
 #ifndef _TIMESPEC_DEFINED
 #include <time.h>
 #ifdef _CRT_NO_TIME_T
-	struct timespec {
+	struct timespec 
+	{
 		time_t  tv_sec;       /* Seconds */
 		long    tv_nsec;      /* Nanoseconds */
 	};
-#endif
+#endif  // _CRT_NO_TIME_T
 
-	struct itimerspec {
+	struct itimerspec 
+	{
 		struct timespec  it_interval; /* Timer period */
 		struct timespec  it_value;    /* Timer expiration */
 	};
@@ -120,3 +126,5 @@ extern "C" {
 /** @} */
 
 #endif /* __SEMAPHORE_H */
+
+#endif // _WIN32

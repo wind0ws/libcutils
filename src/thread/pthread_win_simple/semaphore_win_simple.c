@@ -30,24 +30,29 @@
 #include "thread/pthread_win_simple/semaphore_win_simple.h"
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
-static int lc_set_errno(int result) {
-	if (result != 0) {
+static int lc_set_errno(int result) 
+{
+	if (result != 0) 
+	{
 		errno = result;
 		return -1;
 	}
 	return 0;
 }
 
-static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mode, unsigned int value) {
+static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mode, unsigned int value) 
+{
 	int len;
 	char buffer[512];
 	UNUSED(mode);
 
-	if (value > (unsigned int)SEM_VALUE_MAX || (len = (int)strlen(name)) > (int)sizeof(buffer) - 8 || len < 1) {
+	if (value > (unsigned int)SEM_VALUE_MAX || (len = (int)strlen(name)) > (int)sizeof(buffer) - 8 || len < 1) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if (NULL == sem) {
+	if (NULL == sem) 
+	{
 		return lc_set_errno(ENOMEM);
 	}
 
@@ -55,8 +60,10 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 	memmove(buffer + 7, name, len);
 	buffer[len + 7] = '\0';
 
-	if ((sem->handle = CreateSemaphoreA(NULL, value, SEM_VALUE_MAX, buffer)) == NULL) {
-		switch (GetLastError()) {
+	if ((sem->handle = CreateSemaphoreA(NULL, value, SEM_VALUE_MAX, buffer)) == NULL) 
+	{
+		switch (GetLastError()) 
+		{
 		case ERROR_ACCESS_DENIED:
 			lc_set_errno(EACCES);
 			break;
@@ -71,14 +78,17 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 		}
 		return -1;
 	}
-	if (GetLastError() == ERROR_ALREADY_EXISTS) {
-		if ((oflag & O_CREAT) && (oflag & O_EXCL)) {
+	if (GetLastError() == ERROR_ALREADY_EXISTS) 
+	{
+		if ((oflag & O_CREAT) && (oflag & O_EXCL)) 
+		{
 			CloseHandle(sem->handle);
 			return lc_set_errno(EEXIST);
 		}
 		return 0;
 	}
-	if (!(oflag & O_CREAT)) {
+	if (!(oflag & O_CREAT)) 
+	{
 		return lc_set_errno(ENOENT);
 	}
 
@@ -97,15 +107,17 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_init(sem_t* sem, int pshared, unsigned int value) {
+int sem_init(sem_t* sem, int pshared, unsigned int value) 
+{
 	char buf[24] = { '\0' };
 	UNUSED(pshared);
 
-	if (sem == NULL || value > (unsigned int)SEM_VALUE_MAX) {
+	if (sem == NULL || value > (unsigned int)SEM_VALUE_MAX) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 	//if (pshared != PTHREAD_PROCESS_PRIVATE) {
-		snprintf(buf, 24, "Global\\%p", sem);
+	snprintf(buf, sizeof(buf), "Global\\%p", sem);
 	//}
 	sem->is_internal_malloc = 0;
 	return sem_open_internal(sem, buf, O_CREAT | O_EXCL, 0, value);
@@ -118,14 +130,17 @@ int sem_init(sem_t* sem, int pshared, unsigned int value) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_wait(sem_t* sem) {
+int sem_wait(sem_t* sem) 
+{
 	sem_t* pv = (sem_t*)(sem);
 
-	if (sem == NULL || pv == NULL) {
+	if (sem == NULL || pv == NULL) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if (WaitForSingleObject(pv->handle, INFINITE) != WAIT_OBJECT_0) {
+	if (WaitForSingleObject(pv->handle, INFINITE) != WAIT_OBJECT_0) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
@@ -139,19 +154,23 @@ int sem_wait(sem_t* sem) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_trywait(sem_t* sem) {
+int sem_trywait(sem_t* sem) 
+{
 	unsigned rc;
 	sem_t* pv = (sem_t*)sem;
 
-	if (sem == NULL || pv == NULL) {
+	if (sem == NULL || pv == NULL) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if ((rc = WaitForSingleObject(pv->handle, 0)) == WAIT_OBJECT_0) {
+	if ((rc = WaitForSingleObject(pv->handle, 0)) == WAIT_OBJECT_0) 
+	{
 		return 0;
 	}
 
-	if (rc == WAIT_TIMEOUT) {
+	if (rc == WAIT_TIMEOUT) 
+	{
 		return lc_set_errno(EAGAIN);
 	}
 
@@ -170,27 +189,32 @@ int sem_trywait(sem_t* sem) {
 #define POW10_4					INT64_C(10000)
 #define POW10_6					INT64_C(1000000)
 
-static __int64 FileTimeToUnixTimeIn100NS(FILETIME* input) {
+static inline __int64 FileTimeToUnixTimeIn100NS(FILETIME* input) 
+{
 	return (((__int64)input->dwHighDateTime) << 32 | input->dwLowDateTime) - DELTA_EPOCH_IN_100NS;
 }
 
 /* Return milli-seconds since the Unix epoch (jan. 1, 1970) UTC */
-static __int64 arch_time_in_ms(void) {
+static inline __int64 arch_time_in_ms(void) 
+{
 	FILETIME time;
 	GetSystemTimeAsFileTime(&time);
 	return FileTimeToUnixTimeIn100NS(&time) / POW10_4;
 }
 
-static  __int64 arch_time_in_ms_from_timespec(const struct timespec* ts) {
+static inline __int64 arch_time_in_ms_from_timespec(const struct timespec* ts) 
+{
 	return ts->tv_sec * POW10_3 + ts->tv_nsec / POW10_6;
 }
 
-static unsigned arch_rel_time_in_ms(const struct timespec* ts) {
+static inline unsigned arch_rel_time_in_ms(const struct timespec* ts) 
+{
 	__int64 t1 = arch_time_in_ms_from_timespec(ts);
 	__int64 t2 = arch_time_in_ms();
 	__int64 t = t1 - t2;
 
-	if (t < 0 || t >= INT64_C(4294967295)) {
+	if (t < 0 || t >= INT64_C(4294967295)) 
+	{
 		return 0;
 	}
 
@@ -207,19 +231,23 @@ static unsigned arch_rel_time_in_ms(const struct timespec* ts) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_timedwait(sem_t* sem, const struct timespec* abs_timeout) {
+int sem_timedwait(sem_t* sem, const struct timespec* abs_timeout) 
+{
 	unsigned rc;
 	sem_t* pv = (sem_t*)sem;
 
-	if (sem == NULL || pv == NULL) {
+	if (sem == NULL || pv == NULL) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if ((rc = WaitForSingleObject(pv->handle, arch_rel_time_in_ms(abs_timeout))) == WAIT_OBJECT_0) {
+	if ((rc = WaitForSingleObject(pv->handle, arch_rel_time_in_ms(abs_timeout))) == WAIT_OBJECT_0) 
+	{
 		return 0;
 	}
 
-	if (rc == WAIT_TIMEOUT) {
+	if (rc == WAIT_TIMEOUT) 
+	{
 		return lc_set_errno(ETIMEDOUT);
 	}
 
@@ -233,14 +261,17 @@ int sem_timedwait(sem_t* sem, const struct timespec* abs_timeout) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_post(sem_t* sem) {
+int sem_post(sem_t* sem) 
+{
 	sem_t* pv = (sem_t*)(sem);
 
-	if (sem == NULL || pv == NULL) {
+	if (sem == NULL || pv == NULL) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if (ReleaseSemaphore(pv->handle, 1, NULL) == 0) {
+	if (ReleaseSemaphore(pv->handle, 1, NULL) == 0) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
@@ -255,13 +286,16 @@ int sem_post(sem_t* sem) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_getvalue(sem_t* sem, int* value) {
+int sem_getvalue(sem_t* sem, int* value) 
+{
 	long previous;
 	sem_t* pv = (sem_t*)sem;
 
-	switch (WaitForSingleObject(pv->handle, 0)) {
+	switch (WaitForSingleObject(pv->handle, 0)) 
+	{
 	case WAIT_OBJECT_0:
-		if (!ReleaseSemaphore(pv->handle, 1, &previous)) {
+		if (!ReleaseSemaphore(pv->handle, 1, &previous)) 
+		{
 			return lc_set_errno(EINVAL);
 		}
 
@@ -284,15 +318,18 @@ int sem_getvalue(sem_t* sem, int* value) {
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_destroy(sem_t* sem) {
+int sem_destroy(sem_t* sem) 
+{
 	int err = 0;
 	sem_t* pv = (sem_t*)(sem);
 
-	if (pv == NULL) {
+	if (pv == NULL) 
+	{
 		return lc_set_errno(EINVAL);
 	}
 
-	if (CloseHandle(pv->handle) == 0) {
+	if (CloseHandle(pv->handle) == 0) 
+	{
 		err = lc_set_errno(EINVAL);
 	}
 
@@ -317,9 +354,11 @@ int sem_destroy(sem_t* sem) {
 	@return On success, returns the address of the new semaphore; On error,
 		   returns SEM_FAILED (NULL), with errno set to indicate the error.
 */
-sem_t* sem_open(const char* name, int oflag, mode_t mode, unsigned int value) {
+sem_t* sem_open(const char* name, int oflag, mode_t mode, unsigned int value) 
+{
 	sem_t* pv;
-	if (NULL == (pv = (sem_t*)calloc(1, sizeof(sem_t)))) {
+	if (NULL == (pv = (sem_t*)calloc(1, sizeof(sem_t)))) 
+	{
 		lc_set_errno(ENOMEM);
 		return NULL;
 	}
@@ -340,7 +379,8 @@ sem_t* sem_open(const char* name, int oflag, mode_t mode, unsigned int value) {
 		   with errno set to indicate the error.
 	@remark Same as sem_destroy.
 */
-int sem_close(sem_t* sem) {
+int sem_close(sem_t* sem) 
+{
 	return sem_destroy(sem);
 }
 
@@ -353,7 +393,8 @@ int sem_close(sem_t* sem) {
 	@remark The semaphore object is destroyed when its last handle has been
 		   closed, so this function does nothing.
 */
-int sem_unlink(const char* name) {
+int sem_unlink(const char* name) 
+{
 	UNUSED(name);
 	return 0;
 }

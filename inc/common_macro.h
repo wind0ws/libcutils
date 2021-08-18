@@ -51,22 +51,22 @@ typedef float               FLOAT;
 // annotation: for mark parameters
 #ifndef __in
 #define __in
-#endif
+#endif // !__in
 #ifndef __out
 #define __out
-#endif
+#endif // !__out
 #ifndef __inout
 #define __inout
-#endif
+#endif // !__inout
 #ifndef __in_opt
 #define __in_opt
-#endif
+#endif // !__in_opt
 #ifndef __out_opt
 #define __out_opt
-#endif
+#endif // !__out_opt
 #ifndef __inout_opt
 #define __inout_opt
-#endif
+#endif // !__inout_opt
 
 // for API_EXPORT/IMPORT
 #if defined(_MSC_VER) //  Microsoft 
@@ -172,8 +172,8 @@ typedef intptr_t ssize_t;
 
 #ifndef STATIC_ASSERT
 #define STATIC_ASSERT_WITH_MSG(expr, msg) typedef char __static_assert_t_##msg[(expr) != 0]
-#define __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, msg) STATIC_ASSERT_WITH_MSG(expr, msg)
-#define STATIC_ASSERT(expr) __TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, __LINE__)
+#define _TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, msg) STATIC_ASSERT_WITH_MSG(expr, msg)
+#define STATIC_ASSERT(expr) _TEMP_FOR_EXPAND_STATIC_ASSERT_WITH_MSG(expr, __LINE__)
 #endif  // !STATIC_ASSERT
 
 #ifdef __ANDROID__
@@ -183,53 +183,53 @@ typedef intptr_t ssize_t;
 #endif //__ANDROID__
 
 //for log emergency error message.
-#define EMERGENCY_LOG(fmt, ...)                                                      \
-     {                                                                               \
-        __EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                            \
-        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                  \
-        fflush(stdout);                                                              \
-     }
+#define EMERGENCY_LOG(fmt, ...)                                                     \
+     do {                                                                           \
+        __EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                           \
+        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                 \
+        fflush(stdout);                                                             \
+     } while(0)
 
 #ifndef ASSERT
 #if(defined(NDEBUG) || !defined(_DEBUG))
 #define ASSERT(expr)  (void)(expr) 
 #else
-#if _WIN32
+#ifdef _WIN32
 //why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!
-#define __TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)                              \
-    {                                                                                \
-        bool expr_##line = !!(expr);                                                 \
-        _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                 \
-        if (!expr_##line)                                                            \
-        {                                                                            \
-           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0);  \
-        }                                                                            \
-    }
-#define __TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) __TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
-#define ASSERT(expr) __TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, __LINE__)
+#define _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)                              \
+    do {                                                                            \
+        bool expr_##line = !!(expr);                                                \
+        _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                \
+        if (!expr_##line)                                                           \
+        {                                                                           \
+           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0); \
+        }                                                                           \
+    } while(0)
+#define _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
+#define ASSERT(expr) _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, __LINE__)
 #else
 #define ASSERT(expr) assert(expr)
 #endif // _WIN32
 #endif // NDEBUG || !_DEBUG
 #endif // !ASSERT
 
-#define __TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
-    {                                                                                \
-        ASSERT(expr);                                                                \
-        bool is_expr_true##line = !!(expr);                                          \
-        if (!is_expr_true##line)                                                     \
-        {                                                                            \
-           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                      \
-                  #expr, __func__, __FILE__, line);                                  \
-           abort();                                                                  \
-        }                                                                            \
-     }
-#define __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  __TEMP_FOR_ASSERT_ABORT(expr, line)
+#define _TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
+     do {                                                                           \
+        ASSERT(expr);                                                               \
+        bool is_expr_true##line = !!(expr);                                         \
+        if (!is_expr_true##line)                                                    \
+        {                                                                           \
+           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                     \
+                  #expr, __func__, __FILE__, line);                                 \
+           abort();                                                                 \
+        }                                                                           \
+     } while(0)
+#define _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  _TEMP_FOR_ASSERT_ABORT(expr, line)
 /**
  * In debug mode, expression check failure will catch by ASSERT.
  * In release mode, it will log error to stdout/logcat and abort program.
  */
-#define ASSERT_ABORT(expr)  __TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
+#define ASSERT_ABORT(expr)  _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
 
 #ifndef __cplusplus
  // Macros for safe integer to pointer conversion. In the C language, data is
@@ -241,7 +241,7 @@ typedef intptr_t ssize_t;
 #define UINT_TO_PTR(u)  ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i)   ((void *) ((intptr_t) (i)))
-#endif // __cplusplus
+#endif // !__cplusplus
 
 #ifdef _WIN32
 #include <direct.h>
@@ -256,14 +256,14 @@ typedef intptr_t ssize_t;
 #define read(fd, buf, count)      _read(fd, buf, count)
 #define write(fd, buf, count)     _write(fd, buf, count)
 
-static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
+static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
 {
 	FILE* _ftemp = NULL;
 	fopen_s(&_ftemp, _FileName, _Mode);
 	return _ftemp;
 }
 //to make MSC happy
-#define fopen(file_name, mode) __fopen_safe(file_name, mode)
+#define fopen(file_name, mode) _fopen_safe(file_name, mode)
 #else
 #include <unistd.h>
 #include <sys/types.h>
@@ -272,30 +272,36 @@ static inline FILE* __fopen_safe(char const* _FileName, char const* _Mode)
 #define fclose(fp) do{if(fp){ fclose(fp); (fp) = NULL; }}while(0)
 
 #ifndef RANDOM
-#define RANDOM_INIT(seed)  srand((seed))
+#define RANDOM_INIT(seed)   srand((seed))
 #define RANDOM(a, b)        (rand() % ((b) - (a)) + (a))
-#endif // RANDOM
+#endif // !RANDOM
 
 //================================DECLARE ENUM AND STRINGS================================
 /** how to use:
 
-#define ENUM_STATES(GENERATOR)           \
-         GENERATOR(STATE_START)          \
-         GENERATOR(STATE_STOP)
-DECLARE_ENUM(STATES, ENUM_STATES);
-DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
-
+// def enum and declare enum strings on header
+#define FOREACH_STATES_ITEM(GENERATOR)       \
+             GENERATOR(STATE_START)          \
+             GENERATOR(STATE_STOP)
+DEF_ENUM(STATES, FOREACH_STATES_ITEM);
+DECLARE_ENUM_STRS(STATES);
+// def enum string on source file
+DEF_ENUM_STRS(STATES, FOREACH_STATES_ITEM);
+//now you can print enum str
+printf("STATES[0]=%s", STATES_STR[STATE_START]);
  */
-#define __GENERATOR_ENUM_ITEM(item) item,
-#define __GENERATOR_ENUM_STRING(item) #item,
-#define __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, generator_enum_item)   \
-        typedef enum name##_ {                                             \
-           foreach_enum(generator_enum_item)                               \
+#define _GENERATOR_ENUM_ITEM(item) item,
+#define _GENERATOR_ENUM_STR(item)  #item,
+#define _TEMP_FOR_DEF_ENUM(name, foreach_enum, generator_enum_item)       \
+        typedef enum name##_ {                                            \
+           foreach_enum(generator_enum_item)                              \
         } name;
-#define DECLARE_ENUM(name, foreach_enum) __TEMP_FOR_DECLARE_ENUM(name, foreach_enum, __GENERATOR_ENUM_ITEM)
-#define __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, generator_enum_string)              \
-        static const char *name##_STRINGS[] = {  foreach_enum(generator_enum_string) };
-#define DEFINITION_ENUM_STRINGS(name, foreach_enum) __TEMP_FOR_DEFINITION_ENUM_STRINGS(name, foreach_enum, __GENERATOR_ENUM_STRING)
+#define DEF_ENUM(name, foreach_enum) _TEMP_FOR_DEF_ENUM(name, foreach_enum, _GENERATOR_ENUM_ITEM)
+#define DECLARE_ENUM_STRS(name)               extern const char *name##_STRS[]
+#define _TEMP_FOR_DEF_ENUM_STRS(name, foreach_enum, generator_enum_str)       \
+               const char *name##_STRS[] = { foreach_enum(generator_enum_str) };
+#define DEF_ENUM_STRS(name, foreach_enum)                                     \
+        _TEMP_FOR_DEF_ENUM_STRS(name, foreach_enum, _GENERATOR_ENUM_STR)
 //================================DECLARE ENUM AND STRINGS================================
 
 

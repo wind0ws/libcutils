@@ -1,15 +1,18 @@
 #include "thread/thread_wrapper.h"
 #include "log/xlog.h"
+#include <string.h>
 
 static void* thread_func(void* args) 
 {
 	int code;
+#ifndef _LCU_NOT_SUPPORT_PTHREAD_SETNAME 
 	pthread_setname_np(pthread_self(), "thr_func");
+#endif // !_LCU_NOT_SUPPORT_PTHREAD_SETNAME
 	LOGI("Hello pthread. id:%d", gettid());
 	sem_t* psem = args;
 	if ((code = sem_wait(psem)))
 	{
-		LOGE("error on sem_wait ,code=%d", code);
+		LOGE("error on sem_wait, code=%d", code);
 	}
 	LOGW("pthread now exit");
 	return NULL;
@@ -18,9 +21,9 @@ static void* thread_func(void* args)
 static int sem_test()
 {
 	int code;
-	//sem_t* psem = sem_open("example_semaphore", O_CREAT | O_EXCL, 0, 0);
 
-	sem_t sem = { 0 };
+	sem_t sem;
+	memset(&sem, 0, sizeof(sem));
 	sem_t* psem = &sem;
 	sem_init(psem, 0, 0);
 
@@ -41,7 +44,7 @@ static int sem_test()
 	return 0;
 }
 
-#define LOG_TAG_MAIN "MY_TAG"
+#define LOG_TAG "MY_TAG"
 
 static void test_log()
 {
@@ -59,21 +62,21 @@ static void test_log()
 	LOGW_TRACE("this log is printed by LOGW_TRACE");
 	LOGE_TRACE("this log is printed by LOGE_TRACE");
 
-	TLOGV(LOG_TAG_MAIN, "this log is printed by TLOGV");
-	TLOGD(LOG_TAG_MAIN, "this log is printed by TLOGD");
-	TLOGI(LOG_TAG_MAIN, "this log is printed by TLOGI");
-	TLOGW(LOG_TAG_MAIN, "this log is printed by TLOGW");
-	TLOGE(LOG_TAG_MAIN, "this log is printed by TLOGE");
+	TLOGV(LOG_TAG, "this log is printed by TLOGV");
+	TLOGD(LOG_TAG, "this log is printed by TLOGD");
+	TLOGI(LOG_TAG, "this log is printed by TLOGI");
+	TLOGW(LOG_TAG, "this log is printed by TLOGW");
+	TLOGE(LOG_TAG, "this log is printed by TLOGE");
 
-	TLOGV_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGV_TRACE");
-	TLOGD_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGD_TRACE");
-	TLOGI_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGI_TRACE");
-	TLOGW_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGW_TRACE");
-	TLOGE_TRACE(LOG_TAG_MAIN, "this log is printed by TLOGE_TRACE");
+	TLOGV_TRACE(LOG_TAG, "this log is printed by TLOGV_TRACE");
+	TLOGD_TRACE(LOG_TAG, "this log is printed by TLOGD_TRACE");
+	TLOGI_TRACE(LOG_TAG, "this log is printed by TLOGI_TRACE");
+	TLOGW_TRACE(LOG_TAG, "this log is printed by TLOGW_TRACE");
+	TLOGE_TRACE(LOG_TAG, "this log is printed by TLOGE_TRACE");
 
 	char chars[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0xA0, 0xAF, 0xFD, 0xFE, 0xFF };
-	TLOGV_HEX(LOG_TAG_MAIN, chars, sizeof(chars));
-	LOGI_HEX(chars, 16);
+	TLOGV_HEX(LOG_TAG, chars, sizeof(chars));
+	LOGI_HEX(chars, sizeof(chars));
 
 	xlog_set_min_level(LOG_LEVEL_ERROR);
 	xlog_set_target(LOG_TARGET_ANDROID);
@@ -96,17 +99,19 @@ static void test_log()
 int thread_wrapper_test()
 {
 	LOGD("Hello World, thread id: %d", gettid());
-	//MYLOG("MYLOG, %d", 1111);
 	test_log();
 
-	LOGI("test LOGI");
+	int cur_format = xlog_get_format();
+	xlog_set_format(LOG_FORMAT_RAW);
+	TLOGI("MyTag", "this log only print log msg without timestamp/tag/level/tid");
+	xlog_set_format(cur_format);
+	LOGI("test LOGI with format(%d)", cur_format);
+
 	LOGW_TRACE("hello, %d, xx=%s", 1234, "WORLD");
 	TLOGE("MyTag", "test TLOGE");
-	TLOGD_TRACE("MyTag", "test LOGD_TRACE");
+	TLOGD_TRACE("MyTag", "test TLOGD_TRACE");
 
 	sem_test();
 
-	//LOGI("Main Exit...");
 	return 0;
 }
-

@@ -1,19 +1,25 @@
 #pragma once
-#ifndef __LCU_TIME_RFC1123_H
-#define __LCU_TIME_RFC1123_H
+#ifndef LCU_TIME_RFC1123_H
+#define LCU_TIME_RFC1123_H
+
+#include <time.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stddef.h>
+#define TIME_RFC1123_STR_SIZE (30)
 
-#define TIME_RFC1123_STR_LEN (29)
-
-int time_rfc1123_now(char *out_time_str, size_t out_time_str_len);
+/**
+ * get rfc1123 time format 
+ * how to init time_t : time_t cur_time; time(&cur_time);
+ * @return Format : Fri, 11 Jun 2021 03:42:56 GMT
+ */
+int time_rfc1123(time_t* the_time, char *out_time_str, size_t out_time_str_size);
 
 #ifdef __cplusplus
 };
 #endif
 
-#endif //__LCU_TIME_RFC1123_H
+#endif // !LCU_TIME_RFC1123_H

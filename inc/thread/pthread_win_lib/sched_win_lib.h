@@ -37,6 +37,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 #pragma once
+#ifdef _WIN32
 #if !defined(_SCHED_H)
 #define _SCHED_H
 
@@ -183,3 +184,4 @@ PTW32_DLLPORT int __cdecl sched_getscheduler (pid_t pid);
 
 #endif                          /* !_SCHED_H */
 
+#endif // _WIN32

@@ -4,13 +4,13 @@
 #include "ring/fixed_msg_queue_handler.h"
 #include "log/simple_log.h"
 
-#define _RING_LOG_TAG                     "FIXED_Q_HDL"
+#define _LOG_TAG                     "FIXED_Q_HDL"
 
-#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGV(fmt,...)                 SIMPLE_LOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt,...)                 SIMPLE_LOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt,...)                 SIMPLE_LOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt,...)                 SIMPLE_LOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt,...)                 SIMPLE_LOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct
 {
@@ -24,7 +24,7 @@ struct __fixed_msg_queue_handler
 	fixed_msg_handler_callback callback;
 	void* callback_userdata;
 	pthread_t thread_handler;
-	sem_t sem_handler;
+	sem_t semaphore;
 	volatile bool flag_exit_thread;
 
 	fixed_handler_msg_t msg_send_cache;
@@ -38,7 +38,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 	fixed_handler_msg_t handler_msg = { {0},0 };
 	for (;;)
 	{
-		sem_wait(&handler_p->sem_handler);
+		sem_wait(&handler_p->semaphore);
 		if (handler_p->flag_exit_thread)
 		{
 			break;
@@ -53,7 +53,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 		else
 		{
-			RING_LOGW("abandon msg, token=%zd", handler_msg.token);
+			MY_LOGW("abandon msg, token=%zd", handler_msg.token);
 		}
 	}
 	return NULL;
@@ -62,7 +62,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_capacity,
 	__in fixed_msg_handler_callback callback, __in void* callback_userdata)
 {
-	RING_LOGD("create fixed_queue_handler. max_msg_capacity=%d", max_msg_capacity);
+	MY_LOGD("create fixed_queue_handler. max_msg_capacity=%d", max_msg_capacity);
 	fixed_msg_queue_handler handler_p = calloc(1, sizeof(struct __fixed_msg_queue_handler));
 	if (!handler_p)
 	{
@@ -73,18 +73,20 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	handler_p->callback_userdata = callback_userdata;
 	handler_p->token_counter = 0;
 	handler_p->min_valid_token = 0;
-	sem_init(&(handler_p->sem_handler), 0, 0);
+	sem_init(&(handler_p->semaphore), 0, 0);
 	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
 	{
+#ifndef _LCU_NOT_SUPPORT_PTHREAD_SETNAME 
 		char thr_name[32] = { 0 };
 		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
 		pthread_setname_np(handler_p->thread_handler, thr_name);
+#endif // !_LCU_NOT_SUPPORT_PTHREAD_SETNAME
 		handler_p->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
 	}
 	else
 	{
-		RING_LOGE("error on create pthread of queue handle msg");
-		sem_destroy(&(handler_p->sem_handler));
+		MY_LOGE("error on create pthread of queue handle msg");
+		sem_destroy(&(handler_p->semaphore));
 		free(handler_p);
 		handler_p = NULL;
 	}
@@ -103,11 +105,11 @@ int fixed_msg_queue_handler_send(__in fixed_msg_queue_handler fixed_msg_queue_ha
 
 	if (!fixed_msg_queue_push(fixed_msg_queue_handler_p->msg_queue_p, handler_msg_p))
 	{
-		//RING_LOGE("send msg to queue handled failed. queue is full");
+		//MY_LOGE("send msg to queue handled failed. queue is full");
 		return 2;
 	}
 	fixed_msg_queue_handler_p->token_counter++;
-	sem_post(&(fixed_msg_queue_handler_p->sem_handler));
+	sem_post(&(fixed_msg_queue_handler_p->semaphore));
 	return 0;
 }
 
@@ -134,7 +136,7 @@ extern inline bool fixed_msg_queue_handler_is_full(__in fixed_msg_queue_handler 
 extern inline void fixed_msg_queue_handler_clear(__in fixed_msg_queue_handler handler_p)
 {
 	handler_p->min_valid_token = handler_p->token_counter;
-	RING_LOGD("fixed_msg_queue_handler_clear handler_p(%p) min_valid_token=%zd",
+	MY_LOGD("fixed_msg_queue_handler_clear handler_p(%p) min_valid_token=%zd",
 		handler_p, handler_p->min_valid_token);
 }
 
@@ -147,12 +149,12 @@ void fixed_msg_queue_handler_destroy(__inout fixed_msg_queue_handler* handler_pp
 	fixed_msg_queue_handler handler_p = *handler_pp;
 	handler_p->flag_exit_thread = true;
 	//send a signal to make sure thread is not stuck at sem_wait
-	sem_post(&(handler_p->sem_handler));
+	sem_post(&(handler_p->semaphore));
 	if (pthread_join(handler_p->thread_handler, NULL) != 0)
 	{
-		RING_LOGE("error on join handle msg thread.");
+		MY_LOGE("error on join handle msg thread.");
 	}
-	sem_destroy(&(handler_p->sem_handler));
+	sem_destroy(&(handler_p->semaphore));
 	fixed_msg_queue_destroy(&handler_p->msg_queue_p);
 	handler_p->msg_queue_p = NULL;
 	free(handler_p);

@@ -3,7 +3,7 @@
 #ifdef _WIN32
 //reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2019
 #include <windows.h>
-const DWORD MS_VC_EXCEPTION = 0x406D1388;
+static const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
 typedef struct tagTHREADNAME_INFO
 {

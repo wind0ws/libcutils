@@ -30,6 +30,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 #pragma once
+#ifdef _WIN32
 #if !defined( PTHREAD_H )
 #define PTHREAD_H
 
@@ -1370,3 +1371,5 @@ PTW32_DLLPORT DWORD PTW32_CDECL ptw32_get_exception_services_code(void);
 #endif /* ! RC_INVOKED */
 
 #endif /* PTHREAD_H */
+
+#endif // _WIN32

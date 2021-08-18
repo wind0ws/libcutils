@@ -18,15 +18,17 @@ msg_queue msg_queue_create(__in uint32_t buf_size)
 	{
 		return NULL;
 	}
-	msg_queue msg_queue_p = calloc(1, sizeof(struct __msg_queue));
-	if (!msg_queue_p)
+	const size_t expect_mem_size = buf_size + sizeof(struct __msg_queue);
+	char *raw_mem = (char *)malloc(expect_mem_size);
+	if (!raw_mem)
 	{
 		return NULL;
 	}
-	msg_queue_p->ring_buf_p = RingBuffer_create(buf_size);
+	msg_queue msg_queue_p = (msg_queue)raw_mem;
+	msg_queue_p->ring_buf_p = RingBuffer_create_with_mem(raw_mem + sizeof(struct __msg_queue), buf_size);
 	if (!msg_queue_p->ring_buf_p)
 	{
-		free(msg_queue_p);
+		free(raw_mem);
 		return NULL;
 	}
 	return msg_queue_p;
@@ -81,17 +83,17 @@ MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __inout void* msg_p, __inou
 	ASSERT_ABORT(read_bytes == sizeof(msg_header));
 	if (available_read_bytes < sizeof(header) + header.msg_size)
 	{
-		return MSG_Q_CODE_AGAIN; // msg buffer is not full copied to queue, just copied header bytes.
+		return MSG_Q_CODE_AGAIN; // msg buffer is not full copied to queue, maybe just copied header bytes.
 	}
 	if (header.msg_size > *msg_size_p)
 	{
+		*msg_size_p = header.msg_size; // tell caller the msg real size
 		return MSG_Q_CODE_BUF_NOT_ENOUGH;
 	}
 	read_bytes = RingBuffer_discard(msg_queue_p->ring_buf_p, sizeof(msg_header));
 	ASSERT_ABORT(read_bytes == sizeof(msg_header));
 	read_bytes = RingBuffer_read(msg_queue_p->ring_buf_p, msg_p, header.msg_size);
 	ASSERT_ABORT(read_bytes == header.msg_size);
-	*msg_size_p = read_bytes; // tell caller the msg real size.
 	return MSG_Q_CODE_SUCCESS;
 }
 
@@ -113,7 +115,7 @@ uint32_t msg_queue_available_push_bytes(__in msg_queue msg_queue_p)
 	return RingBuffer_available_write(msg_queue_p->ring_buf_p);
 }
 
-void msg_queue_destroy(__in msg_queue* msg_queue_pp)
+void msg_queue_destroy(__inout msg_queue* msg_queue_pp)
 {
 	if (!msg_queue_pp || !(*msg_queue_pp)->ring_buf_p)
 	{

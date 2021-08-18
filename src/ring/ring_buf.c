@@ -6,61 +6,65 @@
 
 #define RING_BUF_TAKE_MIN(a, b) ((a) > (b) ? (b) : (a))
 
-#define __RING_LOG_TAG                     "RING_BUF"
+#define __RING_LOG_TAG        "R_BUF"
 
-#define RING_LOGV(fmt,...)                 SIMPLE_LOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)                 SIMPLE_LOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)                 SIMPLE_LOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)                 SIMPLE_LOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)                 SIMPLE_LOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)    SIMPLE_LOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)    SIMPLE_LOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)    SIMPLE_LOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)    SIMPLE_LOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)    SIMPLE_LOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 struct __ring_buf_t 
 {
-	bool is_internal_malloced;
+	bool need_free_myself;
 	char* pbuf;
 	size_t size;
 	size_t offset_read;
 	size_t offset_write;
 };
 
-ring_handle ring_buf_create(const size_t size) 
-{
-	char* pbuf = (char*)malloc(size);
-	if (!pbuf) 
-	{
-		RING_LOGE("failed alloc %zu size for ring_buf", size);
-		return NULL;
-	}
-	ring_handle handle = ring_buf_create_with_mem(pbuf, size);
-	if (!handle) 
-	{
-		RING_LOGE("failed alloc ring_handle");
-		free(pbuf);
-	}
-	else 
-	{
-		handle->is_internal_malloced = true;
-	}
-	return handle;
-}
-
-ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size) 
+ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 {
 	if (!pbuf)
 	{
 		return NULL;
 	}
-	size_t ring_struct_size = sizeof(struct __ring_buf_t);
+	const size_t ring_struct_size = sizeof(struct __ring_buf_t);
 	if (buf_size < ring_struct_size + 3)
 	{
 		RING_LOGE("buf_size(%zu) is too small", buf_size);
 		return NULL;
 	}
 	ring_handle handle = (ring_handle)pbuf;
-	handle->is_internal_malloced = false;
+	handle->need_free_myself = false;
 	handle->size = buf_size - ring_struct_size;
-	handle->pbuf = (char *)pbuf + ring_struct_size;
+	handle->pbuf = (char*)pbuf + ring_struct_size;
 	handle->offset_read = handle->offset_write = 0;
+	return handle;
+}
+
+ring_handle ring_buf_create(const size_t size) 
+{
+	if (size < 3)
+	{
+		RING_LOGE("buf size too small. %zu", size);
+		return NULL;
+	}
+	const size_t expect_mem_size = size + sizeof(struct __ring_buf_t);
+	char* pbuf = (char*)malloc(expect_mem_size);
+	if (!pbuf) 
+	{
+		RING_LOGE("failed alloc %zu size for ring_buf", expect_mem_size);
+		return NULL;
+	}
+	ring_handle handle = ring_buf_create_with_mem(pbuf, expect_mem_size);
+	if (!handle) 
+	{
+		RING_LOGE("failed alloc ring_handle");
+		free(pbuf);
+		return NULL;
+	}
+	handle->need_free_myself = true;
 	return handle;
 }
 
@@ -91,19 +95,7 @@ static size_t internal_ring_buf_read(ring_handle handle, bool is_peek, void* tar
 
 	//second part: from begin
 	size_t second_part_len = len - first_part_len;
-	if (0 == second_part_len) 
-	{
-		if (!is_peek)
-		{
-			size_t new_offset_read = handle->offset_read + first_part_len;
-			if (new_offset_read == handle->size) 
-			{
-				new_offset_read = 0;
-			}
-			handle->offset_read = new_offset_read;
-		}
-	}
-	else 
+	if (second_part_len) 
 	{
 		if (target)
 		{
@@ -112,6 +104,18 @@ static size_t internal_ring_buf_read(ring_handle handle, bool is_peek, void* tar
 		if (!is_peek)
 		{
 			handle->offset_read = second_part_len;
+		}
+	}
+	else 
+	{
+		if (!is_peek)
+		{
+			size_t new_offset_read = handle->offset_read + first_part_len;
+			if (new_offset_read == handle->size)
+			{
+				new_offset_read = 0;
+			}
+			handle->offset_read = new_offset_read;
 		}
 	}
 	return len;
@@ -152,7 +156,7 @@ size_t ring_buf_write(ring_handle handle, void* source, size_t len)
 	if (0 == second_part_len) 
 	{
 		size_t new_offset_write = handle->offset_write + first_part_len;
-		if (new_offset_write == handle->size) 
+		if (new_offset_write == handle->size)
 		{
 			new_offset_write = 0;
 		}
@@ -182,8 +186,9 @@ void ring_buf_destroy(ring_handle* handle_p)
 	{
 		return;
 	}
-	if (handle->is_internal_malloced) 
+	if (handle->need_free_myself) 
 	{
+		handle->need_free_myself = false;
 		handle->pbuf = NULL;// buf memory is in handle
 		free(handle);
 	}

@@ -10,22 +10,21 @@
 
 static void setup_console();
 
-#define RUN_TEST(func_name) do                                                        \
-{                                                                                     \
-   LOGD("\n%s\nNow run --> %s()\n", XLOG_STAR_LINE, #func_name);                      \
-   int ret_##func_name = func_name();                                                  \
-   printf("\n");                                                                      \
-   LOGD("<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE);  \
-   ASSERT(ret_##func_name == 0);                                                       \
+#define RUN_TEST(func_name) do                                                          \
+{                                                                                       \
+   LOGD("\n%s\nNow run --> %s()", XLOG_STAR_LINE, #func_name);                          \
+   int ret_##func_name = func_name();                                                   \
+   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE); \
+   ASSERT(ret_##func_name == 0);                                                        \
 } while (0)
 
-/*
-#define ENUM_STATES(GENERATOR)           \
-         GENERATOR(STATE_START)          \
-         GENERATOR(STATE_STOP)           
-DECLARE_ENUM(STATES, ENUM_STATES);
-DEFINITION_ENUM_STRINGS(STATES, ENUM_STATES);
-*/
+
+//#define ENUM_STATES(GENERATOR)           \
+//         GENERATOR(STATE_START)          \
+//         GENERATOR(STATE_STOP)           
+//DECLARE_ENUM(STATES, ENUM_STATES);
+//DEFINIE_ENUM_STRINGS(STATES, ENUM_STATES);
+
 
 static int memleak_test();
 
@@ -50,6 +49,7 @@ extern int url_encoder_decoder_test();
 extern int base64_test();
 extern int str_params_test();
 extern int msg_queue_handler_test();
+extern int integer_test();
 
 EXTERN_C_END
 
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
-	//RUN_TEST(ini_test);
+	RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(mplite_test);
@@ -97,7 +97,8 @@ int main(int argc, char* argv[])
 	//RUN_TEST(url_encoder_decoder_test);
 	//RUN_TEST(base64_test);
 	//RUN_TEST(str_params_test);
-	RUN_TEST(msg_queue_handler_test);
+	//RUN_TEST(msg_queue_handler_test);
+	//RUN_TEST(integer_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

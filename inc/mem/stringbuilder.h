@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_STRINGBUILDER_HEADER
-#define __LCU_STRINGBUILDER_HEADER
+#ifndef LCU_STRINGBUILDER_H
+#define LCU_STRINGBUILDER_H
 
 #include <stddef.h>
 
@@ -11,11 +11,19 @@ extern "C" {
 	typedef struct stringbuilder stringbuilder_t;
 
 	/**
+	 * create stringbuilder object with provide buffer.
+	 * @param buf : buffer pointer
+	 * @param buf_size : buffer size
+	 */
+	stringbuilder_t* stringbuilder_create_with_mem(char* buf, size_t buf_size);
+
+	/**
 	 * create stringbuilder object.
 	 * if init_buf_size is non-zero, use it as init buffer size.
 	 * if init_buf_size is zero, default init buf size will used.
 	 */
 	stringbuilder_t* stringbuilder_create(size_t init_buf_size);
+
 	/**
 	 * free stringbuilder memory.
 	 */
@@ -61,4 +69,4 @@ extern "C" {
 };
 #endif // __cplusplus
 
-#endif // __LCU_STRINGBUILDER_HEADER
+#endif // !LCU_STRINGBUILDER_H

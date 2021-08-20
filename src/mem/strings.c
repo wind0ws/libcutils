@@ -133,32 +133,30 @@ char* strreplace(char const* const original,
 		++patcnt;
 	}
 
+	// allocate memory for the new string
+	size_t const retlen = orilen + patcnt * (replen - patlen);
+	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
+	if (returned != NULL)
 	{
-		// allocate memory for the new string
-		size_t const retlen = orilen + patcnt * (replen - patlen);
-		char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
-		if (returned != NULL)
+		//memset(returned, '\0', sizeof(char) * (retlen + 1));
+		returned[0] = '\0';
+		// copy the original string, 
+		// replacing all the instances of the pattern
+		char* retptr = returned;
+		for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
 		{
-			//memset(returned, '\0', sizeof(char) * (retlen + 1));
-			returned[0] = '\0';
-			// copy the original string, 
-			// replacing all the instances of the pattern
-			char* retptr = returned;
-			for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
-			{
-				size_t const skplen = patloc - oriptr;
-				// copy the section until the occurrence of the pattern
-				strncpy(retptr, oriptr, skplen);
-				retptr += skplen;
-				// copy the replacement 
-				strncpy(retptr, replacement, replen);
-				retptr += replen;
-			}
-			// copy the rest of the string.
-			strcpy(retptr, oriptr);
+			size_t const skplen = patloc - oriptr;
+			// copy the section until the occurrence of the pattern
+			strncpy(retptr, oriptr, skplen);
+			retptr += skplen;
+			// copy the replacement 
+			strncpy(retptr, replacement, replen);
+			retptr += replen;
 		}
-		return returned;
+		// copy the rest of the string.
+		strcpy(retptr, oriptr);
 	}
+	return returned;
 }
 
 void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_str, const char* delimiter)

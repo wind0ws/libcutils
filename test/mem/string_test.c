@@ -5,7 +5,7 @@
 #include "log/xlog.h"
 #include "thread/thread_wrapper.h"
 
-#define LOG_TAG_STR_TEST "STR_TEST"
+#define LOG_TAG "STR_TEST"
 
 static int stringbuilder_test()
 {
@@ -36,7 +36,7 @@ static int stringreplace_test()
 	const char* str = "Hello, can you replace this string. can you. can you...";
 	char chars[32];
 	strlcpy(chars, str, sizeof(chars));
-	char *replaced_str = strreplace(chars,"can you","i can");
+	char *replaced_str = strreplace(chars, "can you", "i can");
 	LOGD("replaced string => %s", replaced_str);
 	free(replaced_str);
 	return 0;
@@ -90,6 +90,18 @@ static int strdup_test()
 	return 0;
 }
 
+static int strcase_test()
+{
+	char str[128] = {0};
+	strlcpy(str, "hello", sizeof(str));
+	LOGD("str=> %s", str);
+	STRING2UPPER(str);
+	LOGD("after upper => %s", str);
+	STRING2LOWER(str);
+	LOGD("after lower => %s", str);
+	return 0;
+}
+
 int string_test()
 {
 	LOGD("--> test strdup");
@@ -119,6 +131,10 @@ int string_test()
 	LOGD("--> test count_utf8str_words_test");
 	count_utf8str_words_test();
 	LOGD("<-- count_utf8str_words_test finished\n");
+
+	LOGD("--> test strcase_test");
+	strcase_test();
+	LOGD("<-- strcase_test finished\n");
 
 	return 0;
 }

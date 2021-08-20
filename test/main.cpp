@@ -86,12 +86,12 @@ int main(int argc, char* argv[])
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
-	RUN_TEST(ini_test);
+	//RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
-	//RUN_TEST(string_test);
+	RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);

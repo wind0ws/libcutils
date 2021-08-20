@@ -26,15 +26,11 @@
 #ifndef strdup
 #define strdup(s)                            _strdup(s)
 #endif // !strdup
-#ifndef strndup
-	//windows not implement strndup, let's do it.
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#ifndef strndup  //windows not implement strndup, let's do it.
+    #ifdef __cplusplus
+    extern "C" 
+    #endif // __cplusplus
 	char* strndup(const char* s, size_t n);
-#ifdef __cplusplus
-}
-#endif // __cplusplus
 #endif // !strndup
 
 /**
@@ -43,10 +39,10 @@ extern "C" {
  * here we assume that "dest" is big enough to storage "src", so we use 'strlen(src) + 1' as destSize.
  * be careful!
  */
-#define strcpy(dest, src)                    strcpy_s(dest, strlen(src) + 1, src) 
-#define strncpy(dest, src, max_count)        strncpy_s(dest, (max_count) + 1, src, max_count)
-#define strcat(dest, src)                    strcat_s(dest, strlen(dest) + strlen(src) + 1, src)
-#define strtok_r(str, delimiter, ctx)        strtok_s(str, delimiter, ctx)
+#define strcpy(dest, src)                    strcpy_s((dest), strlen(src) + 1, (src)) 
+#define strncpy(dest, src, cp_count)         strncpy_s((dest), (cp_count) + 1, (src), (cp_count))
+#define strcat(dest, src)                    strcat_s((dest), strlen(dest) + strlen(src) + 1, (src))
+#define strtok_r(str, delimiter, ctx)        strtok_s((str), (delimiter), (ctx))
  //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
 //stricmp is windows function. suggest to use strcasecmp for cross platform
@@ -54,9 +50,15 @@ extern "C" {
 #define strnicmp(s1, s2, n)                  strncasecmp(s1, s2, n)
 #endif // _WIN32
 
-#define _STRING_TRANSFORM(s, trans_func)     do{ for ( ; *p; ++p) *p = trans_func(*p); }while(0)
-#define STRING2UPPER(s)                      _STRING_TRANSFORM(s, tolower)
-#define STRING2LOWER(s)                      _STRING_TRANSFORM(s, toupper)
+#define _STRING_TRANSFORM(s, line, trans_func)  do{  char *cpy_s_##line = (char *)(s); \
+													 for ( ; *cpy_s_##line; ++cpy_s_##line) *cpy_s_##line = trans_func(*cpy_s_##line); \
+	 											  } while(0)
+#ifndef STRING2UPPER
+#define STRING2UPPER(s)                      _STRING_TRANSFORM(s, __LINE__, toupper)
+#endif // !STRING2UPPER
+#ifndef STRING2LOWER
+#define STRING2LOWER(s)                      _STRING_TRANSFORM(s, __LINE__, tolower)
+#endif // !STRING2LOWER
 
 #ifdef __cplusplus
 extern "C" {

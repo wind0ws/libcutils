@@ -31,7 +31,7 @@ run_mode =  \r\n\
 \r\n";
 
 //ini解析回调，return true继续，return false终止解析
-static int my_ini_handler(void* user,
+static bool my_ini_handler(void* user,
 	const char* section, const char* key, const char* value) 
 {
 	if (!section || !key)

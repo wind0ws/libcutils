@@ -12,7 +12,7 @@
 
 #if(defined(__linux__) || defined(__ANDROID__))
 #include <sys/cdefs.h>    /* for __BEGIN_DECLS                 */
-#endif
+#endif // __linux__ || __ANDROID__
 
 #ifdef __ANDROID__
 #include <android/log.h>  /* for log msg on logcat             */
@@ -83,7 +83,7 @@ typedef float               FLOAT;
 #define API_IMPORT
 #define API_HIDDEN
 #pragma warning Unknown dynamic link import/export/hidden semantics.
-#endif
+#endif // _MSC_VER
 
 #ifndef EXTERN_C
 #ifdef __cplusplus
@@ -202,7 +202,7 @@ typedef intptr_t ssize_t;
         _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                \
         if (!expr_##line)                                                           \
         {                                                                           \
-           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0); \
+           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, line, 0); \
         }                                                                           \
     } while(0)
 #define _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)

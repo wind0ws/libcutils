@@ -5,7 +5,7 @@ inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
 https://github.com/benhoyt/inih 
 */
-
+#pragma once
 #ifndef LCU_INI_READER_H
 #define LCU_INI_READER_H
 
@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include <stdbool.h>
 
     /* Nonzero if ini_handler callback should accept lineno parameter. */
 #ifndef INI_HANDLER_LINENO
@@ -24,11 +25,11 @@ extern "C" {
 //handler callback return true for continue, false for error
 /* Typedef for prototype of handler function. */
 #if INI_HANDLER_LINENO
-    typedef int (*ini_handler)(void* user, const char* section,
+    typedef bool (*ini_handler)(void* user, const char* section,
         const char* name, const char* value,
         int lineno);
 #else
-    typedef int (*ini_handler)(void* user, const char* section,
+    typedef bool (*ini_handler)(void* user, const char* section,
         const char* name, const char* value);
 #endif
 

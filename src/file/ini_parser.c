@@ -69,7 +69,7 @@ static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
 //ini reader callback, return true for continue，return false for abort
-static int ini_handler_cb(void* user,
+static bool ini_handler_cb(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
 	, int lineno
@@ -321,18 +321,10 @@ char* ini_parser_dump(ini_parser_ptr parser_p)
 	{
 		return NULL;
 	}
-	// why manual alloc memory for stringbuilder: 
-	//   to make sure it won't realloc frequently.
 	const size_t sb_mem_size = parser_p->prediction_str_size + 64;
-	char* sb_memory = (char *)malloc(sb_mem_size);
-	if (!sb_memory)
-	{
-		return NULL;
-	}
-	stringbuilder_t *sb = stringbuilder_create_with_mem(sb_memory, sb_mem_size);
+	stringbuilder_t *sb = stringbuilder_create(sb_mem_size);
 	if (!sb)
 	{
-		free(sb_memory);
 		return NULL;
 	}
 	dump_ini_context dump_context =
@@ -343,7 +335,6 @@ char* ini_parser_dump(ini_parser_ptr parser_p)
 	hashmap_foreach(parser_p->ini_root_map_p, foreach_section_iter_cb, &dump_context);
 	char* ret_str = dump_context.ret_code ? NULL : strdup(stringbuilder_print(sb));
 	stringbuilder_destroy(&sb);
-	free(sb_memory);
 	return ret_str;
 }
 

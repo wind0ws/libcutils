@@ -202,7 +202,7 @@ typedef intptr_t ssize_t;
         _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                \
         if (!expr_##line)                                                           \
         {                                                                           \
-           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, line, 0); \
+           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, line, 0);     \
         }                                                                           \
     } while(0)
 #define _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
@@ -215,14 +215,14 @@ typedef intptr_t ssize_t;
 
 #define _TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
      do {                                                                           \
-        ASSERT(expr);                                                               \
-        bool is_expr_true##line = !!(expr);                                         \
-        if (!is_expr_true##line)                                                    \
-        {                                                                           \
-           EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                     \
-                  #expr, __func__, __FILE__, line);                                 \
-           abort();                                                                 \
-        }                                                                           \
+          ASSERT(expr);                                                             \
+          bool is_expr_true##line = !!(expr);                                       \
+          if (!is_expr_true##line)                                                  \
+          {                                                                         \
+             EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
+                    #expr, __func__, __FILE__, line);                               \
+             abort();                                                               \
+          }                                                                         \
      } while(0)
 #define _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  _TEMP_FOR_ASSERT_ABORT(expr, line)
 /**

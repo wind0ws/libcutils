@@ -50,6 +50,7 @@ extern int base64_test();
 extern int str_params_test();
 extern int msg_queue_handler_test();
 extern int integer_test();
+extern int list_test();
 
 EXTERN_C_END
 
@@ -86,12 +87,12 @@ int main(int argc, char* argv[])
 
 	//RUN_TEST(memleak_test);//this will report mem leak.
 	//RUN_TEST(file_util_test);
-	//RUN_TEST(ini_test);
+	RUN_TEST(ini_test);
 	//RUN_TEST(basic_test);
 	//RUN_TEST(autocover_buffer_test);
 	//RUN_TEST(mplite_test);
 	//RUN_TEST(thpool_test);
-	RUN_TEST(string_test);
+	//RUN_TEST(string_test);
 	//RUN_TEST(time_util_test);
 	//RUN_TEST(thread_wrapper_test);
 	//RUN_TEST(url_encoder_decoder_test);
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
 	//RUN_TEST(str_params_test);
 	//RUN_TEST(msg_queue_handler_test);
 	//RUN_TEST(integer_test);
+	//RUN_TEST(list_test);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);

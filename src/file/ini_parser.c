@@ -40,7 +40,7 @@ typedef struct
 
 struct _ini_parser
 {
-	/* hold all sections, and each section(list_t) hold key_value_t */
+	/* hold all sections, and each section(list_t *) hold key_value_t */
 	list_t* plist_sections;
 	/* prediction ini string size */
 	size_t prediction_str_size;
@@ -71,7 +71,7 @@ static inline void allocator_my_free(void* ptr)
 static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
-//ini reader callback, return true for continue£¬return false for abort
+//ini reader callback, return true for continue, return false for abort
 static bool ini_handler_cb(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
@@ -170,12 +170,13 @@ static bool iter_for_search_target_section(void* data, void* context)
 static section_info_t* search_target_section(ini_parser_ptr parser_p, bool auto_create,
 	const char* section, const size_t section_len)
 {
+	if (!section || section_len == 0) return NULL;
 	if (parser_p->p_last_used_section &&
 		strcasecmp(section, parser_p->p_last_used_section->section_name) == 0)
 	{
 		return parser_p->p_last_used_section; //hit cache, no need search on root list.
 	}
-	
+	if (!auto_create && list_length(parser_p->plist_sections) == 0) return NULL;
 	list_node_t *target_section_node = list_foreach((const list_t *)parser_p->plist_sections, 
 										iter_for_search_target_section, (void *)section);
 	section_info_t* target_section = target_section_node ? (section_info_t*)list_node(target_section_node) : NULL;
@@ -194,7 +195,7 @@ static section_info_t* search_target_section(ini_parser_ptr parser_p, bool auto_
 		}
 		strlcpy(target_section->section_name, section, sizeof(target_section->section_name));
 		list_append(parser_p->plist_sections, target_section);
-		parser_p->prediction_str_size += (section_len + 6); /* 2 for square brackets, and 4 for 2 \r\n */
+		parser_p->prediction_str_size += (section_len + 6U); /* 2 for square brackets, and 4 for 2 \r\n */
 		parser_p->p_last_used_section = target_section;
 	}
 	return target_section;
@@ -287,6 +288,43 @@ INI_PARSER_CODE ini_parser_get_string(ini_parser_ptr parser_p,
 	return INI_PARSER_ERR_SUCCEED;
 }
 
+// delete target section key
+INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_ptr parser_p,
+	const char* section, const char* key)
+{
+	if (!parser_p || !section || !key)
+	{
+		return INI_PARSER_ERR_INVALID_PARAM;
+	}
+	section_info_t * p_section = search_target_section(parser_p, false, section, strlen(section));
+	if (!p_section)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	key_value_t *p_kv = search_target_kv(p_section->plist_section, key);
+	if (!p_kv)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	return list_remove(p_section->plist_section, p_kv) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+}
+
+// delete target section, all key-value in this section will deleted.
+INI_PARSER_CODE ini_parser_delete_section(ini_parser_ptr parser_p, const char* section)
+{
+	if (!parser_p || !section)
+	{
+		return INI_PARSER_ERR_INVALID_PARAM;
+	}
+	section_info_t* p_section = search_target_section(parser_p, false, section, strlen(section));
+	if (!p_section)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	list_free(p_section->plist_section);
+	return list_remove(parser_p->plist_sections, p_section) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+}
+
 static bool iter_key_value_for_dump(void* data, void* context)
 {
 	if (!data || !context) // key is key, value is value.
@@ -373,9 +411,9 @@ INI_PARSER_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section
 	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_BOOL);
 }
 
-static bool iter_for_delete_section(void* data, void* context)
+static bool iter_for_delete_all_section(void* data, void* context)
 {
-	if (!data) // key is section_info_t *
+	if (!data) // data is section_info_t *
 	{
 		return true;
 	}
@@ -394,7 +432,7 @@ INI_PARSER_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 	if (parser_p->plist_sections)
 	{
 		//delete all section
-		list_foreach(parser_p->plist_sections, iter_for_delete_section, NULL);
+		list_foreach(parser_p->plist_sections, iter_for_delete_all_section, NULL);
 		list_free(parser_p->plist_sections);
 		parser_p->plist_sections = NULL;
 	}

@@ -58,28 +58,28 @@ static int sb_ensure_space(stringbuilder_t* sb, size_t string_len)
 	{
 		return -1;
 	}
-
 	if (sb->allocated >= sb->length + string_len + 1)
 	{
 		return 0; // buf size is already enough.
 	}
-
-	while (sb->allocated < sb->length + string_len + 1)
+	size_t should_alloc_buf_size = sb->allocated;
+	while (should_alloc_buf_size < sb->length + string_len + 1)
 	{
-		sb->allocated <<= 1;
-		if (sb->allocated == 0)
+		should_alloc_buf_size <<= 1;
+		if (should_alloc_buf_size == 0)
 		{
 			/* wow, what a huge string! */
-			//sb->allocated--;
+			//--should_alloc_buf_size;
 			return -3;
 		}
 	}
 
-	void* new_buf = realloc(sb->buffer, sb->allocated);
+	void* new_buf = realloc(sb->buffer, should_alloc_buf_size);
 	if (!new_buf)
 	{
 		return -4;
 	}
+	sb->allocated = should_alloc_buf_size;
 	sb->buffer = new_buf;
 	return 0;
 }

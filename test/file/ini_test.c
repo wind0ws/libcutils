@@ -103,6 +103,10 @@ static int ini_parser_test()
 
 	err = ini_parser_put_string(parser, "config", "new_key", "new_value");
 	TLOGD(LOG_TAG, "%s on put new config", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	err = ini_parser_delete_by_section_key(parser, "config", "test");
+	TLOGD(LOG_TAG, "%s on delete [config] test", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	err = ini_parser_delete_section(parser, "config3");
+	TLOGD(LOG_TAG, "%s on delete [config3]", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
 	//dump string should free after use.
 	char* ini_dump = ini_parser_dump(parser);
 	if (ini_dump)

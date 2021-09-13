@@ -7,17 +7,11 @@
 #include "log/file_logger.h"
 #include "libcutils.h"
 #include <locale.h> /* for setlocale */
+#ifdef _WIN32
+#include <conio.h> /* for kbhit */
+#endif // _WIN32
 
-static void setup_console();
-
-#define RUN_TEST(func_name) do                                                          \
-{                                                                                       \
-   LOGD("\n%s\nNow run --> %s()", XLOG_STAR_LINE, #func_name);                          \
-   int ret_##func_name = func_name();                                                   \
-   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE); \
-   ASSERT(ret_##func_name == 0);                                                        \
-} while (0)
-
+#define KB_TIMEOUT      (5)   // seconds
 
 //#define ENUM_STATES(GENERATOR)           \
 //         GENERATOR(STATE_START)          \
@@ -25,7 +19,25 @@ static void setup_console();
 //DECLARE_ENUM(STATES, ENUM_STATES);
 //DEFINIE_ENUM_STRINGS(STATES, ENUM_STATES);
 
+typedef int(*test_case_func)();
 
+#define RUN_TEST(func_name) do                                                          \
+{                                                                                       \
+   LOGD("\n%s\nNow run --> %s()", XLOG_STAR_LINE, #func_name);                          \
+   int ret_##func_name = func_name();                                                   \
+   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE); \
+   ASSERT_ABORT(ret_##func_name == 0);                                                  \
+} while (0)
+
+typedef struct
+{
+	test_case_func p_func;
+	char* str_description;
+} test_case_t;
+
+
+static void setup_console();
+static int run_test_case_from_user();
 static int memleak_test();
 
 EXTERN_C_START
@@ -52,9 +64,28 @@ extern int msg_queue_handler_test();
 extern int integer_test();
 extern int list_test();
 
+static test_case_t g_all_test_cases[] =
+{
+	{ ini_test, "test ini" },
+	{ thread_wrapper_test, "test multi-thread and xlog" },
+	{ basic_test, "simple fwrite test case" },
+	{ autocover_buffer_test, "test auto-cover buffer" },
+	{ mplite_test, "test mem-pool" },
+	{ file_util_test, "test file util" },
+	{ thpool_test, "test thread pool" },
+	{ string_test, "test string op" },
+	{ time_util_test, "test time op" },
+	{ url_encoder_decoder_test, "test url encoder/decoder" },
+	{ base64_test, "test base64" },
+	{ str_params_test, "test string params" },
+	{ msg_queue_handler_test, "test msg queue handler" },
+	{ integer_test, "test integer" },
+	{ list_test, "test list" },
+};
+
 EXTERN_C_END
 
-#define SAVE_LOG 0
+#define SAVE_LOG 1
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
 #ifdef _WIN32
@@ -62,8 +93,8 @@ EXTERN_C_END
 #else
 #define LOG_PATH ("mylog.log")
 #endif // _WIN32
-#define STDOUT2FILE() xlog_stdout2file(LOG_PATH)
-#define BACK2STDOUT() xlog_back2stdout()
+#define STDOUT2FILE() do{ printf("\n redirect to file \n"); xlog_stdout2file(LOG_PATH); } while(0);
+#define BACK2STDOUT() do{ xlog_back2stdout(); printf("\n redirect to console \n"); } while(0);
 #else
 #define STDOUT2FILE()
 #define BACK2STDOUT()
@@ -72,45 +103,72 @@ EXTERN_C_END
 EXTERN_C
 int main(int argc, char* argv[])
 {
+	int ret = 0;
 	setup_console();
-
 	INIT_MEM_CHECK();
-
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
+
+	bool is_press_kb = true; // default status true for unix
+#if _WIN32
+	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
+	clock_t tstart = clock();
+	//int pressed_char = 'y';                   // default key press
+	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
+	{
+		if ((is_press_kb = _kbhit()))
+		{
+			//pressed_char = _getch();
+			break;
+		}
+		usleep(500000);
+	}
+	//if (tolower(pressed_char) == 'y')
+	//	printf("you pressed y\n");
+#endif //_WIN32
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_begin() == 0);
 #endif
 	STDOUT2FILE();
 
-	//ASSERT_ABORT(1 == 0);
-
-	//RUN_TEST(memleak_test);//this will report mem leak.
-	//RUN_TEST(file_util_test);
-	RUN_TEST(ini_test);
-	//RUN_TEST(basic_test);
-	//RUN_TEST(autocover_buffer_test);
-	//RUN_TEST(mplite_test);
-	//RUN_TEST(thpool_test);
-	//RUN_TEST(string_test);
-	//RUN_TEST(time_util_test);
-	//RUN_TEST(thread_wrapper_test);
-	//RUN_TEST(url_encoder_decoder_test);
-	//RUN_TEST(base64_test);
-	//RUN_TEST(str_params_test);
-	//RUN_TEST(msg_queue_handler_test);
-	//RUN_TEST(integer_test);
-	//RUN_TEST(list_test);
+	do
+	{
+		if (is_press_kb)
+		{
+			ret = run_test_case_from_user();
+			break;
+		}
+		
+		fprintf(stderr, "\n  ====auto run test case====  \n");
+		LOGI("  ====auto run test case====  ");
+		//ASSERT_ABORT(1 == 0);
+		//RUN_TEST(memleak_test);//this will report mem leak.
+		//RUN_TEST(file_util_test);
+		//RUN_TEST(ini_test);
+		//RUN_TEST(basic_test);
+		//RUN_TEST(autocover_buffer_test);
+		//RUN_TEST(mplite_test);
+		//RUN_TEST(thpool_test);
+		//RUN_TEST(string_test);
+		RUN_TEST(time_util_test);
+		//RUN_TEST(thread_wrapper_test);
+		//RUN_TEST(url_encoder_decoder_test);
+		//RUN_TEST(base64_test);
+		//RUN_TEST(str_params_test);
+		//RUN_TEST(msg_queue_handler_test);
+		//RUN_TEST(integer_test);
+		//RUN_TEST(list_test);
+	} while (0);
 
 #if TEST_FILE_LOGGER
 	ASSERT(file_logger_test_end() == 0);
 #endif
 	BACK2STDOUT();
 
-	LOGI("...bye bye...\n");
+	LOGI("...bye bye...  %d\n", ret);
 
 	DEINIT_MEM_CHECK();
-	return 0;
+	return ret;
 }
 
 static int memleak_test()
@@ -143,4 +201,95 @@ static void setup_console()
 	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP);
 	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL);
 	//xlog_set_format(LOG_FORMAT_RAW);
+}
+
+static int get_testcase_from_kb(int* p_testcases, int test_case_size)
+{
+	char buffer[1024] = { 0 };
+	int retry_counter = 0;
+	do 
+	{
+		fprintf(stderr, "%s. please input your choose: ", retry_counter ? "invalid input, retry" : "");
+		if (!fgets(buffer, sizeof(buffer) - 1, stdin))
+		{
+			fprintf(stderr, "failed on get run info");
+			return -1;
+		}
+		++retry_counter;
+	} while (buffer[0] == '\n' || buffer[0] > ('0' + 9));
+	fprintf(stderr, "your choose is: %s\n", buffer);
+	size_t str_len = strlen(buffer);
+	if (str_len < 1) return -2;
+	char* p_str_end = buffer + strlen(buffer);
+	char* p_loc = NULL;
+	if (NULL != (p_loc = strchr(buffer, '\n')))
+	{
+		*p_loc = '\0'; // remove \n
+	}
+	char* str_start = buffer;
+	int case_count = 0;
+	while (case_count < test_case_size)
+	{
+		if (NULL != (p_loc = strchr(str_start, ' ')))
+		{
+			*p_loc = '\0'; // cut string
+		}
+		char* end_ptr = NULL;
+		int num = (int)strtol(str_start, &end_ptr, 10);
+		if (end_ptr == str_start)
+		{
+			break; // no parse performed
+		}
+		p_testcases[case_count] = num;
+		fprintf(stderr, "you select test cases[%d]=%d\n", case_count, p_testcases[case_count]);
+		++case_count;
+		if (!end_ptr || *end_ptr == '\0' || p_loc == NULL || (str_start = p_loc + 1) >= p_str_end)
+		{
+			break; // no string need continue parsing
+		}
+	}
+	return case_count;
+}
+
+static void show_menu_test_case()
+{
+	char str_menu[4096] = { 0 };
+	size_t str_len = 0;
+	size_t buffer_left_len;
+	for (size_t i = 0; (buffer_left_len = sizeof(str_menu) - 1 - str_len) > 0
+		&& i < (sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0])); ++i)
+	{
+		str_len += snprintf(str_menu + str_len, buffer_left_len, "  %02d : %s\n", i, g_all_test_cases[i].str_description);
+	}
+	fprintf(stderr, "input test case numbers (split by space),\n press enter to submit task:\n%s\n", str_menu);
+}
+
+static int run_test_case_from_user()
+{
+	int ret = 0;
+	int test_cases[64] = { -1 };
+	int test_case_count = 0;
+	show_menu_test_case();
+	if ((test_case_count = get_testcase_from_kb(test_cases, sizeof(test_cases) / sizeof(test_cases[0]))) < 1)
+	{
+		fprintf(stderr, "failed on get test cases\n");
+		ret = 1;
+	}
+	fprintf(stderr, "total test case count=%d\n    Please wait...\n", test_case_count);
+	int all_available_case_count = sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0]);
+	int case_number;
+	for (int i = 0; i < test_case_count && (case_number = test_cases[i]) >= 0 
+		&& case_number < all_available_case_count; ++i)
+	{
+		test_case_t* p_case = &g_all_test_cases[case_number];
+		LOGI("\nNow Run testcase[%d] ==> %s ", i, p_case->str_description);
+		ret = p_case->p_func();
+		LOGI("End Run testcase[%d] <== %s, ret=%d \n", i, p_case->str_description, ret);
+		if (ret)
+		{
+			LOGI("failed run last test case, break. %d", ret);
+			break;
+		}
+	}
+	return ret;
 }

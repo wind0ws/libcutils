@@ -35,7 +35,7 @@ static void* thread_worker(void *param)
 	TLOGI(LOG_TAG, "tid=%d start!", tid);
 	uint64_t cur_millis, start_millis;
 	time_util_current_ms(&start_millis);
-	while (counter++ < 100)
+	while (counter++ < 100000)
 	{
 		//time_util_get_time_str_current(time_str, 8);
 		//printf("    [%d] %s at %d", tid, time_str, counter);

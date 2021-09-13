@@ -1,7 +1,7 @@
 #include "thread/thread_wrapper.h"
 
 #ifdef _WIN32
-//reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2019
+//reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
 #include <windows.h>
 static const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
@@ -13,10 +13,10 @@ typedef struct tagTHREADNAME_INFO
 	DWORD dwFlags; // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
-//The SetThreadName function shown below demonstrates this exception-based approach. 
+//The SetWin32ThreadName function shown below demonstrates this exception-based approach. 
 //Note that the thread name will be automatically copied to the thread, 
 //so that the memory for the threadName parameter can be released after the SetThreadName call is completed.
-static void SetThreadName(DWORD dwThreadID, const char* threadName) 
+static void SetWin32ThreadName(DWORD dwThreadID, const char* threadName) 
 {
 	THREADNAME_INFO info = {0};
 	info.dwType = 0x1000;
@@ -44,7 +44,7 @@ int pthread_setname_np(pthread_t thr, const char* name)
 #else
 #error " unknow _LCU_CFG_WIN32_PTHREAD_MODE "
 #endif // _LCU_CFG_WIN_PTHREAD_MODE
-	SetThreadName(thr_id, name);
+	SetWin32ThreadName(thr_id, name);
 	return 0;
 }
 #endif // _WIN32

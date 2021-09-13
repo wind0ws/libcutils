@@ -1,9 +1,10 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdbool.h>
 #include "log/xlog.h"
 #include "mem/strings.h"
 #include "time/time_util.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <malloc.h>
 
 // For gettid.
 #if defined(__APPLE__)
@@ -29,6 +30,8 @@
 #elif defined(_WIN32)
 #define XLOG_GETTID()      (int)GetCurrentThreadId()
 #endif
+
+#define DEFAULT_LOG_BUF_SIZE (512)
 
 #define LEVEL_CHAR_V ('V')
 #define LEVEL_CHAR_D ('D')
@@ -95,7 +98,7 @@ static xlog_config_t g_xlog_cfg =
 
 #define XLOG_IS_LOGABLE(level) (g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
-static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, 'U'};
+static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?'};
 
 #if defined(__ANDROID__)
 static int g_map_android_level[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
@@ -220,12 +223,14 @@ int xlog_get_format()
 #pragma warning(push)
 #pragma warning(disable:6386) //for disable buffer overflow
 #endif // _WIN32
-void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
+void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
-	va_list args;
-	char buffer_log[1024] = { 0 };
+	va_list va;
+	char default_buffer[DEFAULT_LOG_BUF_SIZE] = { 0 };
+	size_t default_buffer_remaining_size;
+	char* buffer_log = default_buffer;
+	size_t buffer_log_size = sizeof(default_buffer);
 	size_t buffer_strlen;
-	size_t buffer_remaining_size;
 	size_t header_len = 0;
 	bool is_log2console;
 	bool is_log2usercb;
@@ -252,29 +257,45 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
 		{
-			header_len += snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TID)
 		{
-			header_len += snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "(%5d)", XLOG_GETTID());
+			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
 		}
 		if (header_len)
 		{
-			buffer_log[header_len++] = ':';
-			buffer_log[header_len++] = ' ';
+#define XLOG_HEADER_COLON (": ")
+			memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
+			header_len += (sizeof(XLOG_HEADER_COLON) - 1);
 		}
 	}
 	buffer_strlen = header_len;
-	if (func_name && file_line > 0 && (buffer_remaining_size = sizeof(buffer_log) - buffer_strlen) > 0)
+	if (func_name && file_line > 0 && (default_buffer_remaining_size = buffer_log_size - buffer_strlen) > 0)
 	{
-		buffer_strlen += snprintf(buffer_log + buffer_strlen, buffer_remaining_size, "(%s:%d) ", func_name, file_line);
+		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
 	}
 	
-	if ((buffer_remaining_size = sizeof(buffer_log) - buffer_strlen) > 0)
+	if ((default_buffer_remaining_size = buffer_log_size - buffer_strlen) > 0)
 	{
-		va_start(args, fmt);
-		buffer_strlen += vsnprintf(buffer_log + buffer_strlen, buffer_remaining_size, fmt, args);
-		va_end(args);
+		va_start(va, fmt);
+		//first we get the formatted string length. ('\0' is not belong of the length)
+		size_t need_fmt_str_size = vsnprintf(NULL, 0, fmt, va) + 1;
+		va_end(va);
+		if (default_buffer_remaining_size < need_fmt_str_size)
+		{
+			buffer_log_size = buffer_strlen + need_fmt_str_size;
+			buffer_log = (char *)malloc(buffer_log_size);
+			if (!buffer_log)
+			{
+				return; // oops, out of memory
+			}
+			strlcpy(buffer_log, default_buffer, buffer_log_size);
+		}
+
+		va_start(va, fmt);
+		buffer_strlen += vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
+		va_end(va);
 	}
 	
 	/*if (buffer_strlen == sizeof(buffer_log))
@@ -289,7 +310,7 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 
 #if defined(__ANDROID__)
 	if (XLOG_IS_ANDROID_LOGABLE)
-	{
+	{   // android log no need our own log header, just skip it
 		__android_log_print(g_map_android_level[level], tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
@@ -297,6 +318,11 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 	if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
 	{
 		g_xlog_cfg.cb_pack.cb(buffer_log, buffer_strlen + 1, g_xlog_cfg.cb_pack.cb_user_data);
+	}
+
+	if (buffer_log != default_buffer)
+	{
+		free(buffer_log);
 	}
 }
 #ifdef _WIN32
@@ -320,13 +346,13 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	}
 }
 
-void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_size)
+void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_size)
 {
-	char hex_str[1024];
+	char hex_str[DEFAULT_LOG_BUF_SIZE];
 	if (!XLOG_IS_LOGABLE(level))
 	{
 		return;
 	}
 	xlog_chars2hex(hex_str, sizeof(hex_str), chars, chars_size);
-	__xlog_internal_log(level, tag, NULL, -1, "%s", hex_str);
+	__xlog_internal_print(level, tag, NULL, -1, "%s", hex_str);
 }

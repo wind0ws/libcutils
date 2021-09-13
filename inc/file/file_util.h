@@ -11,7 +11,7 @@ extern "C" {
 	/**
 	 * append slash("/" or "\\") if "folder_path" NOT end with slash("/" or "\\")
 	 */
-	int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_capacity);
+	int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size);
 
 	/**
 	 * check folder_path is exists.
@@ -30,14 +30,14 @@ extern "C" {
 	 * get total file size
 	 * @return file size
 	 */
-	long file_util_size_by_path(__in const char* file_path);
+	long file_util_get_size_by_path(__in const char* file_path);
 
 	/**
 	 * get file size from FILE stream.
 	 * after this function call, stream position will set to 0.
 	 * @return file size
 	 */
-	long file_util_size_by_fs(__in FILE* fs);
+	long file_util_get_size_by_fs(__in FILE* fs);
 
 	/**
 	 * read on file_handle(file descriptor).

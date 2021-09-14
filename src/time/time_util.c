@@ -203,7 +203,7 @@ static inline int print_millisec(char* buffer, unsigned int num)
 		num /= 10;
 	}
 	buffer[3] = '\0';
-#endif
+#endif // USE_SNPRINTF_MILLISECONDS
 	return 4;
 }
 
@@ -242,7 +242,7 @@ static int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 			pthread_rwlock_wrlock(&cache_p->rw_lock); // lock wrlock
 			if (cache_p->tval.tv_sec != tval_p->tv_sec)
 			{
-				printf("now write time cache: %s\n", str);
+				//printf("now write time cache: %s\n", str);
 				strlcpy(cache_p->format_cache, str, TIME_STR_SIZE);
 				cache_p->timezone_hour = timezone_hour;
 				cache_p->tval.tv_sec = tval_p->tv_sec;

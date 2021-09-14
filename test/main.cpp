@@ -93,8 +93,8 @@ EXTERN_C_END
 #else
 #define LOG_PATH ("mylog.log")
 #endif // _WIN32
-#define STDOUT2FILE() do{ printf("\n redirect to file \n"); xlog_stdout2file(LOG_PATH); } while(0);
-#define BACK2STDOUT() do{ xlog_back2stdout(); printf("\n redirect to console \n"); } while(0);
+#define STDOUT2FILE() do{ printf("\n redirect print to file \n"); xlog_stdout2file(LOG_PATH); } while(0);
+#define BACK2STDOUT() do{ xlog_back2stdout(); printf("\n redirect print to console \n"); } while(0);
 #else
 #define STDOUT2FILE()
 #define BACK2STDOUT()

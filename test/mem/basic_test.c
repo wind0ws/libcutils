@@ -7,6 +7,7 @@
 
 int basic_test()
 {
+	TLOGD_TRACE(LOG_TAG, " *** Welcome *** ");
 	FILE* fp_test = fopen("basic_test.txt", "wb");
 	ASSERT(fp_test);
 	const char *str = "0123456789abcdefghijklmnopqrstuvwxyz"

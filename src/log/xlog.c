@@ -1,6 +1,6 @@
 #include "log/xlog.h"
-#include "mem/strings.h"
-#include "time/time_util.h"
+#include "mem/strings.h"     /* for strlcpy  */
+#include "time/time_util.h"  /* for get time */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -54,13 +54,13 @@ typedef struct xlog_cb_pack
 	void* cb_user_data;
 }xlog_cb_pack_t;
 
-#define XLOG_DEFAULT_TAG_MAX_SIZE (32)
+#define XLOG_DEFAULT_TAG_MAX_SIZE (24)
 typedef struct xlog_config
 {
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
-	/* if level small than this, transform the current level to this */
+	/* if log level bigger than min_level but small than this, transform log level to this */
 	LogLevel trigger_up_level;
 	/* the file pointer after redirect stdout */
 	FILE* fp_stdout;
@@ -96,7 +96,7 @@ static xlog_config_t g_xlog_cfg =
 #define XLOG_IS_ANDROID_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
 #define XLOG_IS_USER_CALLBACK_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
-#define XLOG_IS_LOGABLE(level) (g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
+#define XLOG_IS_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
 static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?'};
 
@@ -223,10 +223,66 @@ int xlog_get_format()
 #pragma warning(push)
 #pragma warning(disable:6386) //for disable buffer overflow
 #endif // _WIN32
+
+#define USE_SNPRINTF_HEADER (0)
+
+#if(!defined(USE_SNPRINTF_HEADER) || !USE_SNPRINTF_HEADER)
+static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
+{
+	int fmt_len = 0;
+	buffer[fmt_len++] = ' ';
+	buffer[fmt_len++] = g_map_level_chars[level];
+	buffer[fmt_len++] = '/';
+	size_t origin_tag_len = strlen(tag);
+	size_t cpy_tag_len = origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
+		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : origin_tag_len; // max copy 22 chars
+#if 1
+	for (size_t i = 0; i < cpy_tag_len; ++i)
+	{
+		buffer[fmt_len++] = tag[i];
+	}
+#else
+	memcpy(buffer + fmt_len, tag, cpy_tag_len);
+	fmt_len += cpy_tag_len;
+#endif
+	while (cpy_tag_len++ < 8)
+	{
+		buffer[fmt_len++] = ' ';
+	}
+	buffer[fmt_len] = '\0';
+	return fmt_len;
+}
+
+static inline int print_tid(char* buffer, int tid)
+{
+	buffer[0] = '(';
+	buffer += 1;
+	int loc_first_non_zero = 0;
+	for (int i = 5; i > 0; --i)
+	{
+		int mod = tid % 10;
+		if (mod)
+		{
+			loc_first_non_zero = i - 1;
+		}
+		buffer[i - 1] =  '0' + mod;
+		tid /= 10;
+	}
+	for (int i = 0; i < loc_first_non_zero; ++i)
+	{
+		buffer[i] = ' ';
+	}
+	buffer += 5;
+	buffer[0] = ')';
+	buffer[1] = '\0';
+	return 7;
+}
+#endif // !USE_SNPRINTF_HEADER
+
 void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list va;
-	char default_buffer[DEFAULT_LOG_BUF_SIZE] = { 0 };
+	char default_buffer[DEFAULT_LOG_BUF_SIZE];
 	size_t default_buffer_remaining_size;
 	char* buffer_log = default_buffer;
 	size_t buffer_log_size = sizeof(default_buffer);
@@ -257,55 +313,72 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
 		{
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+#else
+			header_len += print_level_tag(buffer_log + header_len, level, tag);
+#endif // USE_SNPRINTF_HEADER
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TID)
 		{
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
+#else
+			header_len += print_tid(buffer_log + header_len, XLOG_GETTID());
+#endif // USE_SNPRINTF_HEADER
 		}
 		if (header_len)
 		{
-#define XLOG_HEADER_COLON (": ")
-			memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
-			header_len += (sizeof(XLOG_HEADER_COLON) - 1);
+			buffer_log[header_len++] = ':';
+			buffer_log[header_len++] = ' ';
+			buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
+//#define XLOG_HEADER_COLON (": ")
+			//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
+			//header_len += (sizeof(XLOG_HEADER_COLON) - 1);
 		}
 	}
 	buffer_strlen = header_len;
-	if (func_name && file_line > 0 && (default_buffer_remaining_size = buffer_log_size - buffer_strlen) > 0)
+	if (func_name && file_line > 0 && (default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 0)
 	{
 		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
 	}
 	
-	if ((default_buffer_remaining_size = buffer_log_size - buffer_strlen) > 0)
+	default_buffer_remaining_size = buffer_log_size - buffer_strlen;
+	va_start(va, fmt);
+	// '\0' is not belong of the length
+	int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
+	va_end(va);
+	if (ret_vsn < 0)
 	{
+		fprintf(stderr, "failed on measure log format length. ret=%d\n", ret_vsn);
+		return;
+	}
+	if (ret_vsn < (int)default_buffer_remaining_size)
+	{
+		buffer_strlen += ret_vsn;
+	}
+	else
+	{
+		/*
 		va_start(va, fmt);
 		//first we get the formatted string length. ('\0' is not belong of the length)
-		size_t need_fmt_str_size = vsnprintf(NULL, 0, fmt, va) + 1;
+		ret_vsn = vsnprintf(NULL, 0, fmt, va);
 		va_end(va);
-		if (default_buffer_remaining_size < need_fmt_str_size)
+		*/
+		size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
+		buffer_log_size = buffer_strlen + need_fmt_str_size;
+		if (!(buffer_log = (char*)malloc(buffer_log_size)))
 		{
-			buffer_log_size = buffer_strlen + need_fmt_str_size;
-			buffer_log = (char *)malloc(buffer_log_size);
-			if (!buffer_log)
-			{
-				return; // oops, out of memory
-			}
-			strlcpy(buffer_log, default_buffer, buffer_log_size);
-		}
-
+			fprintf(stderr, "failed malloc %zu byte on xlog\n", buffer_log_size);
+			return; // oops, out of memory
+		} // here we only copy header to new buffer
+		strlcpy(buffer_log, default_buffer, /*buffer_log_size*/buffer_strlen + 1); 
+		
 		va_start(va, fmt);
-		buffer_strlen += vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
+		// vsnprintf ensure '\0' in string.
+		ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
 		va_end(va);
-	}
-	
-	/*if (buffer_strlen == sizeof(buffer_log))
-	{
-		buffer_log[--buffer_strlen] = '\0'; // vsnprintf ensure '\0' in string.
-	}*/
-
-	if (is_log2console)
-	{
-		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+		buffer_strlen += ret_vsn;
 	}
 
 #if defined(__ANDROID__)
@@ -315,9 +388,14 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	}
 #endif // __ANDROID__
 
+	if (is_log2console)
+	{
+		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+	}
+
 	if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
 	{
-		g_xlog_cfg.cb_pack.cb(buffer_log, buffer_strlen + 1, g_xlog_cfg.cb_pack.cb_user_data);
+		g_xlog_cfg.cb_pack.cb(buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
 	}
 
 	if (buffer_log != default_buffer)
@@ -336,13 +414,17 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	if (chars_size * 3 > out_hex_str_capacity)
 	{
 		snprintf(out_hex_str, out_hex_str_capacity, "hex is truncated(%zu):", chars_size);
-		chars_size = out_hex_str_capacity / 3 - 6;
 		header_len = strnlen(out_hex_str, out_hex_str_capacity);
+		out_hex_str_capacity -= header_len;
+		chars_size = out_hex_str_capacity / 3 - 1;
 	}
-	out_hex_str_capacity -= header_len;
 	for (size_t chars_index = 0, str_offset = 0; chars_index < chars_size; ++chars_index, str_offset += 3)
 	{
-		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[chars_index]);
+		if (snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset,
+			" %02hhx", (unsigned char)chars[chars_index]) < 0)
+		{
+			break; // oops, error occurred
+		}
 	}
 }
 

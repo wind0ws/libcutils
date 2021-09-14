@@ -57,7 +57,8 @@ extern "C" {
 #endif // __cplusplus
 
 	/**
-	 * auto increase log level if current log level below trigger_level
+	 * auto increase low level to trigger_level.
+	 * if log level bigger than min_level but small than this trigger_level, transform log level to this.
 	 * this is useful when some Android devices have restrictions on the log level below LOG_LEVEL_INFO.
 	 */
 	void xlog_auto_level_up(LogLevel trigger_level);
@@ -102,14 +103,16 @@ extern "C" {
 	/**
 	 * set log target which you want to output.
 	 * default: on Android: target is LOG_TARGET_ANDROID, other platform target is LOG_TARGET_CONSOLE
+	 * multiple can be combined. example: LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE
 	 */
 	void xlog_set_target(int target);
 
 	int xlog_get_target();
 
 	/**
-	 * set log format.
+	 * set log header format.
 	 * default format is (LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL)
+	 * android log won't use this header format, be aware of that.
 	 */
 	void xlog_set_format(int format);
 

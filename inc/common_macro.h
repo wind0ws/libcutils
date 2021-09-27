@@ -113,9 +113,9 @@ typedef float               FLOAT;
 #ifdef _WIN32
 #if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
 typedef intptr_t ssize_t;
-# define SSIZE_MAX INTPTR_MAX
-# define _SSIZE_T_        // mark ssize_t defined
-# define _SSIZE_T_DEFINED // mark ssize_t defined
+#define SSIZE_MAX INTPTR_MAX
+#define _SSIZE_T_      
+#define _SSIZE_T_DEFINED 
 #endif // !_SSIZE_T_ && !_SSIZE_T_DEFINED
 #if(defined(_MSC_VER) && _MSC_VER < 1800)
 /* __LP64__ is defined by compiler. If set to 1 means this is 64bit build system */
@@ -177,53 +177,48 @@ typedef intptr_t ssize_t;
 #endif  // !STATIC_ASSERT
 
 #ifdef __ANDROID__
-#define __EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", fmt, ##__VA_ARGS__)
+#define _EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", fmt, ##__VA_ARGS__)
 #else
-#define __EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) 
+#define _EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) 
 #endif //__ANDROID__
 
 //for log emergency error message.
 #define EMERGENCY_LOG(fmt, ...)                                                     \
      do {                                                                           \
-        __EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                           \
-        printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                                 \
-        fflush(stdout);                                                             \
+          _EMERGENCY_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__);                          \
+          printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                               \
+          fflush(stdout);                                                           \
      } while(0)
 
 #ifndef ASSERT
 #if(defined(NDEBUG) || !defined(_DEBUG))
-#define ASSERT(expr)  (void)(expr) 
+#define ASSERT(expr)  (void)(expr)
+#define _TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
+     do {                                                                           \
+          if (expr) break;                                                          \
+          EMERGENCY_LOG("API check '%s' failed at '%s' (%s:%d)",                    \
+	          #expr, __PRETTY_FUNCTION__, __FILE__, line);                          \
+	      abort();                                                                  \
+     } while(0)
 #else
 #ifdef _WIN32
 //why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!
 #define _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)                              \
     do {                                                                            \
-        bool expr_##line = !!(expr);                                                \
-        _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                                \
-        if (!expr_##line)                                                           \
-        {                                                                           \
-           _invoke_watson(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, line, 0);     \
-        }                                                                           \
+          bool expr_##line = !!(expr);                                              \
+          if(expr_##line) break;                                                    \
+          _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                              \
     } while(0)
 #define _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
 #define ASSERT(expr) _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, __LINE__)
+#define _TEMP_FOR_ASSERT_ABORT(expr, line)  _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line)
 #else
 #define ASSERT(expr) assert(expr)
+#define _TEMP_FOR_ASSERT_ABORT(expr, line)  assert(expr)
 #endif // _WIN32
 #endif // NDEBUG || !_DEBUG
 #endif // !ASSERT
 
-#define _TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
-     do {                                                                           \
-          ASSERT(expr);                                                             \
-          bool is_expr_true##line = !!(expr);                                       \
-          if (!is_expr_true##line)                                                  \
-          {                                                                         \
-             EMERGENCY_LOG("API check '%s' failed at %s (%s:%d)",                   \
-                    #expr, __func__, __FILE__, line);                               \
-             abort();                                                               \
-          }                                                                         \
-     } while(0)
 #define _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  _TEMP_FOR_ASSERT_ABORT(expr, line)
 /**
  * In debug mode, expression check failure will catch by ASSERT.

@@ -17,12 +17,6 @@
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 #define GET_TIME_FORMAT_TYPE(fmt) ((fmt[8] == ':') ? 0 : 1) 
 
-typedef enum
-{
-	TIME_FMT_WRITE_CACHE_STATUS_IDLE = 0,
-	TIME_FMT_WRITE_CACHE_STATUS_WRITING
-} time_fmt_write_cache_status;
-
 typedef struct
 {
 	pthread_rwlock_t rw_lock;
@@ -305,11 +299,11 @@ static inline uint64_t get_cached_performance_freq()
 }
 
 //onetime initializer
-static uint64_t init_get_performance_freq();
+static uint64_t init_get_milli_perf_freq();
 
-static fn_get_performance_freq get_milli_perf_freq = &init_get_performance_freq;
+static fn_get_performance_freq get_milli_perf_freq = &init_get_milli_perf_freq;
 
-static uint64_t init_get_performance_freq()
+static uint64_t init_get_milli_perf_freq()
 {
 	LARGE_INTEGER frequency = { 0 }; // how many clock period on one seconds.
 	QueryPerformanceFrequency(&frequency);

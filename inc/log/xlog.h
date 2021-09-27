@@ -69,7 +69,7 @@ extern "C" {
 	void xlog_stdout2file(char* file_path);
 
 	/**
-	 * let stdout print on console window if current redirect to file.
+	 * bring stdout print on console window if current redirect print to file.
 	 */
 	void xlog_back2stdout();
 
@@ -122,7 +122,7 @@ extern "C" {
 	 * transform char to hex.
 	 * note: just transform for you, not print.
 	 * @param out_hex_str: place hex result, should provide (3 * chars_len + 1) memory
-	 * @param out_hex_str_capacity: the length of out_hex_str you provide, should include NULL terminator
+	 * @param out_hex_str_capacity: the size of out_hex_str you provide, should include NULL terminator
 	 * @param chars: the chars you want to transform to hex
 	 * @param chars_size: the size of chars
 	 */

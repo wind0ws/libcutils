@@ -24,6 +24,9 @@
 #endif // !sleep
 
 #else /* for unix */
+#ifndef _GNU_SOURCE // for enable pthread_setname_np
+#define _GNU_SOURCE
+#endif // !_GNU_SOURCE
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
@@ -54,6 +57,9 @@ extern "C" {
 #ifdef _WIN32
 	int pthread_setname_np(pthread_t thr, const char* name);
 #endif // _WIN32
+
+	// set name for pthread. suggest use this method instead of pthread_setname_np
+	int pthread_set_name(pthread_t thr, const char* name);
 
 	// No definition needed for Android because we'll just pick up bionic's copy.
 #ifndef __ANDROID__

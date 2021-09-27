@@ -1,4 +1,7 @@
 #include "thread/thread_wrapper.h"
+#if defined(__linux__)
+#include <sys/prctl.h>
+#endif // __linux__
 
 #ifdef _WIN32
 //reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
@@ -48,6 +51,22 @@ int pthread_setname_np(pthread_t thr, const char* name)
 	return 0;
 }
 #endif // _WIN32
+
+int pthread_set_name(pthread_t thr, const char* name)
+{
+	int ret = -1;
+#if(defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP)
+	ret = pthread_setname_np(thr, name);
+#elif defined(__linux__)
+	/* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
+	ret = prctl(PR_SET_NAME, name);
+#elif defined(__APPLE__) && defined(__MACH__)
+	ret = pthread_setname_np(name);
+#else
+#pragma message("pthread_set_name(): pthread_setname_np is not supported on this system")
+#endif // HAVE_PTHREAD_SETNAME_NP
+	return ret;
+}
 
 #ifndef __ANDROID__ // Android just pick up bionic's copy.
 pid_t gettid() 

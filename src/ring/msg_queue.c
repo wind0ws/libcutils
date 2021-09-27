@@ -61,7 +61,7 @@ uint32_t msg_queue_next_msg_size(__in msg_queue msg_queue_p)
 		return 0;
 	}
 
-	msg_header header = { .msg_size = 0 };
+	msg_header header = { 0 };
 	uint32_t read_bytes = RingBuffer_peek(msg_queue_p->ring_buf_p, &header, sizeof(msg_header));
 	ASSERT_ABORT(read_bytes == sizeof(msg_header));
 	return header.msg_size;
@@ -83,7 +83,7 @@ MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __inout void* msg_p, __inou
 	ASSERT_ABORT(read_bytes == sizeof(msg_header));
 	if (available_read_bytes < sizeof(header) + header.msg_size)
 	{
-		return MSG_Q_CODE_AGAIN; // msg buffer is not full copied to queue, maybe just copied header bytes.
+		return MSG_Q_CODE_AGAIN; // msg buffer is not full copied to queue, maybe just write header.
 	}
 	if (header.msg_size > *msg_size_p)
 	{

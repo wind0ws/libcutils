@@ -52,7 +52,7 @@ extern "C" {
 	 * destroy RingBuffer and free memory
 	 * @param ring_buf_pp RingBuffer pointer's pointer
 	 */
-	void RingBuffer_destroy(__in ring_buf_handle *ring_buf_pp);
+	void RingBuffer_destroy(__inout ring_buf_handle *ring_buf_pp);
 
 	/**
 	 * get current RingBuffer available data size
@@ -90,7 +90,7 @@ extern "C" {
 	 * @param size copy specified size memory
 	 * @return the real read data size
 	 */
-	uint32_t RingBuffer_read(__in const ring_buf_handle ring_buf_p, __out void* target, uint32_t size);
+	uint32_t RingBuffer_read(__in const ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size);
 
 	/**
 	 * peek(read) specified size memory from RingBuffer to target: this will NOT change read offset.
@@ -100,7 +100,7 @@ extern "C" {
 	 * @param size copy specified size memory
 	 * @return the real peek(read) data size
 	 */
-	uint32_t RingBuffer_peek(__in const ring_buf_handle ring_buf_p, __out void* target, uint32_t size);
+	uint32_t RingBuffer_peek(__in const ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size);
 
 	/**
 	 * discard specified size memory from RingBuffer: behavior like "RingBuffer_read" but NOT copy memory.
@@ -109,7 +109,7 @@ extern "C" {
 	 * @param size discard specified size memory
 	 * @return the real discard data size
 	 */
-	uint32_t RingBuffer_discard(__in const ring_buf_handle ring_buf_p, uint32_t size);
+	uint32_t RingBuffer_discard(__in const ring_buf_handle ring_buf_p, __in uint32_t size);
 
 	/**
 	 * copy specified size memory from source to RingBuffer.

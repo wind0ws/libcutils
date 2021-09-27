@@ -35,7 +35,6 @@ typedef struct
 	char* str_description;
 } test_case_t;
 
-
 static void setup_console();
 static int run_test_case_from_user();
 static int memleak_test();
@@ -85,7 +84,7 @@ static test_case_t g_all_test_cases[] =
 
 EXTERN_C_END
 
-#define SAVE_LOG 1
+#define SAVE_LOG 0
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
 #ifdef _WIN32
@@ -112,12 +111,12 @@ int main(int argc, char* argv[])
 #if _WIN32
 	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();
-	//int pressed_char = 'y';                   // default key press
+	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
 	{
 		if ((is_press_kb = _kbhit()))
 		{
-			//pressed_char = _getch();
+			pressed_char = _getch();
 			break;
 		}
 		usleep(500000);
@@ -133,15 +132,17 @@ int main(int argc, char* argv[])
 
 	do
 	{
+		//ASSERT_ABORT(1 == 0);
 		if (is_press_kb)
 		{
 			ret = run_test_case_from_user();
 			break;
 		}
 		
+#if SAVE_LOG
 		fprintf(stderr, "\n  ====auto run test case====  \n");
+#endif // SAVE_LOG
 		LOGI("  ====auto run test case====  ");
-		//ASSERT_ABORT(1 == 0);
 		//RUN_TEST(memleak_test);//this will report mem leak.
 		//RUN_TEST(file_util_test);
 		//RUN_TEST(ini_test);
@@ -150,10 +151,10 @@ int main(int argc, char* argv[])
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
-		RUN_TEST(time_util_test);
+		//RUN_TEST(time_util_test);
 		//RUN_TEST(thread_wrapper_test);
 		//RUN_TEST(url_encoder_decoder_test);
-		//RUN_TEST(base64_test);
+		RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
 		//RUN_TEST(msg_queue_handler_test);
 		//RUN_TEST(integer_test);
@@ -209,7 +210,7 @@ static int get_testcase_from_kb(int* p_testcases, int test_case_size)
 	int retry_counter = 0;
 	do 
 	{
-		fprintf(stderr, "%s. please input your choose: ", retry_counter ? "invalid input, retry" : "");
+		fprintf(stderr, "%s please input your choose: ", retry_counter > 1 ? "invalid input, retry." : "");
 		if (!fgets(buffer, sizeof(buffer) - 1, stdin))
 		{
 			fprintf(stderr, "failed on get run info");
@@ -243,7 +244,7 @@ static int get_testcase_from_kb(int* p_testcases, int test_case_size)
 		p_testcases[case_count] = num;
 		fprintf(stderr, "you select test cases[%d]=%d\n", case_count, p_testcases[case_count]);
 		++case_count;
-		if (!end_ptr || *end_ptr == '\0' || p_loc == NULL || (str_start = p_loc + 1) >= p_str_end)
+		if (p_loc == NULL || (str_start = p_loc + 1) >= p_str_end)
 		{
 			break; // no string need continue parsing
 		}
@@ -259,7 +260,7 @@ static void show_menu_test_case()
 	for (size_t i = 0; (buffer_left_len = sizeof(str_menu) - 1 - str_len) > 0
 		&& i < (sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0])); ++i)
 	{
-		str_len += snprintf(str_menu + str_len, buffer_left_len, "  %02d : %s\n", i, g_all_test_cases[i].str_description);
+		str_len += snprintf(str_menu + str_len, buffer_left_len, "  %02zu : %s\n", i, g_all_test_cases[i].str_description);
 	}
 	fprintf(stderr, "input test case numbers (split by space),\n press enter to submit task:\n%s\n", str_menu);
 }
@@ -275,16 +276,18 @@ static int run_test_case_from_user()
 		fprintf(stderr, "failed on get test cases\n");
 		ret = 1;
 	}
-	fprintf(stderr, "total test case count=%d\n    Please wait...\n", test_case_count);
+	fprintf(stderr, "you selected test case count=%d\n    Please wait...\n", test_case_count);
 	int all_available_case_count = sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0]);
 	int case_number;
 	for (int i = 0; i < test_case_count && (case_number = test_cases[i]) >= 0 
 		&& case_number < all_available_case_count; ++i)
 	{
 		test_case_t* p_case = &g_all_test_cases[case_number];
-		LOGI("\nNow Run testcase[%d] ==> %s ", i, p_case->str_description);
+		fprintf(stderr, "\n\n==> Now Run testcase[%d]: %s\n", i, p_case->str_description);
+		LOGI("==> Now Run testcase[%d]: %s\n", i, p_case->str_description);
 		ret = p_case->p_func();
-		LOGI("End Run testcase[%d] <== %s, ret=%d \n", i, p_case->str_description, ret);
+		LOGI("<== End Run testcase[%d]: %s, ret=%d\n", i, p_case->str_description, ret);
+		fprintf(stderr, "\n<== End Run testcase[%d]: %s, ret=%d\n\n", i, p_case->str_description, ret);
 		if (ret)
 		{
 			LOGI("failed run last test case, break. %d", ret);

@@ -26,22 +26,19 @@ struct __auto_cover_buf
 
 auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_buf_lock_t *buf_lock_p)
 {
-	const size_t expect_mem_size = capacity_size + sizeof(struct __auto_cover_buf);
-	char * raw_mem = (char *)malloc(expect_mem_size);
-	if (!raw_mem)
+	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)calloc(1, sizeof(struct __auto_cover_buf));
+	if (!buf_handle)
 	{
 		return NULL;
 	}
-	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)(raw_mem);
 #ifdef _WIN32
 #pragma warning(suppress:6386)
 #endif // _WIN32
-	memset(buf_handle, 0, sizeof(struct __auto_cover_buf));
 	if (buf_lock_p)
 	{
 		memcpy(&buf_handle->buf_lock, buf_lock_p, sizeof(auto_cover_buf_lock_t));
 	}
-	buf_handle->ring = RingBuffer_create_with_mem(raw_mem + sizeof(struct __auto_cover_buf), capacity_size);
+	buf_handle->ring = RingBuffer_create(capacity_size);
 	if (!buf_handle->ring)
 	{
 		free(buf_handle);
@@ -170,7 +167,7 @@ void auto_cover_buf_destroy(auto_cover_buf_handle* buf_handle_p)
 		return;
 	}
 	auto_cover_buf_handle buf_handle = *buf_handle_p;
-	RingBuffer_destroy(&buf_handle->ring);
+	RingBuffer_destroy(&(buf_handle->ring));
 	free(buf_handle);
 	*buf_handle_p = NULL;
 }

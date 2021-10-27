@@ -1,17 +1,16 @@
-//#include "mem/mem_debug.h"
+#include "mem/mem_debug.h"
 #include "file/ini_parser.h"
 #include "file/ini_reader.h"
-#include "data/hashmap.h"
-#include "data/hash_functions.h"
+#include "data/list.h"
 #include "common_macro.h"
-#include "mem/mplite.h"
+//#include "mem/mplite.h"
 #include "mem/strings.h" /* for strcmp */
 #include "mem/stringbuilder.h"
 #include <stdio.h>       /* for fopen */
 #include <stdlib.h>      /* for atoi/atol/atof */
 
 #define INI_VALUE_STACK_SIZE (128)
-#define INI_MAX_SECTION (64)
+#define SECTION_NAME_MAX_SIZE INI_VALUE_STACK_SIZE
 
 typedef enum
 {
@@ -21,55 +20,59 @@ typedef enum
 	INI_VALUE_TYPE_BOOL
 } INI_VALUE_TYPE;
 
+typedef struct
+{
+	char section_name[SECTION_NAME_MAX_SIZE];
+	list_t* plist_section;
+} section_info_t;
+
+typedef struct
+{
+	char key[INI_VALUE_STACK_SIZE];
+	char value[INI_VALUE_STACK_SIZE];
+} key_value_t;
+
+typedef struct
+{
+	int ret_code;
+	stringbuilder_t* sb;
+} dump_ini_context;
+
 struct _ini_parser
 {
-	/* hold all section map, and each section map hold ini key value */
-	hashmap_t* ini_root_map_p;
+	/* hold all sections, and each section(list_t *) hold key_value_t */
+	list_t* plist_sections;
 	/* prediction ini string size */
 	size_t prediction_str_size;
-	/* last used section map  */
-	//section_map_t last_used_section_map;
-	struct
-	{
-#define SECTION_NAME_MAX_SIZE INI_VALUE_STACK_SIZE
-		char section_name[SECTION_NAME_MAX_SIZE];
-		hashmap_t* map;
-	} last_used_section_map;
+	/* last used section  */
+	section_info_t *p_last_used_section;
 };
 
-static inline void* allocator_hashmap_malloc(size_t size)
+static inline void* allocator_my_malloc(size_t size)
 {
 	return malloc(size);
 }
 
-static inline void* allocator_hashmap_calloc(size_t item_count, size_t item_size)
+static inline void* allocator_my_calloc(size_t item_count, size_t item_size)
 {
 	return calloc(item_count, item_size);
 }
 
-static inline void* allocator_hashmap_strdup(char *str)
+static inline void* allocator_my_strdup(char* str)
 {
 	return str ? (strdup(str)) : NULL;
 }
 
-static inline void allocator_hashmap_free(void* ptr)
+static inline void allocator_my_free(void* ptr)
 {
-	if (ptr)
-	{
-		free(ptr);
-	}
-}
-
-static bool map_key_equality(const void* x, const void* y)
-{
-	return (x == y) || (x && y && strcmp(x, y) == 0);
+	if (ptr) free(ptr);
 }
 
 static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
-//ini reader callback, return true for continue，return false for abort
-static int ini_handler_cb(void* user,
+//ini reader callback, return true for continue, return false for abort
+static bool ini_handler_cb(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
 	, int lineno
@@ -86,19 +89,18 @@ static int ini_handler_cb(void* user,
 
 ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 {
-	hashmap_t* root_map = hashmap_create(16, hash_function_string, allocator_hashmap_free, 
-			NULL /*value is hashmap, already free it on sub hashmap_free*/, map_key_equality, NULL);
-	if (!root_map)
+	list_t *plist_sections = list_new(allocator_my_free);
+	if (!plist_sections)
 	{
 		return NULL;
 	}
 	ini_parser_ptr parser_p = (ini_parser_ptr)calloc(1, sizeof(struct _ini_parser));
 	if (!parser_p)
 	{
-		hashmap_free(root_map);
+		list_free(plist_sections);
 		return NULL;
 	}
-	parser_p->ini_root_map_p = root_map;
+	parser_p->plist_sections = plist_sections;
 	if (ini_content && ini_parse_string(ini_content, ini_handler_cb, parser_p) != 0)
 	{
 		ini_parser_destory(&parser_p);
@@ -156,31 +158,63 @@ ini_parser_ptr ini_parser_parse_file(const char* ini_file)
 	return parser;
 }
 
-static hashmap_t* search_target_section_map(ini_parser_ptr parser_p, bool auto_create,
+// return true for continue iter, false for break iter. 
+// so if you find your data, just return false
+static bool iter_for_search_target_section(void* data, void* context)
+{
+	char* section_name = (char *)context;
+	section_info_t* p_section_info = (section_info_t*)data;
+	return strcasecmp(section_name, p_section_info->section_name) != 0;
+}
+
+static section_info_t* search_target_section(ini_parser_ptr parser_p, bool auto_create,
 	const char* section, const size_t section_len)
 {
-	if (parser_p->last_used_section_map.map &&
-		strcasecmp(section, parser_p->last_used_section_map.section_name) == 0)
+	if (!section || section_len == 0) return NULL;
+	if (parser_p->p_last_used_section &&
+		strcasecmp(section, parser_p->p_last_used_section->section_name) == 0)
 	{
-		return parser_p->last_used_section_map.map; //hit cache, no need search on root map.
+		return parser_p->p_last_used_section; //hit cache, no need search on root list.
 	}
-
-	hashmap_t* section_map = (hashmap_t *)hashmap_get(parser_p->ini_root_map_p, (char *)section);
-	if (auto_create && section_map == NULL)
+	if (!auto_create && list_length(parser_p->plist_sections) == 0) return NULL;
+	list_node_t *target_section_node = list_foreach((const list_t *)parser_p->plist_sections, 
+										iter_for_search_target_section, (void *)section);
+	section_info_t* target_section = target_section_node ? (section_info_t*)list_node(target_section_node) : NULL;
+	if (auto_create && !target_section)
 	{
-		section_map = hashmap_create(32, hash_function_string, allocator_hashmap_free, 
-			allocator_hashmap_free, map_key_equality, NULL);
-		if (section_map == NULL)
+		target_section = (section_info_t *)allocator_my_calloc(1, sizeof(section_info_t));
+		if (!target_section)
 		{
 			return NULL;
 		}
-		char* alloc_section_map_key = allocator_hashmap_strdup((char *)section);
-		hashmap_put(parser_p->ini_root_map_p, alloc_section_map_key, section_map);
-		parser_p->prediction_str_size += (section_len + 6); /* 2 for square brackets, and 4 for 2 \r\n */
-		strlcpy(parser_p->last_used_section_map.section_name, section, SECTION_NAME_MAX_SIZE);
-		parser_p->last_used_section_map.map = section_map;
+		target_section->plist_section = list_new(allocator_my_free);
+		if (target_section->plist_section == NULL)
+		{
+			allocator_my_free(target_section);
+			return NULL;
+		}
+		strlcpy(target_section->section_name, section, sizeof(target_section->section_name));
+		list_append(parser_p->plist_sections, target_section);
+		parser_p->prediction_str_size += (section_len + 6U); /* 2 for square brackets, and 4 for 2 \r\n */
+		parser_p->p_last_used_section = target_section;
 	}
-	return section_map;
+	return target_section;
+}
+
+// return true for continue iter, false for break iter. 
+// so if you find your data, just return false
+static bool iter_for_search_key_value(void* data, void* context)
+{
+	key_value_t* p_kv = (key_value_t*)data;
+	char* key = (char*)context;
+	return strcasecmp(key, p_kv->key) != 0;
+}
+
+static key_value_t* search_target_kv(list_t* section, const char* key)
+{
+	if (list_length(section) == 0) return NULL;
+	list_node_t* target_node = list_foreach(section, iter_for_search_key_value, (void *)key);
+	return target_node ? (key_value_t*)list_node(target_node) : NULL;
 }
 
 INI_PARSER_CODE ini_parser_put_string(ini_parser_ptr parser_p,
@@ -196,44 +230,26 @@ INI_PARSER_CODE ini_parser_put_string(ini_parser_ptr parser_p,
 	{
 		return INI_PARSER_ERR_INVALID_PARAM;
 	}
-	hashmap_t* section_map = search_target_section_map(parser_p, true, section, section_len);
-	if (!section_map)
+	section_info_t* target_section = search_target_section(parser_p, true, section, section_len);
+	if (!target_section)
 	{
 		return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
 	}
-	char* map_key = (char*)allocator_hashmap_strdup((char *)key);
-	if (!map_key)
+	key_value_t* p_kv = search_target_kv(target_section->plist_section, key);
+	bool is_update = (p_kv != NULL);
+	if (!is_update)
 	{
-		return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+		p_kv = (key_value_t *)allocator_my_calloc(1, sizeof(key_value_t));
+		if (!p_kv)
+		{
+			return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+		}
+		strlcpy(p_kv->key, key, sizeof(p_kv->key));
 	}
-	do
-	{
-		char* map_value = NULL;
-		size_t map_value_size;
-		if (value)
-		{
-			map_value_size = strlen(value) + 1;
-			map_value = (char*)allocator_hashmap_malloc(map_value_size);
-			if (map_value)
-			{
-				memcpy(map_value, value, map_value_size);
-			}
-		}
-		else
-		{
-			map_value_size = 1;
-			map_value = (char*)allocator_hashmap_strdup("");
-		}
-		if (!map_value)
-		{
-			break; // alloc failed
-		}
-		hashmap_put(section_map, map_key, map_value);
-		parser_p->prediction_str_size += (map_value_size + key_len + 6);
-		return INI_PARSER_ERR_SUCCEED;
-	} while (0);
-	allocator_hashmap_free(map_key);
-	return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+	strlcpy(p_kv->value, (value ? value : ""), sizeof(p_kv->value));
+	if (is_update) return INI_PARSER_ERR_SUCCEED;
+	return list_append(target_section->plist_section, p_kv) == true ?
+					INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
 }
 
 INI_PARSER_CODE ini_parser_get_string(ini_parser_ptr parser_p,
@@ -247,49 +263,81 @@ INI_PARSER_CODE ini_parser_get_string(ini_parser_ptr parser_p,
 	const size_t key_len = strlen(key);
 	if (!section_len || !key_len)
 	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+		return INI_PARSER_ERR_INVALID_PARAM;
 	}
 
-	hashmap_t *section_map = search_target_section_map(parser_p, false, section, section_len);
-	if (!section_map)
+	section_info_t* target_section = search_target_section(parser_p, false, section, section_len);
+	if (!target_section)
 	{
 		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
 	}
-	char* map_value = (char*)hashmap_get(section_map, (void *)key);
-	if (!map_value)
+	key_value_t* p_kv = search_target_kv(target_section->plist_section, key);
+	if (!p_kv)
 	{
 		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
 	}
 	if (value && value_size)
 	{
-		size_t map_value_len = strlen(map_value);
-		if (value_size <= map_value_len)
+		size_t the_value_len = strlen(p_kv->value);
+		if (value_size <= the_value_len)
 		{
 			return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
 		}
-		memcpy(value, map_value, map_value_len + 1);
+		memcpy(value, p_kv->value, the_value_len + 1);
 	}
 	return INI_PARSER_ERR_SUCCEED;
 }
 
-typedef struct 
+// delete target section key
+INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_ptr parser_p,
+	const char* section, const char* key)
 {
-	int ret_code;
-	stringbuilder_t* sb;
-} dump_ini_context;
+	if (!parser_p || !section || !key)
+	{
+		return INI_PARSER_ERR_INVALID_PARAM;
+	}
+	section_info_t * p_section = search_target_section(parser_p, false, section, strlen(section));
+	if (!p_section)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	key_value_t *p_kv = search_target_kv(p_section->plist_section, key);
+	if (!p_kv)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	return list_remove(p_section->plist_section, p_kv) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+}
 
-static bool foreach_section_key_value_iter_cb(void* key, void* value, void* context)
+// delete target section, all key-value in this section will deleted.
+INI_PARSER_CODE ini_parser_delete_section(ini_parser_ptr parser_p, const char* section)
 {
-	if (!key || !value) // key is key, value is value.
+	if (!parser_p || !section)
+	{
+		return INI_PARSER_ERR_INVALID_PARAM;
+	}
+	section_info_t* p_section = search_target_section(parser_p, false, section, strlen(section));
+	if (!p_section)
+	{
+		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+	}
+	list_free(p_section->plist_section);
+	return list_remove(parser_p->plist_sections, p_section) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+}
+
+static bool iter_key_value_for_dump(void* data, void* context)
+{
+	if (!data || !context) // key is key, value is value.
 	{
 		return true; // just continue
 	}
+	key_value_t* p_kv = (key_value_t *)data;
 	dump_ini_context* dup_ctx = (dump_ini_context*)context;
-	if ((dup_ctx->ret_code = stringbuilder_appendf(dup_ctx->sb, "%s = %s\r\n", (char*)key, (char*)value)) != 0)
+	if ((dup_ctx->ret_code = stringbuilder_appendf(dup_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)) != 0)
 	{
 #if(!defined(NDEBUG) || defined(_DEBUG))
 		printf("ERROR[%s:%d]: failed on append %s=%s to stringbuilder. %d",
-			__FILE__, __LINE__, (char*)key, (char*)value, dup_ctx->ret_code);
+			__FILE__, __LINE__, p_kv->key, p_kv->value, dup_ctx->ret_code);
 #endif // !NDEBUG || _DEBUG
 		ASSERT_ABORT(dup_ctx->ret_code);
 		return false;
@@ -297,20 +345,20 @@ static bool foreach_section_key_value_iter_cb(void* key, void* value, void* cont
 	return true;
 }
 
-static bool foreach_section_iter_cb(void* key, void* value, void* context)
+static bool iter_section_for_dump(void* data, void* context)
 {
-	if (!key || !value) // key is section name, value is section map
+	if (!data || !context) // data is section_info_t *
 	{
 		return true;
 	}
+	section_info_t* p_section = (section_info_t *)data;
 	dump_ini_context* dup_ctx = (dump_ini_context*)context;
 	if (dup_ctx->ret_code)
 	{
 		return false; // error occurred on foreach last section, break chain.
 	}
-	stringbuilder_appendf(dup_ctx->sb, "[%s]\r\n", (char *)key);
-	hashmap_t* section_map = (hashmap_t *)value;
-	hashmap_foreach(section_map, foreach_section_key_value_iter_cb, dup_ctx);
+	stringbuilder_appendf(dup_ctx->sb, "[%s]\r\n", (char*)p_section->section_name);
+	list_foreach(p_section->plist_section, iter_key_value_for_dump, dup_ctx);
 	stringbuilder_appendstr(dup_ctx->sb, "\r\n");
 	return true;
 }
@@ -321,18 +369,10 @@ char* ini_parser_dump(ini_parser_ptr parser_p)
 	{
 		return NULL;
 	}
-	// why manual alloc memory for stringbuilder: 
-	//   to make sure it won't realloc frequently.
-	const size_t sb_mem_size = parser_p->prediction_str_size + 64;
-	char* sb_memory = (char *)malloc(sb_mem_size);
-	if (!sb_memory)
-	{
-		return NULL;
-	}
-	stringbuilder_t *sb = stringbuilder_create_with_mem(sb_memory, sb_mem_size);
+	const size_t sb_mem_size = parser_p->prediction_str_size + 64U;
+	stringbuilder_t* sb = stringbuilder_create(sb_mem_size);
 	if (!sb)
 	{
-		free(sb_memory);
 		return NULL;
 	}
 	dump_ini_context dump_context =
@@ -340,10 +380,9 @@ char* ini_parser_dump(ini_parser_ptr parser_p)
 		.ret_code = 0,
 		.sb = sb,
 	};
-	hashmap_foreach(parser_p->ini_root_map_p, foreach_section_iter_cb, &dump_context);
+	list_foreach(parser_p->plist_sections, iter_section_for_dump, &dump_context);
 	char* ret_str = dump_context.ret_code ? NULL : strdup(stringbuilder_print(sb));
 	stringbuilder_destroy(&sb);
-	free(sb_memory);
 	return ret_str;
 }
 
@@ -372,14 +411,14 @@ INI_PARSER_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section
 	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_BOOL);
 }
 
-static bool delete_section_map_iter_cb(void *key, void *value, void *context)
+static bool iter_for_delete_all_section(void* data, void* context)
 {
-	if (!key || !value) // key is section, value is section map.
+	if (!data) // data is section_info_t *
 	{
 		return true;
 	}
-	hashmap_t* section_map = (hashmap_t *)value;
-	hashmap_free(section_map);
+	section_info_t* p_sec_info = (section_info_t *)data;
+	list_free(p_sec_info->plist_section);
 	return true;
 }
 
@@ -390,12 +429,12 @@ INI_PARSER_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 		return INI_PARSER_ERR_INVALID_PARAM;
 	}
 	ini_parser_ptr parser_p = *parser_pp;
-	if (parser_p->ini_root_map_p)
+	if (parser_p->plist_sections)
 	{
-		//delete all section map
-		hashmap_foreach(parser_p->ini_root_map_p, delete_section_map_iter_cb, NULL);
-		hashmap_free(parser_p->ini_root_map_p);
-		parser_p->ini_root_map_p = NULL;
+		//delete all section
+		list_foreach(parser_p->plist_sections, iter_for_delete_all_section, NULL);
+		list_free(parser_p->plist_sections);
+		parser_p->plist_sections = NULL;
 	}
 	free(parser_p);
 	*parser_pp = NULL;

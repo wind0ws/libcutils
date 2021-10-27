@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "file/ini_reader.h"
 #include "file/ini_parser.h"
 #include "log/xlog.h"
@@ -22,6 +23,7 @@ auto_start = FALSE\r\n\
 enable_state = true \r\n\
 number_bool_state = 0 \r\n\
 \r\n\
+;test semicolon comment\r\n\
 [config3]\r\n\
 path= /sdcard/Android/data/  \r\n\
 \r\n\
@@ -31,7 +33,7 @@ run_mode =  \r\n\
 \r\n";
 
 //ini解析回调，return true继续，return false终止解析
-static int my_ini_handler(void* user,
+static bool my_ini_handler(void* user,
 	const char* section, const char* key, const char* value) 
 {
 	if (!section || !key)
@@ -61,6 +63,7 @@ static int ini_reader_test()
 
 static int ini_parser_test()
 {
+	char buffer[128];
 	ini_parser_ptr parser = ini_parser_parse_str(test_ini_str);
 	if (!parser)
 	{
@@ -88,18 +91,24 @@ static int ini_parser_test()
 	err = ini_parser_get_bool(parser, "config2", "number_bool_state", &bool_result);
 	TLOGI(LOG_TAG, "%d get number_bool_state=%d", err, bool_result);
 
-	char path[128];
-	err = ini_parser_get_string(parser, "config3", "path", path, sizeof(path));
+	err = ini_parser_get_string(parser, "config3", "path", buffer, sizeof(buffer));
 	if (err == INI_PARSER_ERR_SUCCEED)
 	{
-		TLOGI(LOG_TAG, "succeed get path=%s", path);
+		TLOGI(LOG_TAG, "succeed get path=%s", buffer);
 	}
 	else
 	{
 		TLOGE(LOG_TAG, "failed get path. err=%d", err);
 	}
+
+	err = ini_parser_put_string(parser, "config", "new_key", "new_value");
+	TLOGD(LOG_TAG, "%s on put new config", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	err = ini_parser_delete_by_section_key(parser, "config", "test");
+	TLOGD(LOG_TAG, "%s on delete [config] test", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	err = ini_parser_delete_section(parser, "config3");
+	TLOGD(LOG_TAG, "%s on delete [config3]", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
 	//dump string should free after use.
-	char *ini_dump = ini_parser_dump(parser);
+	char* ini_dump = ini_parser_dump(parser);
 	if (ini_dump)
 	{
 		TLOGI(LOG_TAG, "succeed dump ini:\n%s", ini_dump);

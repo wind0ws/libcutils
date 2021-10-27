@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_ARRAY_H
-#define __LCU_ARRAY_H
+#ifndef LCU_ARRAY_H
+#define LCU_ARRAY_H
 
 /*
 * reference: https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/array.h
@@ -57,4 +57,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif //__LCU_ARRAY_H
+#endif // LCU_ARRAY_H

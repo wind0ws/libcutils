@@ -23,23 +23,23 @@
 #define WRITE_FUNC                    write
 #endif // WIN32
 
-typedef ssize_t(*pfunc_rw)(int file_handle, void* buffer, size_t max_char_count);
+typedef ssize_t (*pfunc_rw)(int file_handle, void* buffer, size_t max_char_count);
 
 static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, pfunc_rw target_func);
 
-int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_capacity)
+int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size)
 {
-	if (!folder_path || folder_path_capacity < 3)
+	if (!folder_path || folder_path_size < 3)
 	{
 		return -1;
 	}
-	const size_t path_len = strnlen(folder_path, folder_path_capacity);
+	const size_t path_len = strnlen(folder_path, folder_path_size);
 	char slash_char = (strstr(folder_path, "/")) ? '/' : '\\';
 	if (folder_path[path_len - 1] == slash_char)
 	{
 		return 0;
 	}
-	size_t slash_location = (path_len + 1) < folder_path_capacity ?
+	size_t slash_location = (path_len + 1) < folder_path_size ?
 		path_len : (path_len - 1);
 	folder_path[slash_location] = slash_char;
 	folder_path[slash_location + 1] = '\0';
@@ -52,7 +52,7 @@ int file_util_access(__in const char* path, __in const int access_mode)
 }
 
 // 从左到右依次判断文件夹是否存在,不存在就创建
-// example: /home/root/mkdir/1/2/3/4/
+// example: /home/root/my_dir/1/2/3/4/
 // 注意:最后一个如果是文件夹的话,需要加上 '\\' 或者 '/'
 int file_util_mkdirs(__in const char* folder_path)
 {
@@ -90,7 +90,7 @@ int file_util_mkdirs(__in const char* folder_path)
 	return 0;
 }
 
-long file_util_size_by_path(__in const char* file_path)
+long file_util_get_size_by_path(__in const char* file_path)
 {
 	struct stat buf;
 	int stat_ret;
@@ -101,7 +101,7 @@ long file_util_size_by_path(__in const char* file_path)
 	return buf.st_size;
 }
 
-long file_util_size_by_fs(__in FILE* fs)
+long file_util_get_size_by_fs(__in FILE* fs)
 {
 	if (!fs)
 	{

@@ -4,13 +4,13 @@
 #include "ring/fixed_msg_queue_handler.h"
 #include "log/simple_log.h"
 
-#define _LOG_TAG                     "FIXED_Q_HDL"
+#define _LOG_TAG          "FIXED_Q_HDL"
 
-#define MY_LOGV(fmt,...)                 SIMPLE_LOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGD(fmt,...)                 SIMPLE_LOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGI(fmt,...)                 SIMPLE_LOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGW(fmt,...)                 SIMPLE_LOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGE(fmt,...)                 SIMPLE_LOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGV(fmt,...)  SIMPLE_LOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt,...)  SIMPLE_LOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt,...)  SIMPLE_LOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt,...)  SIMPLE_LOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt,...)  SIMPLE_LOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct
 {
@@ -76,11 +76,9 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	sem_init(&(handler_p->semaphore), 0, 0);
 	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
 	{
-#ifndef _LCU_NOT_SUPPORT_PTHREAD_SETNAME 
 		char thr_name[32] = { 0 };
 		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
-		pthread_setname_np(handler_p->thread_handler, thr_name);
-#endif // !_LCU_NOT_SUPPORT_PTHREAD_SETNAME
+		pthread_set_name(handler_p->thread_handler, thr_name);
 		handler_p->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
 	}
 	else

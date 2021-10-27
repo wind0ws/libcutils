@@ -28,6 +28,7 @@ static void test_rfc_1123_2822()
 
 static void* thread_worker(void *param) 
 {
+	printf("\n\n\n");
 	const pid_t tid = gettid();
 	TLOGI(LOG_TAG, "mytid=%d", tid);
 	char time_str[TIME_STR_SIZE];
@@ -35,7 +36,7 @@ static void* thread_worker(void *param)
 	TLOGI(LOG_TAG, "tid=%d start!", tid);
 	uint64_t cur_millis, start_millis;
 	time_util_current_ms(&start_millis);
-	while (counter++ < 100)
+	while (counter++ < 100000)
 	{
 		//time_util_get_time_str_current(time_str, 8);
 		//printf("    [%d] %s at %d", tid, time_str, counter);
@@ -46,8 +47,8 @@ static void* thread_worker(void *param)
 		TLOGD(LOG_TAG, "[%06d], at %s    %llu", tid, time_str, cur_millis);
 	}
 	time_util_current_ms(&cur_millis);
-	printf("\n\n\n");
 	TLOGI(LOG_TAG, "tid=%d end! cost %llums", tid, (cur_millis - start_millis));
+	printf("\n\n\n");
 	return NULL;
 }
 

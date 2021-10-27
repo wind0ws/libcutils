@@ -11,13 +11,6 @@ extern "C" {
 	typedef struct stringbuilder stringbuilder_t;
 
 	/**
-	 * create stringbuilder object with provide buffer.
-	 * @param buf : buffer pointer
-	 * @param buf_size : buffer size
-	 */
-	stringbuilder_t* stringbuilder_create_with_mem(char* buf, size_t buf_size);
-
-	/**
 	 * create stringbuilder object.
 	 * if init_buf_size is non-zero, use it as init buffer size.
 	 * if init_buf_size is zero, default init buf size will used.

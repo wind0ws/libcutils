@@ -1,9 +1,10 @@
+#include "log/xlog.h"
+#include "mem/strings.h"     /* for strlcpy  */
+#include "time/time_util.h"  /* for get time */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include "log/xlog.h"
-#include "mem/strings.h"
-#include "time/time_util.h"
+#include <malloc.h>
 
 // For gettid.
 #if defined(__APPLE__)
@@ -30,6 +31,8 @@
 #define XLOG_GETTID()      (int)GetCurrentThreadId()
 #endif
 
+#define DEFAULT_LOG_BUF_SIZE (512)
+
 #define LEVEL_CHAR_V ('V')
 #define LEVEL_CHAR_D ('D')
 #define LEVEL_CHAR_I ('I')
@@ -51,22 +54,24 @@ typedef struct xlog_cb_pack
 	void* cb_user_data;
 }xlog_cb_pack_t;
 
-#define XLOG_DEFAULT_TAG_MAX_SIZE (32)
+#define XLOG_DEFAULT_TAG_MAX_SIZE (24)
 typedef struct xlog_config
 {
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
-	/* if level small than this, transform the current level to this */
+	/* if log level bigger than min_level but small than this, transform log level to this */
 	LogLevel trigger_up_level;
 	/* the file pointer after redirect stdout */
-	FILE* fp_stdout;
+	FILE* fp_out;
 	/* min log level: if current level bigger or equal than this. */
 	LogLevel min_level;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */
 	int format;
+	/* LogFlushMode */
+	LogFlushMode flush_mode;
 	/* for calculate locale time */
 	int timezone_hour;
 }xlog_config_t;
@@ -85,6 +90,7 @@ static xlog_config_t g_xlog_cfg =
 	LOG_TARGET_CONSOLE,
 #endif // __ANDROID__
 	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
+	LOG_FLUSH_MODE_AUTO,
 	DEFAULT_TIMEZONE_HOUR
 };
 
@@ -93,9 +99,9 @@ static xlog_config_t g_xlog_cfg =
 #define XLOG_IS_ANDROID_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
 #define XLOG_IS_USER_CALLBACK_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
-#define XLOG_IS_LOGABLE(level) (g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
+#define XLOG_IS_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
-static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, 'U'};
+static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?'};
 
 #if defined(__ANDROID__)
 static int g_map_android_level[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
@@ -117,15 +123,15 @@ void xlog_stdout2file(char* file_path)
 	{
 		return;
 	}
-	if (g_xlog_cfg.fp_stdout)
+	if (g_xlog_cfg.fp_out && (g_xlog_cfg.fp_out != stdout))
 	{
-		printf("[XLog] [%s:%d] WARN: did you forgot to close stdout file stream?", __func__, __LINE__);
-		fflush(g_xlog_cfg.fp_stdout);
-		fclose(g_xlog_cfg.fp_stdout);
+		printf("[XLog] [%s:%d] WARN: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
+		fflush(g_xlog_cfg.fp_out);
+		fclose(g_xlog_cfg.fp_out);
 	}
 	fflush(stdout);
-	g_xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
-	if (!g_xlog_cfg.fp_stdout)
+	g_xlog_cfg.fp_out = freopen(file_path, "w", stdout);
+	if (!g_xlog_cfg.fp_out)
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
 	}
@@ -133,14 +139,14 @@ void xlog_stdout2file(char* file_path)
 
 void xlog_back2stdout()
 {
-	if (NULL == g_xlog_cfg.fp_stdout)
+	if (!g_xlog_cfg.fp_out || (stdout == g_xlog_cfg.fp_out))
 	{
 		return;
 	}
 	// must close current stream first, and then reopen it
-	fflush(g_xlog_cfg.fp_stdout);
-	fclose(g_xlog_cfg.fp_stdout);
-	g_xlog_cfg.fp_stdout = NULL;
+	fflush(g_xlog_cfg.fp_out);
+	fclose(g_xlog_cfg.fp_out);
+	g_xlog_cfg.fp_out = stdout;
 	if (!freopen(STDOUT_NODE, "w", stdout))
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
@@ -216,16 +222,90 @@ int xlog_get_format()
 	return g_xlog_cfg.format;
 }
 
+void xlog_set_flush_mode(LogFlushMode flush_mode)
+{
+	if (flush_mode < LOG_FLUSH_MODE_AUTO)
+	{
+		return;
+	}
+	g_xlog_cfg.flush_mode = flush_mode;
+}
+
+LogFlushMode xlog_get_flush_mode()
+{
+	return g_xlog_cfg.flush_mode;
+}
+
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:6386) //for disable buffer overflow
 #endif // _WIN32
-void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
+
+#define USE_SNPRINTF_HEADER (0)
+
+#if(!defined(USE_SNPRINTF_HEADER) || !USE_SNPRINTF_HEADER)
+static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
 {
-	va_list args;
-	char buffer_log[1024] = { 0 };
+	int fmt_len = 0;
+	buffer[fmt_len++] = ' ';
+	buffer[fmt_len++] = g_map_level_chars[level];
+	buffer[fmt_len++] = '/';
+	size_t origin_tag_len = strlen(tag);
+	size_t cpy_tag_len = origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
+		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : origin_tag_len; // max copy 22 chars
+#if 1
+	size_t align_tag_len = (cpy_tag_len < 8 ? 8 : cpy_tag_len);
+	for (size_t i = 0; i < align_tag_len; ++i)
+	{
+		buffer[fmt_len++] = (i < cpy_tag_len ? tag[i] : ' ');
+	}
+#else
+	memcpy(buffer + fmt_len, tag, cpy_tag_len);
+	fmt_len += cpy_tag_len;
+	while (cpy_tag_len++ < 8)
+	{
+		buffer[fmt_len++] = ' ';
+	}
+#endif
+	buffer[fmt_len] = '\0';
+	return fmt_len;
+}
+
+static inline int print_tid(char* buffer, int tid)
+{
+	buffer[0] = '(';
+	buffer += 1;
+	int loc_first_non_zero = 0;
+	for (int i = 5; i > 0; --i)
+	{
+		int mod = tid % 10;
+		if (mod)
+		{
+			loc_first_non_zero = i - 1;
+		}
+		buffer[i - 1] =  '0' + mod;
+		tid /= 10;
+	}
+	for (int i = 0; i < loc_first_non_zero; ++i)
+	{
+		buffer[i] = ' ';
+	}
+	buffer += 5;
+	buffer[0] = ')';
+	buffer[1] = '\0';
+	return 7;
+}
+#endif // !USE_SNPRINTF_HEADER
+
+void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
+{
+	va_list va;
+	//no need init buffer.
+	char default_buffer[DEFAULT_LOG_BUF_SIZE];
+	size_t default_buffer_remaining_size;
+	char* buffer_log = default_buffer;
+	size_t buffer_log_size = sizeof(default_buffer);
 	size_t buffer_strlen;
-	size_t buffer_remaining_size;
 	size_t header_len = 0;
 	bool is_log2console;
 	bool is_log2usercb;
@@ -252,51 +332,98 @@ void __xlog_internal_log(LogLevel level, char* tag, const char* func_name, int f
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
 		{
-			header_len += snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
+			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+#else
+			header_len += print_level_tag(buffer_log + header_len, level, tag);
+#endif // USE_SNPRINTF_HEADER
 		}
 		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TID)
 		{
-			header_len += snprintf(buffer_log + header_len, sizeof(buffer_log) - header_len, "(%5d)", XLOG_GETTID());
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
+			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
+#else
+			header_len += print_tid(buffer_log + header_len, XLOG_GETTID());
+#endif // USE_SNPRINTF_HEADER
 		}
 		if (header_len)
 		{
 			buffer_log[header_len++] = ':';
 			buffer_log[header_len++] = ' ';
+			buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
+//#define XLOG_HEADER_COLON (": ")
+			//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
+			//header_len += (sizeof(XLOG_HEADER_COLON) - 1);
 		}
 	}
 	buffer_strlen = header_len;
-	if (func_name && file_line > 0 && (buffer_remaining_size = sizeof(buffer_log) - buffer_strlen) > 0)
+	if (func_name && file_line > 0 && (default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 0)
 	{
-		buffer_strlen += snprintf(buffer_log + buffer_strlen, buffer_remaining_size, "(%s:%d) ", func_name, file_line);
+		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
 	}
 	
-	if ((buffer_remaining_size = sizeof(buffer_log) - buffer_strlen) > 0)
+	default_buffer_remaining_size = buffer_log_size - buffer_strlen;
+	va_start(va, fmt);
+	// '\0' is not belong of the length
+	int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
+	va_end(va);
+	if (ret_vsn < 0)
 	{
-		va_start(args, fmt);
-		buffer_strlen += vsnprintf(buffer_log + buffer_strlen, buffer_remaining_size, fmt, args);
-		va_end(args);
+		fprintf(stderr, "[XLOG] [%s:%d] failed on measure log format length. ret=%d\n", __func__, __LINE__, ret_vsn);
+		return;
 	}
-	
-	/*if (buffer_strlen == sizeof(buffer_log))
+	if (ret_vsn < (int)default_buffer_remaining_size)
 	{
-		buffer_log[--buffer_strlen] = '\0'; // vsnprintf ensure '\0' in string.
-	}*/
-
-	if (is_log2console)
+		buffer_strlen += ret_vsn;
+	}
+	else
 	{
-		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+		/*
+		va_start(va, fmt);
+		//first we get the formatted string length. ('\0' is not belong of the length)
+		ret_vsn = vsnprintf(NULL, 0, fmt, va);
+		va_end(va);
+		*/
+		const size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
+		buffer_log_size = buffer_strlen + need_fmt_str_size;
+		if (!(buffer_log = (char*)malloc(buffer_log_size)))
+		{
+			fprintf(stderr, "[XLOG] [%s:%d] failed malloc %zu byte on xlog\n", __func__, __LINE__, buffer_log_size);
+			return; // oops, out of memory
+		} // here we only copy header to new buffer
+		strlcpy(buffer_log, default_buffer, /*buffer_log_size*/buffer_strlen + 1); 
+		
+		va_start(va, fmt);
+		// vsnprintf ensure '\0' in string.
+		ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
+		va_end(va);
+		buffer_strlen += ret_vsn;
 	}
 
 #if defined(__ANDROID__)
 	if (XLOG_IS_ANDROID_LOGABLE)
-	{
+	{   // android log no need our own log header, just skip it
 		__android_log_print(g_map_android_level[level], tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
 
+	if (is_log2console)
+	{
+		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+		if (g_xlog_cfg.flush_mode)
+		{
+			fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);
+		}
+	}
+
 	if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
 	{
-		g_xlog_cfg.cb_pack.cb(buffer_log, buffer_strlen + 1, g_xlog_cfg.cb_pack.cb_user_data);
+		g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
+	}
+
+	if (buffer_log != default_buffer)
+	{
+		free(buffer_log);
 	}
 }
 #ifdef _WIN32
@@ -310,23 +437,27 @@ void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* 
 	if (chars_size * 3 > out_hex_str_capacity)
 	{
 		snprintf(out_hex_str, out_hex_str_capacity, "hex is truncated(%zu):", chars_size);
-		chars_size = out_hex_str_capacity / 3 - 6;
 		header_len = strnlen(out_hex_str, out_hex_str_capacity);
+		out_hex_str_capacity -= header_len;
+		chars_size = out_hex_str_capacity / 3 - 1;
 	}
-	out_hex_str_capacity -= header_len;
 	for (size_t chars_index = 0, str_offset = 0; chars_index < chars_size; ++chars_index, str_offset += 3)
 	{
-		snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset, " %02hhx", (unsigned char)chars[chars_index]);
+		if (snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset,
+			" %02hhx", (unsigned char)chars[chars_index]) < 0)
+		{
+			break; // oops, error occurred
+		}
 	}
 }
 
-void __xlog_internal_hex_helper(LogLevel level, char* tag, char* chars, size_t chars_size)
+void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_size)
 {
-	char hex_str[1024];
+	char hex_str[DEFAULT_LOG_BUF_SIZE];
 	if (!XLOG_IS_LOGABLE(level))
 	{
 		return;
 	}
 	xlog_chars2hex(hex_str, sizeof(hex_str), chars, chars_size);
-	__xlog_internal_log(level, tag, NULL, -1, "%s", hex_str);
+	__xlog_internal_print(level, tag, NULL, -1, "%s", hex_str);
 }

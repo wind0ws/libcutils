@@ -41,8 +41,10 @@ set BUILD_TYPE=%2
 if "%BUILD_TYPE%" EQU "" set BUILD_TYPE=Release
 if "%BUILD_TYPE%" EQU "Release" goto label_run_next_bat
 if "%BUILD_TYPE%" EQU "Debug" goto label_run_next_bat
-@echo unknown BUILD_TYPE=%BUILD_TYPE%, available "Debug"/"Release"
+@echo unknown BUILD_TYPE=%BUILD_TYPE%, available "Debug" / "Release"
 @exit /b 2
 
 :label_run_next_bat
-@echo hello...
+@echo.
+@echo   hello... now compile it...
+@echo.

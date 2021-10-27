@@ -5,12 +5,10 @@
 static void* thread_func(void* args) 
 {
 	int code;
-#ifndef _LCU_NOT_SUPPORT_PTHREAD_SETNAME 
-	pthread_setname_np(pthread_self(), "thr_func");
-#endif // !_LCU_NOT_SUPPORT_PTHREAD_SETNAME
+	pthread_set_name(pthread_self(), "thr_func");
 	LOGI("Hello pthread. id:%d", gettid());
 	sem_t* psem = args;
-	if ((code = sem_wait(psem)))
+	if (0 != (code = sem_wait(psem)))
 	{
 		LOGE("error on sem_wait, code=%d", code);
 	}

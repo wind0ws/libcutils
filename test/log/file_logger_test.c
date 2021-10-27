@@ -3,7 +3,7 @@
 #include "log/xlog.h"
 #include "mem/strings.h"
 
-static void xlog_custom_user_cb(void* log_msg, size_t msg_size, void* user_data);
+static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_size, void* user_data);
 static void my_file_logger_lock(void* arg);
 static void my_file_logger_unlock(void* arg);
 
@@ -12,7 +12,7 @@ typedef struct
 	file_logger_cfg f_logger_cfg;
 	pthread_mutex_t log_mutex;
 	file_logger_handle f_logger_hdl;
-}logger_config_t;
+} logger_config_t;
 
 static logger_config_t g_logger_cfg;
 
@@ -43,9 +43,10 @@ int file_logger_test_begin()
 	g_logger_cfg.f_logger_hdl = file_logger_init(g_logger_cfg.f_logger_cfg);
 	if (NULL == g_logger_cfg.f_logger_hdl)
 	{
+		pthread_mutex_destroy(&g_logger_cfg.log_mutex);
 		return 1;
 	}
-	xlog_set_user_callback(xlog_custom_user_cb, (void*)g_logger_cfg.f_logger_hdl);
+	xlog_set_user_callback(my_xlog_custom_user_cb, (void*)g_logger_cfg.f_logger_hdl);
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK);
 	LOGD("Now call xlog_stdout2file");
 	xlog_stdout2file(STDOUT_FILE_PATH);
@@ -78,7 +79,7 @@ static void my_file_logger_unlock(void* arg)
 	pthread_mutex_unlock((pthread_mutex_t*)arg);
 }
 
-static void xlog_custom_user_cb(void* log_msg, size_t msg_size, void* user_data)
+static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_size, void* user_data)
 {
 	file_logger_handle f_logger_hdl = (file_logger_handle)user_data;
 	if (NULL == f_logger_hdl || NULL == log_msg)

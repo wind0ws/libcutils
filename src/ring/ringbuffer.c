@@ -2,7 +2,7 @@
 #include "log/simple_log.h"
 #include <stdbool.h>
 #include <malloc.h> /* for malloc/free */
-#include <string.h> /* for memcpy */
+#include <string.h> /* for memcpy      */
 
 #define _RING_LOG_TAG         "RING_BUF"
 
@@ -164,7 +164,8 @@ uint32_t RingBuffer_current_write_position(__in const ring_buf_handle ring_buf_p
 	return ring_buf_p->in;
 }
 
-uint32_t RingBuffer_real_capacity(__in const ring_buf_handle ring_buf_p) {
+uint32_t RingBuffer_real_capacity(__in const ring_buf_handle ring_buf_p) 
+{
 	return ring_buf_p->size;
 }
 
@@ -189,6 +190,10 @@ uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t available_space = RingBuffer_available_write(ring_buf_p);
+	if (available_space == 0)
+	{
+		return 0;
+	}
 	size = TAKE_MIN(size, available_space);
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	if (origin_size != size)
@@ -213,7 +218,7 @@ uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void
 	return size;
 }
 
-static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_peek, void* target, uint32_t size)
+static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, void* target, uint32_t size, bool is_peek)
 {
 	if (ring_buf_p == NULL || size == 0)
 	{
@@ -224,6 +229,10 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_pee
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t available_data = RingBuffer_available_read(ring_buf_p);
+	if (available_data == 0)
+	{
+		return 0;
+	}
 	size = TAKE_MIN(size, available_data);
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	if (origin_size != size)
@@ -231,17 +240,17 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_pee
 		return 0;
 	}
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
-	/* first get the data from fifo->out until the end of the buffer */
-	start = ring_buf_p->out & (ring_buf_p->size - 1);
-	uint32_t first_part_max_len = ring_buf_p->size - start;
-	first_part_len = TAKE_MIN(size, first_part_max_len);
-	if (first_part_len && target)
-	{
-		memcpy(target, ring_buf_p->buf + start, first_part_len);
-	}
-	/* then get the rest_len (if any) from the beginning of the buffer */
 	if (target)
 	{
+		/* first get the data from fifo->out until the end of the buffer */
+		start = ring_buf_p->out & (ring_buf_p->size - 1);
+		uint32_t first_part_max_len = ring_buf_p->size - start;
+		first_part_len = TAKE_MIN(size, first_part_max_len);
+		if (first_part_len)
+		{
+			memcpy(target, ring_buf_p->buf + start, first_part_len);
+		}
+		/* then get the rest_len (if any) from the beginning of the buffer */
 		rest_len = size - first_part_len;
 		if (rest_len)
 		{
@@ -257,15 +266,15 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, bool is_pee
 
 uint32_t RingBuffer_read(__in ring_buf_handle ring_buf_p, __out void* target, uint32_t size)
 {
-	return target == NULL ? 0 : RingBuffer_read_internal(ring_buf_p, false, target, size);
+	return target == NULL ? 0 : RingBuffer_read_internal(ring_buf_p, target, size, false);
 }
 
 uint32_t RingBuffer_peek(__in const ring_buf_handle ring_buf_p, __out void* target, uint32_t size)
 {
-	return RingBuffer_read_internal(ring_buf_p, true, target, size);
+	return RingBuffer_read_internal(ring_buf_p, target, size, true);
 }
 
 uint32_t RingBuffer_discard(__in const ring_buf_handle ring_buf_p, uint32_t size)
 {
-	return RingBuffer_read_internal(ring_buf_p, false, NULL, size);
+	return RingBuffer_read_internal(ring_buf_p, NULL, size, false);
 }

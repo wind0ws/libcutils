@@ -42,7 +42,7 @@
 #define INIT_MEM_CHECK() {\
     void *_hDbgLogFile = CreateFile((LPCSTR)"./memleak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
 	                             NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); \
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW); \
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG /*| _CRTDBG_MODE_WNDW*/); \
     _CrtSetReportFile(_CRT_WARN, _hDbgLogFile); \
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
 }

@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.5.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.5.2 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # 使用utility.cmake
 include(utility)
+include(CheckSymbolExists)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_C_STANDARD 11)
@@ -109,58 +110,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${DEPLOY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
 
 
-#add compile/optimize options for DEBUG/RELEASE
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
-if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
-	string(APPEND CMAKE_C_FLAGS_RELEASE        " /O2 /Ot /MT")
-	string(APPEND CMAKE_C_FLAGS_DEBUG          " /Od /MTd /DEBUG")
-	string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /O2 /Ot /MT")
-	string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /Od /MTd /DEBUG /Zi")
-	#string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
-	#string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
-	
-	string(APPEND CMAKE_C_FLAGS   " /utf-8 /W3")
-    string(APPEND CMAKE_CXX_FLAGS " /utf-8 /W3")
-else()
-	string(APPEND CMAKE_C_FLAGS_RELEASE    " -O3")
-	string(APPEND CMAKE_C_FLAGS_DEBUG      " -Og")
-	string(APPEND CMAKE_CXX_FLAGS_RELEASE  " -O3")
-	string(APPEND CMAKE_CXX_FLAGS_DEBUG    " -Og")
-	
-    string(APPEND CMAKE_C_FLAGS   " -Wall -Wno-unused-local-typedefs -Wno-unused-function")
-    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-write-strings")
-endif ()
-
-# 小知识
-# add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，
-# 而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
-# add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
-# 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
-#
-#add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
-#add_definitions("-DCURL_STATICLIB")
-IF(WIN32)
-  #supress warnings for VS
-  add_compile_options( /wd4819 )
-  #add optimiziation options
-  add_compile_options(/bigobj /nologo /EHsc /GF /MP)
-  #solution folder
-  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-  #put ZERO_CHECK/ALL_BUILD in all_targets folder
-  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
-  
-  #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
-  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
-ELSE() # for unix
-  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-  # Android 5.0 以上需要在此处设置 PIE
-  string(APPEND CMAKE_C_FLAGS          " -fPIC")
-  string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
-  string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
-  #add _GNU_SOURCE for pthread
-  add_compile_options(-D_GNU_SOURCE)
-ENDIF(WIN32)
 
 set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
 configure_file(
@@ -254,8 +203,11 @@ add_library(${target_lcu_shared}
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
 set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
 set_target_properties(${target_lcu_shared} PROPERTIES OUTPUT_NAME "lcu")
+if(NOT MSVC)
+# strip 
 set_target_properties(${target_lcu_static} PROPERTIES LINK_FLAGS_RELEASE -s)
 set_target_properties(${target_lcu_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
+endif()
 # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
 #set_target_properties(${target_lcu_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 #set_target_properties(${target_lcu_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
@@ -270,6 +222,7 @@ IF(UNIX)
   find_package(Threads REQUIRED)
   set(pthread-lib ${CMAKE_THREAD_LIBS_INIT})
   #target_link_libraries(my_app Threads::Threads)
+  check_symbol_exists(pthread_setname_np "pthread.h" HAVE_PTHREAD_SETNAME_NP)
 
   if(ANDROID)
     # Searches for a specified prebuilt library and stores the path as a
@@ -296,6 +249,7 @@ IF(UNIX)
   endif(ANDROID)
 ELSEIF(WIN32)
   message(STATUS "Current build system is WIN32!")
+  set(HAVE_PTHREAD_SETNAME_NP 1)
   # set vs startup project
   set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_lcu_test})
   #set_property(TARGET ${target_lcu_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
@@ -319,7 +273,73 @@ ELSE()
   set(log-lib "")
 ENDIF(UNIX)
 
+message(STATUS "HAVE_PTHREAD_SETNAME_NP => ${HAVE_PTHREAD_SETNAME_NP}")
 message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
+
+# 小知识
+# add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，
+# 而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
+# add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
+# 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
+#
+#add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
+#add_definitions("-DCURL_STATICLIB")
+if(HAVE_PTHREAD_SETNAME_NP STREQUAL "1")
+  add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
+endif()
+#add compile/optimize options for DEBUG/RELEASE
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
+if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
+	string(APPEND CMAKE_C_FLAGS_RELEASE        " /O2 /Ot /MT")
+	string(APPEND CMAKE_C_FLAGS_DEBUG          " /Od /MTd /DEBUG")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /O2 /Ot /MT")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /Od /MTd /DEBUG /Zi")
+	#string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
+	#string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
+	
+	string(APPEND CMAKE_C_FLAGS   " /utf-8 /W3")
+    string(APPEND CMAKE_CXX_FLAGS " /utf-8 /W3")
+else()
+	string( TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER )
+    if (BUILD_TYPE_LOWER STREQUAL "debug")
+        message(STATUS "Debug build detected")
+        add_definitions("-D_DEBUG=1")
+    else()
+        message(STATUS "Release build detected")
+		add_definitions("-DNDEBUG")
+    endif()
+	string(APPEND CMAKE_C_FLAGS_RELEASE    " -O3")
+	string(APPEND CMAKE_C_FLAGS_DEBUG      " -Og")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE  " -O3")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG    " -Og")
+	
+    string(APPEND CMAKE_C_FLAGS   " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment")
+    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-write-strings")
+endif()
+
+
+IF(WIN32)
+  #supress warnings for VS
+  add_compile_options( /wd4819 )
+  #add optimiziation options
+  add_compile_options(/bigobj /nologo /EHsc /GF /MP)
+  #solution folder
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  #put ZERO_CHECK/ALL_BUILD in all_targets folder
+  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
+  
+  #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
+ELSE() # for unix
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+  # Android 5.0 以上需要在此处设置 PIE
+  string(APPEND CMAKE_C_FLAGS          " -fPIC")
+  string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
+  #add _GNU_SOURCE for pthread_setname_np
+  add_definitions(-D_GNU_SOURCE)
+ENDIF(WIN32)
 
 #依赖的动态库目录
 #link_directories(

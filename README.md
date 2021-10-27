@@ -34,6 +34,11 @@
 =================================================
 ## Release Log
 
+* **1.5.2**
+  > 1. improve time_util_get_current_time_str performance
+  > 2. improve xlog performance
+  > 3. add flush mode on xlog
+
 * **1.4.1**
   > 1. Add msg_queue/msg_queue_handler: support various msg
   > 2. rename old msg_queue/msg_queue_handler to fixed_msg_queue/fixed_msg_queue_handler

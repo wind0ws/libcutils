@@ -10,13 +10,14 @@
 #include "time/time_util.h"
 #include "log/simple_log.h"
 
-#define _LOGGER_TAG                     "FILE_LOGGER"
+#define LOG_TAG                     "FILE_LOGGER"
+#define MY_LOGV(fmt, ...)            SIMPLE_LOGV(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt, ...)            SIMPLE_LOGD(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt, ...)            SIMPLE_LOGI(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt, ...)            SIMPLE_LOGW(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt, ...)            SIMPLE_LOGE(LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define MY_LOGV(fmt,...)                 SIMPLE_LOGV(_LOGGER_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGD(fmt,...)                 SIMPLE_LOGD(_LOGGER_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGI(fmt,...)                 SIMPLE_LOGI(_LOGGER_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGW(fmt,...)                 SIMPLE_LOGW(_LOGGER_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGE(fmt,...)                 SIMPLE_LOGE(_LOGGER_TAG, fmt, ##__VA_ARGS__)
+#define MAX_FULL_PATH_BUFFER (256)
 
 typedef struct file_logger
 {
@@ -37,7 +38,7 @@ typedef struct file_logger
 {\
 	logger_handle->cfg.lock.release(logger_handle->cfg.lock.arg);\
 };
-#define MAX_FULL_PATH_BUFFER (256)
+
 static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg cfg)

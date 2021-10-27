@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.5.0 LANGUAGES C CXX)
+project(libcutils VERSION 1.5.2 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -203,8 +203,11 @@ add_library(${target_lcu_shared}
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
 set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
 set_target_properties(${target_lcu_shared} PROPERTIES OUTPUT_NAME "lcu")
+if(NOT MSVC)
+# strip 
 set_target_properties(${target_lcu_static} PROPERTIES LINK_FLAGS_RELEASE -s)
 set_target_properties(${target_lcu_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
+endif()
 # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
 #set_target_properties(${target_lcu_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 #set_target_properties(${target_lcu_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)

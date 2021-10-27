@@ -149,24 +149,23 @@ int time_util_zone_offset_seconds_to_utc()
  */
 int time_util_fast_second2date(const time_t* p_unix_sec, struct tm* lt, int timezone_hour)
 {
-	static const int kHoursInDay = 24;
-	static const int kMinutesInHour = 60;
-	static const int kDaysFromUnixTime = 2472632;
-	static const int kDaysFromYear = 153;
-	static const int kMagicUnkonwnFirst = 146097;
-	static const int kMagicUnkonwnSec = 1461;
+	#define kHoursInDay         (24)
+	#define kMinutesInHour      (60)
+	#define kDaysFromUnixTime   (2472632)
+	#define kDaysFromYear       (153)
+	#define kMagicUnkonwnFirst  (146097)
+	#define kMagicUnkonwnSec    (1461)
 	lt->tm_sec = (*p_unix_sec) % kMinutesInHour;
-	int i = ((int)(*p_unix_sec) / kMinutesInHour);
-	lt->tm_min = i % kMinutesInHour; //nn
-	i /= kMinutesInHour;
-	lt->tm_hour = (i + timezone_hour) % kHoursInDay; // hh
-	lt->tm_mday = (i + timezone_hour) / kHoursInDay;
+	int minutes = ((int)(*p_unix_sec) / kMinutesInHour);
+	lt->tm_min = minutes % kMinutesInHour; //nn
+	int hours = minutes / kMinutesInHour + timezone_hour;
+	lt->tm_hour = hours % kHoursInDay; // hh
+	lt->tm_mday = hours / kHoursInDay;
 	int a = lt->tm_mday + kDaysFromUnixTime;
 	int b = (a * 4 + 3) / kMagicUnkonwnFirst;
 	int c = (-b * kMagicUnkonwnFirst) / 4 + a;
 	int d = ((c * 4 + 3) / kMagicUnkonwnSec);
-	int e = -d * kMagicUnkonwnSec;
-	e = e / 4 + c;
+	int e = (-d * kMagicUnkonwnSec) / 4 + c;
 	int m = (5 * e + 2) / kDaysFromYear;
 	lt->tm_mday = -(kDaysFromYear * m + 2) / 5 + e + 1;
 	lt->tm_mon = (-m / 10) * 12 + m + 2;
@@ -190,7 +189,7 @@ static inline int print_millisec(char* buffer, unsigned int num)
 	snprintf(buffer, 5, ".%03d", num);
 #else
 	buffer[0] = '.';
-	buffer += 1;
+	++buffer;
 	for (int i = 3; i > 0; --i)
 	{
 		buffer[i - 1] = '0' + num % 10;
@@ -214,14 +213,15 @@ static int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 		pthread_rwlock_rdlock(&cache_p->rw_lock); // lock rdlock
 		if (cache_p->timezone_hour == timezone_hour && cache_p->tval.tv_sec == tval_p->tv_sec)
 		{	// hit cache, just copy whole cached time string
-			ftime_len = strlcpy(str, cache_p->format_cache, TIME_STR_SIZE);
-			if (cache_p->tval.tv_usec != tval_p->tv_usec)
-			{
-				ftime_len -= 4; // milliseconds, such as  ".123" 
-			}
+			ftime_len = (int)strlcpy(str, cache_p->format_cache, TIME_STR_SIZE);
+			bool update_millis = cache_p->tval.tv_usec != tval_p->tv_usec;
 			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
-			//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
-			ftime_len += print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+			if (update_millis)
+			{
+				ftime_len -= 4;
+				//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
+				ftime_len += print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+			}
 		}
 		else // not hit sec cache
 		{

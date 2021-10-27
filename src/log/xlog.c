@@ -63,13 +63,15 @@ typedef struct xlog_config
 	/* if log level bigger than min_level but small than this, transform log level to this */
 	LogLevel trigger_up_level;
 	/* the file pointer after redirect stdout */
-	FILE* fp_stdout;
+	FILE* fp_out;
 	/* min log level: if current level bigger or equal than this. */
 	LogLevel min_level;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */
 	int format;
+	/* LogFlushMode */
+	LogFlushMode flush_mode;
 	/* for calculate locale time */
 	int timezone_hour;
 }xlog_config_t;
@@ -88,6 +90,7 @@ static xlog_config_t g_xlog_cfg =
 	LOG_TARGET_CONSOLE,
 #endif // __ANDROID__
 	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
+	LOG_FLUSH_MODE_AUTO,
 	DEFAULT_TIMEZONE_HOUR
 };
 
@@ -120,15 +123,15 @@ void xlog_stdout2file(char* file_path)
 	{
 		return;
 	}
-	if (g_xlog_cfg.fp_stdout)
+	if (g_xlog_cfg.fp_out && (g_xlog_cfg.fp_out != stdout))
 	{
-		printf("[XLog] [%s:%d] WARN: did you forgot to close stdout file stream?", __func__, __LINE__);
-		fflush(g_xlog_cfg.fp_stdout);
-		fclose(g_xlog_cfg.fp_stdout);
+		printf("[XLog] [%s:%d] WARN: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
+		fflush(g_xlog_cfg.fp_out);
+		fclose(g_xlog_cfg.fp_out);
 	}
 	fflush(stdout);
-	g_xlog_cfg.fp_stdout = freopen(file_path, "w", stdout);
-	if (!g_xlog_cfg.fp_stdout)
+	g_xlog_cfg.fp_out = freopen(file_path, "w", stdout);
+	if (!g_xlog_cfg.fp_out)
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
 	}
@@ -136,14 +139,14 @@ void xlog_stdout2file(char* file_path)
 
 void xlog_back2stdout()
 {
-	if (NULL == g_xlog_cfg.fp_stdout)
+	if (!g_xlog_cfg.fp_out || (stdout == g_xlog_cfg.fp_out))
 	{
 		return;
 	}
 	// must close current stream first, and then reopen it
-	fflush(g_xlog_cfg.fp_stdout);
-	fclose(g_xlog_cfg.fp_stdout);
-	g_xlog_cfg.fp_stdout = NULL;
+	fflush(g_xlog_cfg.fp_out);
+	fclose(g_xlog_cfg.fp_out);
+	g_xlog_cfg.fp_out = stdout;
 	if (!freopen(STDOUT_NODE, "w", stdout))
 	{
 		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
@@ -219,6 +222,20 @@ int xlog_get_format()
 	return g_xlog_cfg.format;
 }
 
+void xlog_set_flush_mode(LogFlushMode flush_mode)
+{
+	if (flush_mode < LOG_FLUSH_MODE_AUTO)
+	{
+		return;
+	}
+	g_xlog_cfg.flush_mode = flush_mode;
+}
+
+LogFlushMode xlog_get_flush_mode()
+{
+	return g_xlog_cfg.flush_mode;
+}
+
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:6386) //for disable buffer overflow
@@ -237,18 +254,19 @@ static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
 	size_t cpy_tag_len = origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
 		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : origin_tag_len; // max copy 22 chars
 #if 1
-	for (size_t i = 0; i < cpy_tag_len; ++i)
+	size_t align_tag_len = (cpy_tag_len < 8 ? 8 : cpy_tag_len);
+	for (size_t i = 0; i < align_tag_len; ++i)
 	{
-		buffer[fmt_len++] = tag[i];
+		buffer[fmt_len++] = (i < cpy_tag_len ? tag[i] : ' ');
 	}
 #else
 	memcpy(buffer + fmt_len, tag, cpy_tag_len);
 	fmt_len += cpy_tag_len;
-#endif
 	while (cpy_tag_len++ < 8)
 	{
 		buffer[fmt_len++] = ' ';
 	}
+#endif
 	buffer[fmt_len] = '\0';
 	return fmt_len;
 }
@@ -282,6 +300,7 @@ static inline int print_tid(char* buffer, int tid)
 void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
 {
 	va_list va;
+	//no need init buffer.
 	char default_buffer[DEFAULT_LOG_BUF_SIZE];
 	size_t default_buffer_remaining_size;
 	char* buffer_log = default_buffer;
@@ -350,7 +369,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	va_end(va);
 	if (ret_vsn < 0)
 	{
-		fprintf(stderr, "failed on measure log format length. ret=%d\n", ret_vsn);
+		fprintf(stderr, "[XLOG] [%s:%d] failed on measure log format length. ret=%d\n", __func__, __LINE__, ret_vsn);
 		return;
 	}
 	if (ret_vsn < (int)default_buffer_remaining_size)
@@ -365,11 +384,11 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 		ret_vsn = vsnprintf(NULL, 0, fmt, va);
 		va_end(va);
 		*/
-		size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
+		const size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
 		buffer_log_size = buffer_strlen + need_fmt_str_size;
 		if (!(buffer_log = (char*)malloc(buffer_log_size)))
 		{
-			fprintf(stderr, "failed malloc %zu byte on xlog\n", buffer_log_size);
+			fprintf(stderr, "[XLOG] [%s:%d] failed malloc %zu byte on xlog\n", __func__, __LINE__, buffer_log_size);
 			return; // oops, out of memory
 		} // here we only copy header to new buffer
 		strlcpy(buffer_log, default_buffer, /*buffer_log_size*/buffer_strlen + 1); 
@@ -391,11 +410,15 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	if (is_log2console)
 	{
 		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+		if (g_xlog_cfg.flush_mode)
+		{
+			fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);
+		}
 	}
 
 	if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
 	{
-		g_xlog_cfg.cb_pack.cb(buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
+		g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
 	}
 
 	if (buffer_log != default_buffer)

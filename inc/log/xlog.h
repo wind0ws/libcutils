@@ -30,7 +30,7 @@ typedef enum
 } LogLevel;
 
 //user log callback. log_msg do not contain '\n'. msg_size contain NUL terminator
-typedef void (*xlog_user_callback_fn)(void* log_msg, size_t msg_size, void* user_data);
+typedef void (*xlog_user_callback_fn)(LogLevel level, void* log_msg, size_t msg_size, void* user_data);
 
 typedef enum
 {
@@ -51,6 +51,12 @@ typedef enum
 	/* output log message with thread id */
 	LOG_FORMAT_WITH_TID = (0x1 << 3)
 } LogFormat;
+
+typedef enum
+{
+	LOG_FLUSH_MODE_AUTO = 0,
+	LOG_FLUSH_MODE_EVERY
+} LogFlushMode;
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,6 +125,15 @@ extern "C" {
 	int xlog_get_format();
 
 	/**
+	 * set flush mode on xlog.
+	 * default mode LOG_FLUSH_MODE_AUTO: auto flush by system.
+	 *              LOG_FLUSH_MODE_EVERY: flush on every log print
+	 */
+	void xlog_set_flush_mode(LogFlushMode flush_mode);
+
+	LogFlushMode xlog_get_flush_mode();
+
+	/**
 	 * transform char to hex.
 	 * note: just transform for you, not print.
 	 * @param out_hex_str: place hex result, should provide (3 * chars_len + 1) memory
@@ -143,6 +158,48 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+// for remove all of log print
+//#defined LCU_XLOG_OFF 1
+#if(defined(LCU_XLOG_OFF) && LCU_XLOG_OFF)
+
+#define TLOGV(tag, fmt, ...) 
+#define TLOGD(tag, fmt, ...) 
+#define TLOGI(tag, fmt, ...) 
+#define TLOGW(tag, fmt, ...) 
+#define TLOGE(tag, fmt, ...) 
+
+#define LOGV(fmt, ...) 
+#define LOGD(fmt, ...) 
+#define LOGI(fmt, ...) 
+#define LOGW(fmt, ...) 
+#define LOGE(fmt, ...) 
+
+#define TLOGV_TRACE(tag, fmt, ...) 
+#define TLOGD_TRACE(tag, fmt, ...) 
+#define TLOGI_TRACE(tag, fmt, ...) 
+#define TLOGW_TRACE(tag, fmt, ...) 
+#define TLOGE_TRACE(tag, fmt, ...) 
+
+#define LOGV_TRACE(fmt, ...) 
+#define LOGD_TRACE(fmt, ...) 
+#define LOGI_TRACE(fmt, ...) 
+#define LOGW_TRACE(fmt, ...) 
+#define LOGE_TRACE(fmt, ...) 
+
+#define TLOGV_HEX(tag, chars, chars_size) 
+#define TLOGD_HEX(tag, chars, chars_size) 
+#define TLOGI_HEX(tag, chars, chars_size) 
+#define TLOGW_HEX(tag, chars, chars_size) 
+#define TLOGE_HEX(tag, chars, chars_size) 
+
+#define LOGV_HEX(chars, chars_size) 
+#define LOGD_HEX(chars, chars_size) 
+#define LOGI_HEX(chars, chars_size) 
+#define LOGW_HEX(chars, chars_size) 
+#define LOGE_HEX(chars, chars_size) 
+
+#else
 
 #define TLOGV(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGD(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
@@ -179,5 +236,7 @@ extern "C" {
 #define LOGI_HEX(chars, chars_size) TLOGI_HEX(NULL, chars, chars_size)
 #define LOGW_HEX(chars, chars_size) TLOGW_HEX(NULL, chars, chars_size)
 #define LOGE_HEX(chars, chars_size) TLOGE_HEX(NULL, chars, chars_size)
+
+#endif // LCU_XLOG_OFF
 
 #endif // LCU_XLOG_H

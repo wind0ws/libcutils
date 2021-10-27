@@ -84,7 +84,7 @@ static test_case_t g_all_test_cases[] =
 
 EXTERN_C_END
 
-#define SAVE_LOG 0
+#define SAVE_LOG 1
 
 #if SAVE_LOG && TEST_FILE_LOGGER == 0
 #ifdef _WIN32
@@ -151,10 +151,10 @@ int main(int argc, char* argv[])
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
-		//RUN_TEST(time_util_test);
+		RUN_TEST(time_util_test);
 		//RUN_TEST(thread_wrapper_test);
 		//RUN_TEST(url_encoder_decoder_test);
-		RUN_TEST(base64_test);
+		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
 		//RUN_TEST(msg_queue_handler_test);
 		//RUN_TEST(integer_test);

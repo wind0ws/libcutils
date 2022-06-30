@@ -5,7 +5,7 @@
 #include <stdbool.h>      /* for true/false                    */
 #include <stddef.h>       /* for size_t                        */
 #include <stdint.h>       /* for int32_t                       */
-#include <stdlib.h>       /* for abort                         */
+#include <stdlib.h>       /* for abort,random                  */
 #include <stdio.h>        /* for FILE                          */
 #include <assert.h>       /* for assert                        */
 #include <sys/types.h>    /* for ssize_t                       */

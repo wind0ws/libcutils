@@ -187,18 +187,20 @@ source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
 #source_group_by_dir(all_files)
 #====================SOURCE_GROUP   END====================
 
-set(target_lcu_static "lcu_static")
+set(target_lcu_static "lcu")
 set(target_lcu_shared "lcu_shared")
 set(target_lcu_test   "libcutils_test")
 
 add_library(${target_lcu_static}
 			STATIC
+			
 			${LCU_SRCS})
 			
 add_library(${target_lcu_shared}
 			SHARED
+			
 			${LCU_SRCS}
-			)
+			${LCU_SRC_DIR}/libcutils.def)
 			
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
 set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
@@ -320,7 +322,7 @@ endif()
 
 IF(WIN32)
   #supress warnings for VS
-  add_compile_options( /wd4819 )
+  add_compile_options( /wd4819 /wd4001 )
   #add optimiziation options
   add_compile_options(/bigobj /nologo /EHsc /GF /MP)
   #solution folder

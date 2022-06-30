@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include "thread/thread_wrapper.h"
 
+#define LOG_TAG "MPLITE_TEST"
+#include "log/logger.h"
+
 typedef struct multithreaded_param 
 {
 	size_t index;
@@ -21,12 +24,12 @@ static void* multithreaded_main(void* args)
 	param = (multithreaded_param_t*)args;
 
 	round_size = mplite_roundup(param->pool, param->req_size);
-	printf("index: %zu requested size: %d round-up size: %d\n", param->index,
+	LOGD("index: %zu requested size: %d round-up size: %d\n", param->index,
 		param->req_size, round_size);
 	while ((buffer = mplite_malloc(param->pool, param->req_size)) != NULL) 
 	{
-		printf("index: %zu address: %p size: %d\n", param->index, buffer,
-			param->req_size);
+		LOGD("index: %zu address: %p size: %d\n", 
+			param->index, buffer, param->req_size);
 		/* Sleep for 1 millisecond to give other threads to run */
 		usleep(1000);
 	}
@@ -57,21 +60,21 @@ int mplite_test()
 
 	/* Get the buffer and size */
 	do {
-		printf("Memory pool testing using mplite API\n");
+		LOGD("Memory pool testing using mplite API\n");
 
-		printf("Enter the total memory block size: ");
+		LOGD("Enter the total memory block size: ");
 		scanf_ret = scanf("%zu", &buffer_size);
 		if (scanf_ret!=1)
 		{
 			break;
 		}
-		printf("Enter the minimum memory allocation size: ");
+		LOGD("Enter the minimum memory allocation size: ");
 		scanf_ret = scanf("%zu", &min_alloc);
 		if (scanf_ret != 1)
 		{
 			break;
 		}
-		printf("Enter the number of threads to run for multi-threaded test: ");
+		LOGD("Enter the number of threads to run for multi-threaded test: ");
 		scanf_ret = scanf("%zu", &num_threads);
 		if (scanf_ret != 1)
 		{
@@ -87,21 +90,21 @@ int mplite_test()
 		{
 			break;
 		}
-		printf("buffer = %p size = %zu minimum alloc = %zu\n", 
+		LOGD("buffer = %p size = %zu minimum alloc = %zu\n", 
 			large_buffer, buffer_size, min_alloc);
 
 		mplite_init(&mempool, large_buffer, (const int)buffer_size,
 			(const int)min_alloc, NULL);
-		printf("\nSingle-threaded test...\n");
+		LOGD("\nSingle-threaded test...\n");
 		alloc_counter = 1;
 		while ((alloc_ret = mplite_malloc(&mempool, (const int)min_alloc)) != NULL) 
 		{
-			printf("malloc = %p counter = %zu\n", alloc_ret, alloc_counter);
+			LOGD("malloc = %p counter = %zu\n", alloc_ret, alloc_counter);
 			alloc_counter++;
 		}
 		mplite_print_stats(&mempool, puts);
 
-		printf("\nMulti-threaded test...\n");
+		LOGD("\nMulti-threaded test...\n");
 		pool_lock.arg = (void*)&mutex;
 		pool_lock.acquire = (int (*)(void*))pthread_mutex_lock;
 		pool_lock.release = (int (*)(void*))pthread_mutex_unlock;
@@ -131,7 +134,7 @@ int mplite_test()
 
 		free(large_buffer);
 
-		printf("\n\nTest again? <0:false, non-zero:true>: ");
+		LOGD("\n\nTest again? <0:false, non-zero:true>: ");
 		scanf_ret = scanf("%d", &test_again);
 		if (scanf_ret != 1)
 		{
@@ -143,6 +146,7 @@ int mplite_test()
 
 	return 0;
 }
+
 #ifdef _WIN32
 #pragma warning(pop)  
 #endif // _WIN32

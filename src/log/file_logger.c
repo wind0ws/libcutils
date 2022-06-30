@@ -8,14 +8,14 @@
 #include "thread/thread_wrapper.h"
 //for timestamp file name
 #include "time/time_util.h"
-#include "log/simple_log.h"
+#include "log/slog.h"
 
 #define LOG_TAG                     "FILE_LOGGER"
-#define MY_LOGV(fmt, ...)            SIMPLE_LOGV(LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGD(fmt, ...)            SIMPLE_LOGD(LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGI(fmt, ...)            SIMPLE_LOGI(LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGW(fmt, ...)            SIMPLE_LOGW(LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGE(fmt, ...)            SIMPLE_LOGE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGV(fmt, ...)            SLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt, ...)            SLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt, ...)            SLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt, ...)            SLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt, ...)            SLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define MAX_FULL_PATH_BUFFER (256)
 
@@ -28,7 +28,7 @@ typedef struct file_logger
 	int timezone_hour;
 	queue_msg_t* msg_cache_p;
 	size_t cur_msg_obj_capacity;
-}file_logger_t;
+} file_logger_t;
 
 #define FILE_LOGGER_LOCK(logger_handle) 	if (logger_handle->cfg.lock.acquire)\
 {\
@@ -41,31 +41,35 @@ typedef struct file_logger
 
 static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
-file_logger_handle file_logger_init(file_logger_cfg cfg)
+file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 {
-	if (strlen(cfg.log_folder_path) < 2) //log folder path is abnormal
+	if (!cfg_p)
 	{
 		return NULL;
 	}
-	if (cfg.log_queue_size < 2)
+	if (strlen(cfg_p->log_folder_path) < 2U) //log folder path is abnormal
 	{
 		return NULL;
 	}
-	size_t cur_msg_size = 2048;
+	if (cfg_p->log_queue_size < 2U)
+	{
+		return NULL;
+	}
+	size_t cur_msg_size = 2048U;
 	queue_msg_t* msg = (queue_msg_t*)calloc(1, sizeof(queue_msg_t) + cur_msg_size);
 	if (!msg)
 	{
 		return NULL;
 	}
-	file_logger_handle handle = calloc(1, sizeof(file_logger_t));
-	if (NULL == handle)
+	file_logger_handle handle = (file_logger_handle)calloc(1, sizeof(file_logger_t));
+	if (!handle)
 	{
 		free(msg);
 		return NULL;
 	}
 	handle->msg_cache_p = msg;
 	handle->cur_msg_obj_capacity = cur_msg_size;
-	handle->msg_queue = msg_queue_handler_create((uint32_t)cfg.log_queue_size * 1024, handle_log_queue_msg, handle);
+	handle->msg_queue = msg_queue_handler_create((uint32_t)cfg_p->log_queue_size * 1024U, handle_log_queue_msg, handle);
 	if (NULL == handle->msg_queue)
 	{
 		free(msg);
@@ -73,28 +77,28 @@ file_logger_handle file_logger_init(file_logger_cfg cfg)
 		handle = NULL;
 		return NULL;
 	}
-	char* log_folder_path_formatted = strreplace(cfg.log_folder_path, "\\", "/");
-	strlcpy(cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
+	char* log_folder_path_formatted = strreplace(cfg_p->log_folder_path, "\\", "/");
+	strlcpy(cfg_p->log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
 	free(log_folder_path_formatted);
-	size_t log_folder_path_len = strlen(cfg.log_folder_path);
-	if (cfg.log_folder_path[log_folder_path_len - 1] != '/')
+	size_t log_folder_path_len = strlen(cfg_p->log_folder_path);
+	if (cfg_p->log_folder_path[log_folder_path_len - 1] != '/')
 	{
 		size_t slash_location = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_SIZE ?
 			log_folder_path_len : (log_folder_path_len - 1);
-		cfg.log_folder_path[slash_location] = '/';
-		cfg.log_folder_path[slash_location + 1] = '\0';
+		cfg_p->log_folder_path[slash_location] = '/';
+		cfg_p->log_folder_path[slash_location + 1] = '\0';
 	}
-	if (cfg.one_piece_file_max_len < 1024) // piece too small
+	if (cfg_p->one_piece_file_max_len < 1024U) // piece too small
 	{
 		//0 that means won't auto create new log file.
-		cfg.one_piece_file_max_len = 0;
+		cfg_p->one_piece_file_max_len = 0U;
 	}
-	if (cfg.log_queue_size < 64)
+	if (cfg_p->log_queue_size < 64U)
 	{
-		cfg.log_queue_size = 64;
+		cfg_p->log_queue_size = 64U;
 	}
 	handle->timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
-	handle->cfg = cfg;
+	handle->cfg = *cfg_p;
 	return handle;
 }
 
@@ -118,16 +122,17 @@ void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 			break;//send complete
 		}
 		MY_LOGE("failed on send log to queue. maybe queue is full! %d", status);
-		if (handle->cfg.is_try_my_best_to_keep_log == false)
+		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break;
 		}
-		MY_LOGE("try again after 1ms");
+		MY_LOGE("try again after 1.5ms");
 		++retry_counter;
-		usleep(1000);
-	} while (status != 0 && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL && handle->cfg.is_try_my_best_to_keep_log);
+		usleep(1500);
+	} while (MSG_Q_CODE_SUCCESS != status && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL 
+		&& handle->cfg.is_try_my_best_to_keep_log);
 	//final safety
-	if (status != 0 && handle->cfg.is_try_my_best_to_keep_log)
+	if (MSG_Q_CODE_SUCCESS != status && handle->cfg.is_try_my_best_to_keep_log)
 	{
 		char cur_time[TIME_STR_SIZE];
 		time_util_get_time_str_for_file_name_current(cur_time, handle->timezone_hour);
@@ -186,12 +191,12 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 		char path_buffer[MAX_FULL_PATH_BUFFER];
 		snprintf(path_buffer, MAX_FULL_PATH_BUFFER, "%s%s_%s.log", handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");
-		handle->cur_log_file_size_counter = 0;
+		handle->cur_log_file_size_counter = 0U;
 	}
 	if (!handle->cur_fp)
 	{
 #if(!defined(NDEBUG) || defined(_DEBUG))
-		printf("[DEBUG] log file handle still null at [%s:%d]!!\n", __FILE__, __LINE__);
+		fprintf(stderr, "[DEBUG] log file handle still null at (%s:%d)!!\n", __FILE__, __LINE__);
 #endif // !NDEBUG || _DEBUG
 		return;
 	}

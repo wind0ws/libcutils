@@ -2,15 +2,15 @@
 #include "thread/thread_wrapper.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
-#include "log/simple_log.h"
+#include "log/slog.h"
 
 #define _LOG_TAG          "FIXED_Q_HDL"
 
-#define MY_LOGV(fmt,...)  SIMPLE_LOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGD(fmt,...)  SIMPLE_LOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGI(fmt,...)  SIMPLE_LOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGW(fmt,...)  SIMPLE_LOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGE(fmt,...)  SIMPLE_LOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGV(fmt,...)  SLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt,...)  SLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt,...)  SLOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt,...)  SLOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt,...)  SLOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct
 {
@@ -53,7 +53,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 		else
 		{
-			MY_LOGW("abandon msg, token=%zd", handler_msg.token);
+			MY_LOGW("abandon msg, token=%zu", handler_msg.token);
 		}
 	}
 	return NULL;
@@ -62,8 +62,8 @@ static void* thread_fun_handle_msg(void* thread_context)
 fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_capacity,
 	__in fixed_msg_handler_callback callback, __in void* callback_userdata)
 {
-	MY_LOGD("create fixed_queue_handler. max_msg_capacity=%d", max_msg_capacity);
-	fixed_msg_queue_handler handler_p = calloc(1, sizeof(struct __fixed_msg_queue_handler));
+	MY_LOGD("create fixed_queue_handler. max_msg_capacity=%u", max_msg_capacity);
+	fixed_msg_queue_handler handler_p = (fixed_msg_queue_handler)calloc(1, sizeof(struct __fixed_msg_queue_handler));
 	if (!handler_p)
 	{
 		return NULL;
@@ -77,7 +77,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
 	{
 		char thr_name[32] = { 0 };
-		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
+		snprintf(thr_name, sizeof(thr_name) - 1, "q_hdl_%p", handler_p);
 		pthread_set_name(handler_p->thread_handler, thr_name);
 		handler_p->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
 	}
@@ -134,7 +134,7 @@ extern inline bool fixed_msg_queue_handler_is_full(__in fixed_msg_queue_handler 
 extern inline void fixed_msg_queue_handler_clear(__in fixed_msg_queue_handler handler_p)
 {
 	handler_p->min_valid_token = handler_p->token_counter;
-	MY_LOGD("fixed_msg_queue_handler_clear handler_p(%p) min_valid_token=%zd",
+	MY_LOGD("fixed_msg_queue_handler_clear handler_p(%p) min_valid_token=%zu",
 		handler_p, handler_p->min_valid_token);
 }
 

@@ -39,7 +39,7 @@ typedef struct __msg_queue_handler *msg_queue_handler;
  * @param queue_msg_t pointer to popped msg. do not free this msg memory.
  * @param user_data user data pointer in msg_queue_handler_create
  */
-typedef void (*msg_handler_callback)(queue_msg_t *msg_p, void *user_data);
+typedef void (*msg_handler_callback_t)(queue_msg_t *msg_p, void *user_data);
 
 /**
  * create fixed_queue_handler
@@ -48,7 +48,7 @@ typedef void (*msg_handler_callback)(queue_msg_t *msg_p, void *user_data);
  * @param callback_userdata user_data will pass in callback
  * @return queue handler ptr
  */
-msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size, __in msg_handler_callback callback, __in void* callback_userdata);
+msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size, __in msg_handler_callback_t callback, __in void* callback_userdata);
 
 /**
  * send msg to queue handler
@@ -61,7 +61,7 @@ MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler_p, __in queue_m
 
 /**
  * available push byte size 
- * <Note: this size is NOT completely equal msg size>
+ * <Note: this is byte size is NOT completely equal msg count>
  * @param handler_p queue handler ptr
  * @return byte size
  */
@@ -69,7 +69,7 @@ uint32_t msg_queue_handler_available_push_bytes(__in msg_queue_handler handler_p
 
 /**
  * available pop byte size 
- * <Note: this size is NOT completely equal msg size>
+ * <Note: this is byte size is NOT completely equal msg count>
  * @param handler_p queue handler ptr
  * @return byte size
  */

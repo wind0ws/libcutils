@@ -22,6 +22,7 @@
 #endif
 
 #ifdef __ANDROID__
+#include <android/log.h>
 #define XLOG_GETTID()      (int)gettid()
 #elif defined(__APPLE__)
 #define XLOG_GETTID()      (int)syscall(SYS_thread_selfid)
@@ -38,15 +39,6 @@
 #define LEVEL_CHAR_I ('I')
 #define LEVEL_CHAR_W ('W')
 #define LEVEL_CHAR_E ('E')
-
-#ifdef _WIN32
-#define STDOUT_NODE ("CON")
-#else
-#define STDOUT_NODE ("/dev/tty")
-#endif // _WIN32
-
-#define CONSOLE_LOG_CONFIG_METHOD          printf
-#define CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT "\n"
 
 typedef struct xlog_cb_pack
 {
@@ -74,7 +66,7 @@ typedef struct xlog_config
 	LogFlushMode flush_mode;
 	/* for calculate locale time */
 	int timezone_hour;
-}xlog_config_t;
+} xlog_config_t;
 
 #define DEFAULT_TIMEZONE_HOUR (8)
 static xlog_config_t g_xlog_cfg =
@@ -99,7 +91,7 @@ static xlog_config_t g_xlog_cfg =
 #define XLOG_IS_ANDROID_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
 #define XLOG_IS_USER_CALLBACK_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
-#define XLOG_IS_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
+#define XLOG_IS_LEVEL_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
 static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?'};
 
@@ -108,11 +100,7 @@ static int g_map_android_level[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, AND
 			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR};
 #endif // __ANDROID__
 
-void xlog_auto_level_up(LogLevel trigger_level)
-{
-	g_xlog_cfg.trigger_up_level = trigger_level;
-}
-
+#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:4996) //for disable freopen warning
@@ -125,7 +113,7 @@ void xlog_stdout2file(char* file_path)
 	}
 	if (g_xlog_cfg.fp_out && (g_xlog_cfg.fp_out != stdout))
 	{
-		printf("[XLog] [%s:%d] WARN: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
+		fprintf(stderr, "[XLog] (%s:%d) warn: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
 		fflush(g_xlog_cfg.fp_out);
 		fclose(g_xlog_cfg.fp_out);
 	}
@@ -133,28 +121,34 @@ void xlog_stdout2file(char* file_path)
 	g_xlog_cfg.fp_out = freopen(file_path, "w", stdout);
 	if (!g_xlog_cfg.fp_out)
 	{
-		printf("[XLog] [%s:%d] Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
 	}
 }
 
 void xlog_back2stdout()
 {
-	if (!g_xlog_cfg.fp_out || (stdout == g_xlog_cfg.fp_out))
+	if (!g_xlog_cfg.fp_out)
 	{
 		return;
 	}
 	// must close current stream first, and then reopen it
 	fflush(g_xlog_cfg.fp_out);
 	fclose(g_xlog_cfg.fp_out);
-	g_xlog_cfg.fp_out = stdout;
-	if (!freopen(STDOUT_NODE, "w", stdout))
+	g_xlog_cfg.fp_out = NULL;
+	if (!freopen(_STDOUT_NODE, "w", stdout))
 	{
-		printf("[XLog] [%s:%d] Error: failed on freopen to stdout\n", __func__, __LINE__);
+		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to stdout\n", __func__, __LINE__);
 	}
 }
 #ifdef _WIN32
 #pragma warning(pop)
 #endif // _WIN32
+#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+
+void xlog_auto_level_up(LogLevel trigger_level)
+{
+	g_xlog_cfg.trigger_up_level = trigger_level;
+}
 
 void xlog_set_default_tag(char* tag)
 {
@@ -241,6 +235,7 @@ LogFlushMode xlog_get_flush_mode()
 #pragma warning(disable:6386) //for disable buffer overflow
 #endif // _WIN32
 
+//our print header func is more efficiently
 #define USE_SNPRINTF_HEADER (0)
 
 #if(!defined(USE_SNPRINTF_HEADER) || !USE_SNPRINTF_HEADER)
@@ -254,15 +249,18 @@ static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
 	size_t cpy_tag_len = origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
 		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : origin_tag_len; // max copy 22 chars
 #if 1
-	size_t align_tag_len = (cpy_tag_len < 8 ? 8 : cpy_tag_len);
+	size_t align_tag_len = (cpy_tag_len < 8U ? 8U : cpy_tag_len);
 	for (size_t i = 0; i < align_tag_len; ++i)
 	{
 		buffer[fmt_len++] = (i < cpy_tag_len ? tag[i] : ' ');
 	}
 #else
-	memcpy(buffer + fmt_len, tag, cpy_tag_len);
-	fmt_len += cpy_tag_len;
-	while (cpy_tag_len++ < 8)
+	if (cpy_tag_len)
+	{
+		memcpy(buffer + fmt_len, tag, cpy_tag_len);
+		fmt_len += cpy_tag_len;
+	}
+	while (cpy_tag_len++ < 8U)
 	{
 		buffer[fmt_len++] = ' ';
 	}
@@ -274,27 +272,73 @@ static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
 static inline int print_tid(char* buffer, int tid)
 {
 	buffer[0] = '(';
-	buffer += 1;
-	int loc_first_non_zero = 0;
-	for (int i = 5; i > 0; --i)
+	++buffer;
+#define MAX_TID_WIDTH (5)
+	int num_count = MAX_TID_WIDTH;
+	for (; num_count > 0 && tid > 0; --num_count, tid /= 10)
 	{
-		int mod = tid % 10;
-		if (mod)
-		{
-			loc_first_non_zero = i - 1;
-		}
-		buffer[i - 1] =  '0' + mod;
-		tid /= 10;
+		buffer[num_count - 1] = '0' + tid % 10;
 	}
-	for (int i = 0; i < loc_first_non_zero; ++i)
+	if (num_count)
 	{
-		buffer[i] = ' ';
+		memset(buffer, ' ', num_count);
 	}
-	buffer += 5;
+	buffer += MAX_TID_WIDTH;
 	buffer[0] = ')';
 	buffer[1] = '\0';
 	return 7;
 }
+
+static inline int int2str(int num, char* str)
+{
+	int len_str = 0;
+	if (num < 0)
+	{
+		num = -num;
+		str[len_str++] = '-';
+	}
+	do
+	{
+		str[len_str++] = num % 10 + '0';
+		num /= 10;
+	} while (num);
+	str[len_str] = '\0';
+
+	int index_swap = 0;
+	if ('-' == str[0])
+	{
+		index_swap = 1;
+		++len_str;
+	}
+	for (; index_swap < len_str / 2; ++index_swap)
+	{
+		str[index_swap] = str[index_swap] + str[len_str - 1 - index_swap];
+		str[len_str - 1 - index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
+		str[index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
+	}
+
+	return len_str;
+}
+
+//(func:line) 
+static inline int print_func_line(char* buffer, const char* func, int line_num)
+{
+	char *str = buffer;
+	str[0] = '(';
+	++str;
+	int len_func = strlen(func);
+	memcpy(str, func, len_func);
+	str += len_func;
+	str[0] = ':';
+	++str;
+	str += int2str(line_num, str);
+	str[0] = ')';
+	str[1] = ' ';
+	str[2] = '\0'; // this is no need, but we have good habit
+	str += 2; // not include NUL terminator
+	return (int)(str - buffer);
+}
+
 #endif // !USE_SNPRINTF_HEADER
 
 void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
@@ -309,7 +353,11 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	size_t header_len = 0;
 	bool is_log2console;
 	bool is_log2usercb;
-	if (!XLOG_IS_LOGABLE(level))
+	if (LOG_TARGET_NONE == g_xlog_cfg.target)
+	{
+		return;
+	}
+	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
 	}
@@ -357,19 +405,24 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 		}
 	}
 	buffer_strlen = header_len;
-	if (func_name && file_line > 0 && (default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 0)
+	if (func_name && file_line > 0 && 
+		(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 20) //normally, buf is enough
 	{
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
+#else
+		buffer_strlen += print_func_line(buffer_log + buffer_strlen, func_name, file_line);
+#endif // USE_SNPRINTF_HEADER
 	}
 	
 	default_buffer_remaining_size = buffer_log_size - buffer_strlen;
 	va_start(va, fmt);
-	// '\0' is not belong of the length
+	// we get the formatted string length. ('\0' is not belong of the length)
 	int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
 	va_end(va);
 	if (ret_vsn < 0)
 	{
-		fprintf(stderr, "[XLOG] [%s:%d] failed on measure log format length. ret=%d\n", __func__, __LINE__, ret_vsn);
+		fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length\n", __func__, __LINE__, ret_vsn);
 		return;
 	}
 	if (ret_vsn < (int)default_buffer_remaining_size)
@@ -378,20 +431,15 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	}
 	else
 	{
-		/*
-		va_start(va, fmt);
-		//first we get the formatted string length. ('\0' is not belong of the length)
-		ret_vsn = vsnprintf(NULL, 0, fmt, va);
-		va_end(va);
-		*/
 		const size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
 		buffer_log_size = buffer_strlen + need_fmt_str_size;
 		if (!(buffer_log = (char*)malloc(buffer_log_size)))
 		{
-			fprintf(stderr, "[XLOG] [%s:%d] failed malloc %zu byte on xlog\n", __func__, __LINE__, buffer_log_size);
+			fprintf(stderr, "[XLOG] (%s:%d) failed malloc %zu byte on xlog\n", __func__, __LINE__, buffer_log_size);
 			return; // oops, out of memory
-		} // here we only copy header to new buffer
-		strlcpy(buffer_log, default_buffer, /*buffer_log_size*/buffer_strlen + 1); 
+		} 
+		// here we only copy header to new buffer
+		strlcpy(buffer_log, default_buffer, buffer_strlen + 1U); 
 		
 		va_start(va, fmt);
 		// vsnprintf ensure '\0' in string.
@@ -409,7 +457,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 
 	if (is_log2console)
 	{
-		CONSOLE_LOG_CONFIG_METHOD("%s"CONSOLE_LOG_CONFIG_NEW_LINE_FORMAT, buffer_log);
+		_PRINTF_FUNC("%s" _SUFFIX_LOG, buffer_log);
 		if (g_xlog_cfg.flush_mode)
 		{
 			fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);
@@ -430,34 +478,13 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 #pragma warning(pop)
 #endif // _WIN32
 
-void xlog_chars2hex(char* out_hex_str, size_t out_hex_str_capacity, const char* chars, size_t chars_size)
-{
-	out_hex_str[0] = '\0';
-	size_t header_len = 0;
-	if (chars_size * 3 > out_hex_str_capacity)
-	{
-		snprintf(out_hex_str, out_hex_str_capacity, "hex is truncated(%zu):", chars_size);
-		header_len = strnlen(out_hex_str, out_hex_str_capacity);
-		out_hex_str_capacity -= header_len;
-		chars_size = out_hex_str_capacity / 3 - 1;
-	}
-	for (size_t chars_index = 0, str_offset = 0; chars_index < chars_size; ++chars_index, str_offset += 3)
-	{
-		if (snprintf(out_hex_str + header_len + str_offset, out_hex_str_capacity - str_offset,
-			" %02hhx", (unsigned char)chars[chars_index]) < 0)
-		{
-			break; // oops, error occurred
-		}
-	}
-}
-
-void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_size)
+void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_count)
 {
 	char hex_str[DEFAULT_LOG_BUF_SIZE];
-	if (!XLOG_IS_LOGABLE(level))
+	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
 	}
-	xlog_chars2hex(hex_str, sizeof(hex_str), chars, chars_size);
+	str_char2hex(hex_str, sizeof(hex_str), chars, chars_count);
 	__xlog_internal_print(level, tag, NULL, -1, "%s", hex_str);
 }

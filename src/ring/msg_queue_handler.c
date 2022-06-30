@@ -1,7 +1,7 @@
 #include "common_macro.h"
 #include "ring/msg_queue_handler.h"
 #include "ring/msg_queue.h"
-#include "log/simple_log.h"
+#include "log/slog.h"
 #include <malloc.h>
 #include "thread/thread_wrapper.h"
 
@@ -10,7 +10,7 @@
 struct __msg_queue_handler
 {
 	msg_queue msg_queue_p;
-	msg_handler_callback callback;
+	msg_handler_callback_t callback;
 	void* callback_userdata;
 	pthread_t thread_handler;
 	sem_t semaphore;
@@ -34,11 +34,11 @@ static size_t roundup_power2(size_t n)
 static void* thread_fun_handle_msg(void* thread_context)
 {
 	msg_queue_handler handler_p = (msg_queue_handler)thread_context;
-	size_t cur_msg_buf_size = 2048;
+	size_t cur_msg_buf_size = 2048U;
 	char* poped_msg_buf = (char *)malloc(cur_msg_buf_size);
 	if (!poped_msg_buf)
 	{
-		SIMPLE_LOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg, now thread exit...", cur_msg_buf_size);
+		SLOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg, now thread exit...", cur_msg_buf_size);
 		return NULL;
 	}
 	MSG_Q_CODE last_status = MSG_Q_CODE_SUCCESS;
@@ -54,16 +54,16 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 		uint32_t popped_msg_size = (uint32_t)cur_msg_buf_size;
 		last_status = msg_queue_pop(handler_p->msg_queue_p, poped_msg_buf, &popped_msg_size);
-		if (last_status != MSG_Q_CODE_SUCCESS)
+		if (MSG_Q_CODE_SUCCESS != last_status)
 		{
-			if (last_status == MSG_Q_CODE_BUF_NOT_ENOUGH)
+			if (MSG_Q_CODE_BUF_NOT_ENOUGH == last_status)
 			{
 				free(poped_msg_buf);
 				size_t expect_buf_size = roundup_power2(popped_msg_size);
 				poped_msg_buf = (char*)malloc(expect_buf_size);
 				if (!poped_msg_buf)
 				{
-					SIMPLE_LOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg", expect_buf_size);
+					SLOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg", expect_buf_size);
 					break;
 				}
 				cur_msg_buf_size = expect_buf_size;
@@ -81,9 +81,9 @@ static void* thread_fun_handle_msg(void* thread_context)
 }
 
 msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
-	__in msg_handler_callback callback, __in void* callback_userdata)
+	__in msg_handler_callback_t callback, __in void* callback_userdata)
 {
-	SIMPLE_LOGD(LOG_TAG, "create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
+	SLOGD(LOG_TAG, "create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
 	msg_queue_handler handler_p = calloc(1, sizeof(struct __msg_queue_handler));
 	if (!handler_p)
 	{
@@ -102,7 +102,7 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	}
 	else
 	{
-		SIMPLE_LOGE(LOG_TAG, "error on create pthread of queue handle msg");
+		SLOGE(LOG_TAG, "error on create pthread of queue handle msg");
 		sem_destroy(&(handler_p->semaphore));
 		free(handler_p);
 		handler_p = NULL;
@@ -146,7 +146,7 @@ void msg_queue_handler_destroy(__inout msg_queue_handler* handler_pp)
 	sem_post(&(handler_p->semaphore));
 	if (pthread_join(handler_p->thread_handler, NULL) != 0)
 	{
-		SIMPLE_LOGE(LOG_TAG, "error on join handle msg thread.");
+		SLOGE(LOG_TAG, "error on join handle msg thread");
 	}
 	sem_destroy(&(handler_p->semaphore));
 	msg_queue_destroy(&handler_p->msg_queue_p);

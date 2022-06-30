@@ -1,16 +1,16 @@
 #include "ring/ringbuffer.h"
-#include "log/simple_log.h"
+#include "log/slog.h"
 #include <stdbool.h>
 #include <malloc.h> /* for malloc/free */
 #include <string.h> /* for memcpy      */
 
 #define _RING_LOG_TAG         "RING_BUF"
 
-#define RING_LOGV(fmt,...)    SIMPLE_LOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)    SIMPLE_LOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)    SIMPLE_LOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)    SIMPLE_LOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)    SIMPLE_LOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)    SLOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)    SLOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)    SLOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)    SLOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #ifndef TAKE_MIN
 /* take min value of a,b */
@@ -70,9 +70,9 @@ ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_siz
 	uint32_t ring_buf_size = buf_size - ring_buffer_struct_size;
 	if (!is_power_of_2(ring_buf_size))
 	{
-		RING_LOGW("RingBuffer_create_with_mem buf_size=%u is not power of 2", ring_buf_size);
+		RING_LOGW("%s buf_size=%u is not power of 2", __func__, ring_buf_size);
 		ring_buf_size = roundup_pow_of_two(ring_buf_size) >> 1;
-		RING_LOGW("RingBuffer_create_with_mem changed buf_size to %u ", ring_buf_size);
+		RING_LOGW("%s changed buf_size to %u ", __func__, ring_buf_size);
 	}
 	ring_buf_handle ring_buffer_p = (ring_buf_handle)buf;
 	ring_buffer_p->need_free_myself = false;
@@ -92,14 +92,14 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 	}
 	if (!is_power_of_2(buf_size))
 	{
-		RING_LOGW("RingBuffer_create buf_size=%u is not power of 2", buf_size);
+		RING_LOGW("%s buf_size=%u is not power of 2", __func__, buf_size);
 		buf_size = roundup_pow_of_two(buf_size);
-		RING_LOGW("RingBuffer_create changed buf_size to %u ", buf_size);
+		RING_LOGW("%s changed buf_size to %u ", __func__, buf_size);
 	}
 
 	const uint32_t expect_memory_size = sizeof(struct __ring_buffer_t) + buf_size;
 	char *raw_memory = (char *)calloc(1, expect_memory_size);
-	if (raw_memory == NULL)
+	if (!raw_memory)
 	{
 		RING_LOGE("failed alloc %u size for RingBuffer", expect_memory_size);
 		return NULL;
@@ -114,9 +114,9 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 	return ring_buffer_p;
 }
 
-void RingBuffer_destroy(__in ring_buf_handle* ring_buf_pp)
+void RingBuffer_destroy(__inout ring_buf_handle* ring_buf_pp)
 {
-	if (ring_buf_pp == NULL || *ring_buf_pp == NULL)
+	if (NULL == ring_buf_pp || *ring_buf_pp == NULL)
 	{
 		return;
 	}
@@ -134,17 +134,17 @@ void RingBuffer_destroy(__in ring_buf_handle* ring_buf_pp)
 	*ring_buf_pp = NULL;
 }
 
-extern inline bool RingBuffer_is_empty(__in const ring_buf_handle ring_buf_p)
+extern inline bool RingBuffer_is_empty(__in ring_buf_handle ring_buf_p)
 {
 	return RingBuffer_available_read(ring_buf_p) == 0;
 }
 
-extern inline bool RingBuffer_is_full(__in const ring_buf_handle ring_buf_p)
+extern inline bool RingBuffer_is_full(__in ring_buf_handle ring_buf_p)
 {
 	return RingBuffer_available_write(ring_buf_p) == 0;
 }
 
-extern inline void RingBuffer_clear(__in const ring_buf_handle ring_buffer_p)
+extern inline void RingBuffer_clear(__in ring_buf_handle ring_buffer_p)
 {
 	if (ring_buffer_p == NULL)
 	{
@@ -154,32 +154,32 @@ extern inline void RingBuffer_clear(__in const ring_buf_handle ring_buffer_p)
 	ring_buffer_p->out = 0;
 }
 
-uint32_t RingBuffer_current_read_position(__in const ring_buf_handle ring_buf_p)
+uint32_t RingBuffer_current_read_position(__in ring_buf_handle ring_buf_p)
 {
 	return ring_buf_p->out;
 }
 
-uint32_t RingBuffer_current_write_position(__in const ring_buf_handle ring_buf_p)
+uint32_t RingBuffer_current_write_position(__in ring_buf_handle ring_buf_p)
 {
 	return ring_buf_p->in;
 }
 
-uint32_t RingBuffer_real_capacity(__in const ring_buf_handle ring_buf_p) 
+uint32_t RingBuffer_real_capacity(__in ring_buf_handle ring_buf_p) 
 {
 	return ring_buf_p->size;
 }
 
-extern inline uint32_t RingBuffer_available_read(__in const ring_buf_handle ring_buf_p)
+extern inline uint32_t RingBuffer_available_read(__in ring_buf_handle ring_buf_p)
 {
 	return ring_buf_p->in - ring_buf_p->out;
 }
 
-extern inline uint32_t RingBuffer_available_write(__in const ring_buf_handle ring_buf_p)
+extern inline uint32_t RingBuffer_available_write(__in ring_buf_handle ring_buf_p)
 {
 	return ring_buf_p->size - RingBuffer_available_read(ring_buf_p);
 }
 
-uint32_t RingBuffer_write(__in const ring_buf_handle ring_buf_p, __in const void* source, __in uint32_t size)
+uint32_t RingBuffer_write(__in ring_buf_handle ring_buf_p, __in const void* source, __in uint32_t size)
 {
 	if (ring_buf_p == NULL || source == NULL || size == 0)
 	{
@@ -264,17 +264,17 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, void* targe
 	return size;
 }
 
-uint32_t RingBuffer_read(__in ring_buf_handle ring_buf_p, __out void* target, uint32_t size)
+uint32_t RingBuffer_read(__in ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size)
 {
 	return target == NULL ? 0 : RingBuffer_read_internal(ring_buf_p, target, size, false);
 }
 
-uint32_t RingBuffer_peek(__in const ring_buf_handle ring_buf_p, __out void* target, uint32_t size)
+uint32_t RingBuffer_peek(__in ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size)
 {
 	return RingBuffer_read_internal(ring_buf_p, target, size, true);
 }
 
-uint32_t RingBuffer_discard(__in const ring_buf_handle ring_buf_p, uint32_t size)
+uint32_t RingBuffer_discard(__in ring_buf_handle ring_buf_p, __in uint32_t size)
 {
 	return RingBuffer_read_internal(ring_buf_p, NULL, size, false);
 }

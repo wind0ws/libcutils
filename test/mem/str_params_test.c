@@ -1,9 +1,9 @@
 #include "mem/mem_debug.h"
 #include "mem/str_params.h"
-#include "log/xlog.h"
 #include "common_macro.h"
 
 #define LOG_TAG  "STR_PARAMS_TEST"
+#include "log/logger.h"
 
 //static const char* test_str = "foo=bar;abc=123;bad_key;def=123.456;";
 static const char* test_str = "foo=bar,abc=123,bad_key,def=123.456,";
@@ -13,7 +13,7 @@ int str_params_test()
 	str_params_ptr params = str_params_create_str(",", test_str);
 	if (!params)
 	{
-		TLOGE(LOG_TAG, "failed on parse: %s", params);
+		TLOGE(LOG_TAG, "failed on parse: %s", test_str);
 		return 1;
 	}
 	char str_value[32];

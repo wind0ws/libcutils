@@ -2,10 +2,10 @@
 #include "mem/stringbuilder.h"
 #include "mem/strings.h"
 #include "common_macro.h"
-#include "log/xlog.h"
 #include "thread/thread_wrapper.h"
 
 #define LOG_TAG "STR_TEST"
+#include "log/logger.h"
 
 static int stringbuilder_test()
 {
@@ -14,7 +14,7 @@ static int stringbuilder_test()
 	stringbuilder_appendchar(sb, ',');
 	stringbuilder_appendnstr(sb, "World!!!", 6);//here stringbuilder internal buffer will grow, because our stringbuilder init buf size is 8.
 	stringbuilder_appendf(sb, " Current thread id:%d. ", gettid());
-	LOGD("stringbuilder len:%d, str is:%s", stringbuilder_len(sb), stringbuilder_print(sb));// will print "Hello,World!"
+	LOGD("stringbuilder len:%zu, str:%s", stringbuilder_len(sb), stringbuilder_print(sb));// will print "Hello,World!"
 	stringbuilder_destroy(&sb);
 	return 0;
 }
@@ -33,10 +33,15 @@ static int stringcmp_test()
 
 static int stringreplace_test()
 {
-	const char* str = "Hello, can you replace this string. can you. can you...";
+	const char* str = "Hello, can you replace this string. can you1. can you2...";
 	char chars[32];
 	strlcpy(chars, str, sizeof(chars));
 	char *replaced_str = strreplace(chars, "can you", "i can");
+	if (!replaced_str)
+	{
+		LOGE("failed on strreplace");
+		return -1;
+	}
 	LOGD("replaced string => %s", replaced_str);
 	free(replaced_str);
 	return 0;
@@ -44,16 +49,19 @@ static int stringreplace_test()
 
 static int stringsplit_test()
 {
-	const char* str = "Hello, can you split this string by comma, can you, can you...";
-	char chars[64];
+	const char* str = "Hello, can you split this sentence by comma, can you1, can you2...";
+	char chars[128];
 	strlcpy(chars, str, sizeof(chars));
 #define STR_TEST_RECEIVE_SPLIT_PTRS (6)
 	size_t receive_split_ptr_nums = STR_TEST_RECEIVE_SPLIT_PTRS;
-	char *receive_splited_str_ptrs[STR_TEST_RECEIVE_SPLIT_PTRS];
+	char* receive_splited_str_ptrs[STR_TEST_RECEIVE_SPLIT_PTRS] = { NULL };
 	strsplit(receive_splited_str_ptrs, &receive_split_ptr_nums, chars, ",");
-	for (size_t i = 0; i < receive_split_ptr_nums; i++)
+	for (size_t i = 0; i < receive_split_ptr_nums; ++i)
 	{
-		LOGD("receive_splited_str_ptrs[%d]=%s", i, receive_splited_str_ptrs[i]);
+		if (receive_splited_str_ptrs[i])
+		{
+			LOGD("receive_splited_str_ptrs[%d]=%s", i, receive_splited_str_ptrs[i]);
+		}
 	}
 	return 0;
 }
@@ -102,8 +110,19 @@ static int strcase_test()
 	return 0;
 }
 
+static int strhex_test()
+{
+	char chars[] = { 0x01, 0x0A, 0x10, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF };
+	LOGI_HEX(chars, sizeof(chars));
+	return 0;
+}
+
 int string_test()
 {
+	LOGD("--> test strhex_test");
+	strhex_test();
+	LOGD("<-- strhex test finished\n");
+
 	LOGD("--> test strdup");
 	strdup_test();
 	LOGD("<-- strdup test finished\n");

@@ -28,9 +28,9 @@ extern "C" {
 		size_t log_queue_size;
 		bool is_try_my_best_to_keep_log;
 		file_logger_lock_t lock;
-	}file_logger_cfg;
+	} file_logger_cfg;
 
-	file_logger_handle file_logger_init(file_logger_cfg cfg);
+	file_logger_handle file_logger_init(file_logger_cfg *cfg_p);
 
 	void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size);
 

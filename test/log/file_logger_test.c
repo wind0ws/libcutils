@@ -12,12 +12,12 @@ typedef struct
 	file_logger_cfg f_logger_cfg;
 	pthread_mutex_t log_mutex;
 	file_logger_handle f_logger_hdl;
-} logger_config_t;
+} logger_context_t;
 
-static logger_config_t g_logger_cfg;
+static logger_context_t g_logge_ctx;
 
 #ifdef _WIN32
-#define FILE_LOGGER_PATH ("D:\\temp\\log") 
+#define FILE_LOGGER_PATH ("D:/temp/log") 
 #define STDOUT_FILE_PATH ("D:/stdout2file.log")
 #else
 #define FILE_LOGGER_PATH ("./log/") 
@@ -26,43 +26,43 @@ static logger_config_t g_logger_cfg;
 
 int file_logger_test_begin()
 {
-	memset(&g_logger_cfg, 0, sizeof(logger_config_t));
-	g_logger_cfg.f_logger_cfg.log_queue_size = 128;
-	g_logger_cfg.f_logger_cfg.is_try_my_best_to_keep_log = true;
+	memset(&g_logge_ctx, 0, sizeof(logger_context_t));
+	g_logge_ctx.f_logger_cfg.log_queue_size = 128;
+	g_logge_ctx.f_logger_cfg.is_try_my_best_to_keep_log = true;
 	//g_logger_cfg.f_logger_cfg.one_piece_file_max_len = 1024;//auto slice log file
-	strcpy(g_logger_cfg.f_logger_cfg.log_folder_path, FILE_LOGGER_PATH);
-	strcpy(g_logger_cfg.f_logger_cfg.log_file_name_prefix, "libcutils");
+	strcpy(g_logge_ctx.f_logger_cfg.log_folder_path, FILE_LOGGER_PATH);
+	strcpy(g_logge_ctx.f_logger_cfg.log_file_name_prefix, "libcutils");
 	//for multi thread support, we should protect file logger
 	//if you call xlog only on one thread, no need lock at all.
-	g_logger_cfg.f_logger_cfg.lock.acquire = (void*)&my_file_logger_lock;
-	g_logger_cfg.f_logger_cfg.lock.release = (void*)&my_file_logger_unlock;
+	g_logge_ctx.f_logger_cfg.lock.acquire = (void*)&my_file_logger_lock;
+	g_logge_ctx.f_logger_cfg.lock.release = (void*)&my_file_logger_unlock;
 
-	pthread_mutex_init(&g_logger_cfg.log_mutex, NULL);
-	g_logger_cfg.f_logger_cfg.lock.arg = (void*)&g_logger_cfg.log_mutex;
+	pthread_mutex_init(&g_logge_ctx.log_mutex, NULL);
+	g_logge_ctx.f_logger_cfg.lock.arg = (void*)&g_logge_ctx.log_mutex;
 
-	g_logger_cfg.f_logger_hdl = file_logger_init(g_logger_cfg.f_logger_cfg);
-	if (NULL == g_logger_cfg.f_logger_hdl)
+	g_logge_ctx.f_logger_hdl = file_logger_init(&g_logge_ctx.f_logger_cfg);
+	if (NULL == g_logge_ctx.f_logger_hdl)
 	{
-		pthread_mutex_destroy(&g_logger_cfg.log_mutex);
+		pthread_mutex_destroy(&g_logge_ctx.log_mutex);
 		return 1;
 	}
-	xlog_set_user_callback(my_xlog_custom_user_cb, (void*)g_logger_cfg.f_logger_hdl);
+	xlog_set_user_callback(my_xlog_custom_user_cb, (void*)g_logge_ctx.f_logger_hdl);
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK);
 	LOGD("Now call xlog_stdout2file");
-	xlog_stdout2file(STDOUT_FILE_PATH);
+	LOG_STD2FILE(STDOUT_FILE_PATH);
 
 	return 0;
 }
 
 int file_logger_test_end()
 {
-	xlog_back2stdout();
+	LOG_BACK2STD();
 	LOGI("Now back to stdout");
 	//optional: give some time to finish log on file
 	usleep(10000);
-	file_logger_deinit(&g_logger_cfg.f_logger_hdl);
+	file_logger_deinit(&g_logge_ctx.f_logger_hdl);
 
-	pthread_mutex_destroy(&g_logger_cfg.log_mutex);
+	pthread_mutex_destroy(&g_logge_ctx.log_mutex);
 	//optional: remove xlog user callback
 	xlog_set_user_callback(NULL, NULL);
 

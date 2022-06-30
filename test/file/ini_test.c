@@ -1,11 +1,11 @@
 #include "mem/mem_debug.h"
 #include "file/ini_reader.h"
 #include "file/ini_parser.h"
-#include "log/xlog.h"
 #include "mem/strings.h"
 #include "common_macro.h"
 
 #define LOG_TAG "INI_TEST"
+#include "log/logger.h"
 
 static const char* test_ini_str = "[config]\r\n\
 #this is comment\r\n\

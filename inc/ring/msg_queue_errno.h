@@ -20,4 +20,4 @@ typedef enum
 	MSG_Q_CODE_BUF_NOT_ENOUGH,
 } MSG_Q_CODE;
 
-#endif // LCU_MSG_QUEUE_ERRNO_H
+#endif // !LCU_MSG_QUEUE_ERRNO_H

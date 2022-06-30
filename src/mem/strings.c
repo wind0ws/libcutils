@@ -10,15 +10,16 @@ char* strndup(const char* s, size_t n)
 	}
 	// n == 0 is acceptable: just empty string.
 	const size_t target_len = strnlen(s, n);
-	char *target_str = (char *)malloc(target_len + 1);
+	char *target_str = (char *)malloc((target_len + 1U));
 	if (!target_str)
 	{
 		return NULL;
 	}
 	if (target_len)
 	{
-		//for now(2020.10.15), the VS2019 16.7.6 report C6386 warning,
-		//but I'm sure there is no buffer overrun problem, so disable it.
+		//for now(2020.10.15), the VS2019 16.7.6 report C6386 warning:
+		//VS said that target_str maybe 0 byte array, i think that not possible!
+		//so I'm sure there is no buffer overrun problem, disable warning.
 #pragma warning(push)
 #pragma warning(disable: 6386)
 		memcpy(target_str, s, target_len);
@@ -30,16 +31,9 @@ char* strndup(const char* s, size_t n)
 #endif // _WIN32
 
 #if defined(__GLIBC__) || defined(_WIN32)
-
 /* Implementation of strlcpy() for platforms that don't already have it. */
 
-/*
- * Copy src to string dst of size size.  At most size-1 characters
- * will be copied.  Always NUL terminates (unless size == 0).
- * Returns strlen(src); if retval >= size, truncation occurred.
- */
-size_t
-strlcpy(char* dst, const char* src, size_t size)
+size_t strlcpy(char* dst, const char* src, size_t size)
 {
 	char* d = dst;
 	const char* s = src;
@@ -71,13 +65,6 @@ strlcpy(char* dst, const char* src, size_t size)
 	return (s - src - 1);	/* count does not include NUL */
 }
 
-/*
- * Appends src to string dst of size "size" (unlike strncat, size is the
- * full size of dst, not space left).  At most size-1 characters
- * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
- * Returns strlen(src) + MIN(size, strlen(initial dst)).
- * If retval >= size, truncation occurred.
- */
 size_t strlcat(char* dst, const char* src, size_t size)
 {
 	char* d = dst;
@@ -112,7 +99,7 @@ size_t strlcat(char* dst, const char* src, size_t size)
 	return (dlen + (s - src));       /* count does not include NUL */
 }
 
-#endif
+#endif // __GLIBC__ || _WIN32
 
 //https://github.com/ssllab/temper1/blob/722991add4a6a239271e1f029ebe4daaad719496/strreplace.c
 //warning: need free the return pointer after use!
@@ -206,4 +193,30 @@ size_t strnutf8len(const char* utf8str, size_t max_count)
 		++chars_count;
 	}
 	return code_points;
+}
+
+size_t str_char2hex(char* out_hex_str, size_t out_hex_str_capacity,
+	const char* chars, size_t chars_count)
+{
+#define ONE_HEX_STR_SIZE (3U)
+	size_t len_hex_str = 0U;
+	out_hex_str[0] = '\0';
+
+	if (chars_count * ONE_HEX_STR_SIZE >= out_hex_str_capacity)
+	{
+		len_hex_str = snprintf(out_hex_str, out_hex_str_capacity - 1U, "hex truncated(%zu):", chars_count);
+		chars_count = out_hex_str_capacity / ONE_HEX_STR_SIZE - 1U;
+	}
+	for (size_t chars_index = 0U; chars_index < chars_count; ++chars_index)
+	{
+		int ret_sn = snprintf(out_hex_str + len_hex_str,
+			out_hex_str_capacity - len_hex_str - 1,
+			" %02x", (unsigned char)chars[chars_index]);
+		if (ONE_HEX_STR_SIZE != ret_sn /*ret_sn < 0*/) /* should be ONE_HEX_STR_SIZE */
+		{
+			break; // oops, error occurred
+		}
+		len_hex_str += ret_sn;
+	}
+	return len_hex_str;
 }

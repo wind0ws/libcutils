@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_VERSION_H
-#define __LCU_VERSION_H
+#ifndef _LCU_VERSION_H
+#define _LCU_VERSION_H
 
 //Attention: do not change this file directly, the header file will generate by cmake.
 
@@ -9,4 +9,4 @@
 #define _LCU_REVISION "@GIT_HASH@"
 #define LCU_VERSION _LCU_MAJOR"."_LCU_REVISION"@"_LCU_BRANCH
 
-#endif //__LCU_VERSION_H
+#endif // !_LCU_VERSION_H

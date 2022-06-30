@@ -1,0 +1,21 @@
+EXPORTS
+	
+	xlog_auto_level_up @1
+	xlog_set_default_tag @4
+	xlog_set_timezone @5
+	xlog_set_user_callback @6
+	xlog_set_min_level @7
+	xlog_get_min_level @8
+	xlog_set_target @9
+	xlog_get_target @10
+	xlog_set_format @11
+	xlog_get_format @12
+	xlog_set_flush_mode @13
+	xlog_get_flush_mode @14
+	__xlog_internal_print @15
+	__xlog_internal_hex_print @16
+	
+	libcutils_get_version @18
+	
+	
+	

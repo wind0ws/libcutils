@@ -7,7 +7,7 @@
 
 #define LOG_TAG "MSG_Q_HDL"
 
-struct __msg_queue_handler
+struct _msg_queue_handler_s
 {
 	msg_queue msg_queue_p;
 	msg_handler_callback_t callback;
@@ -33,27 +33,27 @@ static size_t roundup_power2(size_t n)
 
 static void* thread_fun_handle_msg(void* thread_context)
 {
-	msg_queue_handler handler_p = (msg_queue_handler)thread_context;
-	size_t cur_msg_buf_size = 2048U;
+	msg_queue_handler handler = (msg_queue_handler)thread_context;
+	size_t cur_msg_buf_size = 4096U;
 	char* poped_msg_buf = (char *)malloc(cur_msg_buf_size);
 	if (!poped_msg_buf)
 	{
-		SLOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg, now thread exit...", cur_msg_buf_size);
+		SLOGE(LOG_TAG, "can't malloc(%zu) on %s:%d, now thread exit...", cur_msg_buf_size, __func__, __LINE__);
 		return NULL;
 	}
 	MSG_Q_CODE last_status = MSG_Q_CODE_SUCCESS;
-	for (;;)
+	while (!handler->flag_exit_thread)
 	{
 		if (last_status == MSG_Q_CODE_SUCCESS || last_status == MSG_Q_CODE_EMPTY)
 		{
-			sem_wait(&handler_p->semaphore);
+			sem_wait(&handler->semaphore);
 		}
-		if (handler_p->flag_exit_thread)
+		if (handler->flag_exit_thread)
 		{
 			break;
 		}
 		uint32_t popped_msg_size = (uint32_t)cur_msg_buf_size;
-		last_status = msg_queue_pop(handler_p->msg_queue_p, poped_msg_buf, &popped_msg_size);
+		last_status = msg_queue_pop(handler->msg_queue_p, poped_msg_buf, &popped_msg_size);
 		if (MSG_Q_CODE_SUCCESS != last_status)
 		{
 			if (MSG_Q_CODE_BUF_NOT_ENOUGH == last_status)
@@ -63,16 +63,18 @@ static void* thread_fun_handle_msg(void* thread_context)
 				poped_msg_buf = (char*)malloc(expect_buf_size);
 				if (!poped_msg_buf)
 				{
-					SLOGE(LOG_TAG, "can't malloc %zu on thread_fun_handle_msg", expect_buf_size);
+					SLOGE(LOG_TAG, "can't malloc(%zu) on %s:%d", expect_buf_size, __func__, __LINE__);
 					break;
 				}
 				cur_msg_buf_size = expect_buf_size;
 			}
 			continue;
 		}
+
 		queue_msg_t* msg = (queue_msg_t*)poped_msg_buf;
-		handler_p->callback(msg, handler_p->callback_userdata);
+		handler->callback(msg, handler->callback_userdata);
 	}
+
 	if (poped_msg_buf)
 	{
 		free(poped_msg_buf);
@@ -84,73 +86,73 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	__in msg_handler_callback_t callback, __in void* callback_userdata)
 {
 	SLOGD(LOG_TAG, "create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
-	msg_queue_handler handler_p = calloc(1, sizeof(struct __msg_queue_handler));
-	if (!handler_p)
+	msg_queue_handler handler = (msg_queue_handler)calloc(1, sizeof(struct _msg_queue_handler_s));
+	if (!handler)
 	{
 		return NULL;
 	}
-	handler_p->flag_exit_thread = false;
-	handler_p->callback = callback;
-	handler_p->callback_userdata = callback_userdata;
-	sem_init(&(handler_p->semaphore), 0, 0);
-	if (pthread_create(&(handler_p->thread_handler), NULL, thread_fun_handle_msg, handler_p) == 0)
+	handler->flag_exit_thread = false;
+	handler->callback = callback;
+	handler->callback_userdata = callback_userdata;
+	sem_init(&(handler->semaphore), 0, 0);
+	if (pthread_create(&(handler->thread_handler), NULL, thread_fun_handle_msg, handler) == 0)
 	{
 		char thr_name[32] = { 0 };
-		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler_p);
-		pthread_set_name(handler_p->thread_handler, thr_name);
-		handler_p->msg_queue_p = msg_queue_create(queue_buf_size);
+		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler);
+		pthread_set_name(handler->thread_handler, thr_name);
+		handler->msg_queue_p = msg_queue_create(queue_buf_size);
 	}
 	else
 	{
 		SLOGE(LOG_TAG, "error on create pthread of queue handle msg");
-		sem_destroy(&(handler_p->semaphore));
-		free(handler_p);
-		handler_p = NULL;
+		sem_destroy(&(handler->semaphore));
+		free(handler);
+		handler = NULL;
 	}
-	return handler_p;
+	return handler;
 }
 
-MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler_p, __in queue_msg_t* msg_p)
+MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler, __in queue_msg_t* msg_p)
 {
-	if (!handler_p || handler_p->msg_queue_p == NULL || handler_p->flag_exit_thread)
+	if (!handler || handler->msg_queue_p == NULL || handler->flag_exit_thread)
 	{
 		return MSG_Q_CODE_NULL_HANDLE;
 	}
-	MSG_Q_CODE push_status = msg_queue_push(handler_p->msg_queue_p, msg_p, (sizeof(queue_msg_t) + msg_p->obj_len));
+	MSG_Q_CODE push_status = msg_queue_push(handler->msg_queue_p, msg_p, (sizeof(queue_msg_t) + msg_p->obj_len));
 	if (push_status == MSG_Q_CODE_SUCCESS)
 	{
-		sem_post(&(handler_p->semaphore));
+		sem_post(&(handler->semaphore));
 	}
 	return push_status;
 }
 
-extern inline uint32_t msg_queue_handler_available_push_bytes(__in msg_queue_handler handler_p)
+extern inline uint32_t msg_queue_handler_available_push_bytes(__in msg_queue_handler handler)
 {
-	return msg_queue_available_push_bytes(handler_p->msg_queue_p);
+	return msg_queue_available_push_bytes(handler->msg_queue_p);
 }
 
-extern inline uint32_t msg_queue_handler_available_pop_bytes(__in msg_queue_handler handler_p)
+extern inline uint32_t msg_queue_handler_available_pop_bytes(__in msg_queue_handler handler)
 {
-	return msg_queue_available_pop_bytes(handler_p->msg_queue_p);
+	return msg_queue_available_pop_bytes(handler->msg_queue_p);
 }
 
-void msg_queue_handler_destroy(__inout msg_queue_handler* handler_pp)
+void msg_queue_handler_destroy(__inout msg_queue_handler* handler_p)
 {
-	if (!handler_pp || !(*handler_pp))
+	if (!handler_p || !(*handler_p))
 	{
 		return;
 	}
-	msg_queue_handler handler_p = *handler_pp;
-	handler_p->flag_exit_thread = true;
+	msg_queue_handler handler = *handler_p;
+	handler->flag_exit_thread = true;
 	//send a signal to make sure thread is not stuck at sem_wait
-	sem_post(&(handler_p->semaphore));
-	if (pthread_join(handler_p->thread_handler, NULL) != 0)
+	sem_post(&(handler->semaphore));
+	if (pthread_join(handler->thread_handler, NULL) != 0)
 	{
 		SLOGE(LOG_TAG, "error on join handle msg thread");
 	}
-	sem_destroy(&(handler_p->semaphore));
-	msg_queue_destroy(&handler_p->msg_queue_p);
-	handler_p->msg_queue_p = NULL;
-	free(handler_p);
-	*handler_pp = NULL;
+	sem_destroy(&(handler->semaphore));
+	msg_queue_destroy(&handler->msg_queue_p);
+	handler->msg_queue_p = NULL;
+	free(handler);
+	*handler_p = NULL;
 }

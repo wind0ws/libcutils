@@ -7,7 +7,7 @@
 struct __auto_cover_buf
 {
 	/* ring buffer handle*/
-	ring_buf_handle ring;
+	ring_buffer_handle ring;
 	/* ring buffer real size */
 	uint32_t ring_buffer_size;
 	/* auto_cover_buf lock struct */

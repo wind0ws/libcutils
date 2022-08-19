@@ -7,21 +7,15 @@
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
 #include "log/file_logger.h"
-#include "libcutils.h" /* for libcutils_get_version */
-#include <locale.h> /* for setlocale */
+#include "libcutils.h"       /* for libcutils_get_version */
+#include <locale.h>          /* for setlocale */
 #ifdef _WIN32
-#include <conio.h> /* for kbhit */
+#include <conio.h>           /* for kbhit */
 #endif // _WIN32
 
 #define KB_TIMEOUT      (5)   // seconds
 
-//#define ENUM_STATES(GENERATOR)           \
-//         GENERATOR(STATE_START)          \
-//         GENERATOR(STATE_STOP)           
-//DECLARE_ENUM(STATES, ENUM_STATES);
-//DEFINIE_ENUM_STRINGS(STATES, ENUM_STATES);
-
-typedef int (*test_case_func)();
+typedef int (*test_case_func_t)();
 #define DECLARE_TEST_FUNC(func_name) extern int func_name()
 
 #define RUN_TEST(func_name) do                                                         \
@@ -34,7 +28,7 @@ typedef int (*test_case_func)();
 
 typedef struct
 {
-	test_case_func p_func;
+	test_case_func_t p_func;
 	char* str_description;
 } test_case_t;
 
@@ -46,7 +40,7 @@ EXTERN_C_START
 
 DECLARE_TEST_FUNC(allocator_test);
 
-#define TEST_FILE_LOGGER (0)
+#define TEST_FILE_LOGGER (1)
 #if(_LCU_LOGGER_TYPE_XLOG != LCU_LOGGER_SELECTOR && 0 != TEST_FILE_LOGGER)
 #error "FILE_LOGGER only support XLOG!"
 #endif

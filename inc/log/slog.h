@@ -77,13 +77,13 @@ extern "C" {
 
 #define SLOG_SET_MIN_LEVEL(min_level)  do { slog_set_min_level(min_level); } while(0)
 #define SLOG_GET_MIN_LEVEL()           slog_get_min_level()
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #define SLOG_STD2FILE(file_path)       do { slog_stdout2file(file_path); } while(0)
 #define SLOG_BACK2STD()                do { slog_back2stdout(); } while(0)   
 #else
 #define SLOG_STD2FILE(file_path)       do { (void)(file_path); } while (0)
 #define SLOG_BACK2STD()                do {} while (0)
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 #define SLOGV(tag, fmt, ...)          _SLOGV_IMPL(tag, fmt, ##__VA_ARGS__)
 #define SLOGD(tag, fmt, ...)          _SLOGD_IMPL(tag, fmt, ##__VA_ARGS__)

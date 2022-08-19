@@ -18,7 +18,7 @@
  *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
 #include "data/hashmap.h"
-#include "common_macro.h"
+#include <malloc.h>
 #include <string.h>
 #include <errno.h>
 

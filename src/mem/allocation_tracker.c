@@ -40,6 +40,7 @@ typedef struct
 {
 	uint8_t allocator_id;
 	void* ptr;
+	/* ptr request alloc memory size */
 	size_t size;
 	bool freed;
 #define MAX_FILE_PATH_LEN (128)
@@ -94,7 +95,7 @@ void allocation_tracker_init(void)
 	{
        .arg = &allocations_lock,
        .acquire = lock_allocations_map,
-       .release = unlock_allocations_map
+       .release = unlock_allocations_map,
 	};
 	allocations = hashmap_create(allocation_hash_map_size, 
 		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock);
@@ -213,7 +214,7 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 
 size_t allocation_tracker_resize_for_canary(size_t size)
 {
-	return (!allocations) ? size : size + (2 * canary_size);
+	return (!allocations) ? size : (size + (2 * canary_size));
 }
 
 static bool allocation_memory_corruption_checker(allocation_t* allocation)

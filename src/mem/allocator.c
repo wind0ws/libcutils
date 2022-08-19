@@ -143,18 +143,18 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 	if (ptr == NULL)
 	{
 		/* a little trick: give more memory than you need, for reduce realloc times */
-		return lcu_malloc_trace(size + 2048, file_path, func_name, file_line);
+		return lcu_malloc_trace(size + 2048U, file_path, func_name, file_line);
 	}
 
 	size_t cur_ptr_size = allocation_tracker_ptr_size(alloc_allocator_id, ptr);
 	if (cur_ptr_size && size <= cur_ptr_size)
 	{
-		//current size if enough, no need alloc new memory.
+		//current size is enough, no need alloc new memory.
 		return ptr;
 	}
 
 	/* a little trick: give more memory than you need, for reduce realloc times */
-	void* new_ptr = lcu_malloc_trace(size + 2048, file_path, func_name, file_line);
+	void* new_ptr = lcu_malloc_trace(size + 2048U, file_path, func_name, file_line);
 	if (!new_ptr)
 	{
 		return NULL;

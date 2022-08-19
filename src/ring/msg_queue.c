@@ -4,7 +4,7 @@
 
 struct __msg_queue
 {
-	ring_buf_handle ring_buf_p;
+	ring_buffer_handle ring_buf_p;
 };
 
 typedef struct 

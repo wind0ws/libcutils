@@ -100,7 +100,7 @@ static int g_map_android_level[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, AND
 			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR};
 #endif // __ANDROID__
 
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:4996) //for disable freopen warning
@@ -111,7 +111,7 @@ void xlog_stdout2file(char* file_path)
 	{
 		return;
 	}
-	if (g_xlog_cfg.fp_out && (g_xlog_cfg.fp_out != stdout))
+	if (g_xlog_cfg.fp_out)
 	{
 		fprintf(stderr, "[XLog] (%s:%d) warn: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
 		fflush(g_xlog_cfg.fp_out);
@@ -121,7 +121,7 @@ void xlog_stdout2file(char* file_path)
 	g_xlog_cfg.fp_out = freopen(file_path, "w", stdout);
 	if (!g_xlog_cfg.fp_out)
 	{
-		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen stdout to file(%s)\n", __func__, __LINE__, file_path);
 	}
 }
 
@@ -143,7 +143,7 @@ void xlog_back2stdout()
 #ifdef _WIN32
 #pragma warning(pop)
 #endif // _WIN32
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 void xlog_auto_level_up(LogLevel trigger_level)
 {
@@ -271,6 +271,10 @@ static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
 
 static inline int print_tid(char* buffer, int tid)
 {
+	if (tid < 0)
+	{
+		tid = -tid; //oops, overflow
+	}
 	buffer[0] = '(';
 	++buffer;
 #define MAX_TID_WIDTH (5)
@@ -289,7 +293,7 @@ static inline int print_tid(char* buffer, int tid)
 	return 7;
 }
 
-static inline int int2str(int num, char* str)
+static inline int my_int2str(int num, char* str)
 {
 	int len_str = 0;
 	if (num < 0)
@@ -316,7 +320,6 @@ static inline int int2str(int num, char* str)
 		str[len_str - 1 - index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
 		str[index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
 	}
-
 	return len_str;
 }
 
@@ -326,12 +329,12 @@ static inline int print_func_line(char* buffer, const char* func, int line_num)
 	char *str = buffer;
 	str[0] = '(';
 	++str;
-	int len_func = strlen(func);
+	size_t len_func = strlen(func);
 	memcpy(str, func, len_func);
 	str += len_func;
 	str[0] = ':';
 	++str;
-	str += int2str(line_num, str);
+	str += my_int2str(line_num, str);
 	str[0] = ')';
 	str[1] = ' ';
 	str[2] = '\0'; // this is no need, but we have good habit
@@ -406,7 +409,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	}
 	buffer_strlen = header_len;
 	if (func_name && file_line > 0 && 
-		(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 20) //normally, buf is enough
+		(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 32U) //we should count func_name and line number, but normally, 32 bytes is enough
 	{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
@@ -442,7 +445,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 		strlcpy(buffer_log, default_buffer, buffer_strlen + 1U); 
 		
 		va_start(va, fmt);
-		// vsnprintf ensure '\0' in string.
+		// vsnprintf ensure '\0' at end of string.
 		ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
 		va_end(va);
 		buffer_strlen += ret_vsn;

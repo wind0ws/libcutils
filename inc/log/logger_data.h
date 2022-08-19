@@ -2,8 +2,8 @@
 #ifndef LCU_LOGGER_DATA_H
 #define LCU_LOGGER_DATA_H
 
-//if your os(for example, RTOS) not support freopen printf, enable this macro
-//#define _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT  1
+//if your os(for example, RTOS) not support freopen stdout, enable this macro
+//#define _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT  1
 
 #ifndef _PRINTF_FUNC
 #include <stdio.h>
@@ -32,7 +32,7 @@
 #pragma warning(disable:26812) //for disable enum class warning in c++
 #endif // _MSC_VER && __cplusplus
 
-// DO NOT CHANGE ORDER, or maybe trigger bug!
+// LogLevel. DO NOT CHANGE ORDER, or maybe trigger bug!
 typedef enum
 {
 	LOG_LEVEL_OFF = 0,

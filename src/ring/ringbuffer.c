@@ -55,7 +55,7 @@ struct __ring_buffer_t
 	char* buf;             /* ring buffer pointer, buf size must be power of 2 */
 };
 
-ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
+ring_buffer_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
 {
 	if (!buf)
 	{
@@ -74,7 +74,7 @@ ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_siz
 		ring_buf_size = roundup_pow_of_two(ring_buf_size) >> 1;
 		RING_LOGW("%s changed buf_size to %u ", __func__, ring_buf_size);
 	}
-	ring_buf_handle ring_buffer_p = (ring_buf_handle)buf;
+	ring_buffer_handle ring_buffer_p = (ring_buffer_handle)buf;
 	ring_buffer_p->need_free_myself = false;
 	ring_buffer_p->buf = buf + ring_buffer_struct_size;
 	ring_buffer_p->size = ring_buf_size;
@@ -83,7 +83,7 @@ ring_buf_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_siz
 	return ring_buffer_p;
 }
 
-ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
+ring_buffer_handle RingBuffer_create(__in uint32_t buf_size)
 {
 	if (buf_size < 2)
 	{
@@ -104,7 +104,7 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 		RING_LOGE("failed alloc %u size for RingBuffer", expect_memory_size);
 		return NULL;
 	}
-	ring_buf_handle ring_buffer_p = RingBuffer_create_with_mem(raw_memory, expect_memory_size);
+	ring_buffer_handle ring_buffer_p = RingBuffer_create_with_mem(raw_memory, expect_memory_size);
 	if (!ring_buffer_p)
 	{
 		free(raw_memory);
@@ -114,74 +114,74 @@ ring_buf_handle RingBuffer_create(__in uint32_t buf_size)
 	return ring_buffer_p;
 }
 
-void RingBuffer_destroy(__inout ring_buf_handle* ring_buf_pp)
+void RingBuffer_destroy(__inout ring_buffer_handle* ring_handle_p)
 {
-	if (NULL == ring_buf_pp || *ring_buf_pp == NULL)
+	if (NULL == ring_handle_p || *ring_handle_p == NULL)
 	{
 		return;
 	}
-	ring_buf_handle ring_buffer_p = *ring_buf_pp;
-	ring_buffer_p->in = 0;
-	ring_buffer_p->out = 0;
-	ring_buffer_p->size = 0;
+	ring_buffer_handle ring_handle = *ring_handle_p;
+	ring_handle->in = 0;
+	ring_handle->out = 0;
+	ring_handle->size = 0;
 
-	if (ring_buffer_p->need_free_myself)
+	if (ring_handle->need_free_myself)
 	{
-		ring_buffer_p->buf = NULL; // buf memory is in handle
-		ring_buffer_p->need_free_myself = false;
-		free(ring_buffer_p);
+		ring_handle->buf = NULL; // buf memory is in handle
+		ring_handle->need_free_myself = false;
+		free(ring_handle);
 	}
-	*ring_buf_pp = NULL;
+	*ring_handle_p = NULL;
 }
 
-extern inline bool RingBuffer_is_empty(__in ring_buf_handle ring_buf_p)
+extern inline bool RingBuffer_is_empty(__in ring_buffer_handle ring_handle)
 {
-	return RingBuffer_available_read(ring_buf_p) == 0;
+	return RingBuffer_available_read(ring_handle) == 0;
 }
 
-extern inline bool RingBuffer_is_full(__in ring_buf_handle ring_buf_p)
+extern inline bool RingBuffer_is_full(__in ring_buffer_handle ring_handle)
 {
-	return RingBuffer_available_write(ring_buf_p) == 0;
+	return RingBuffer_available_write(ring_handle) == 0;
 }
 
-extern inline void RingBuffer_clear(__in ring_buf_handle ring_buffer_p)
+extern inline void RingBuffer_clear(__in ring_buffer_handle ring_handle)
 {
-	if (ring_buffer_p == NULL)
+	if (ring_handle == NULL)
 	{
 		return;
 	}
-	ring_buffer_p->in = 0;
-	ring_buffer_p->out = 0;
+	ring_handle->in = 0;
+	ring_handle->out = 0;
 }
 
-uint32_t RingBuffer_current_read_position(__in ring_buf_handle ring_buf_p)
+uint32_t RingBuffer_current_read_position(__in ring_buffer_handle ring_handle)
 {
-	return ring_buf_p->out;
+	return ring_handle->out;
 }
 
-uint32_t RingBuffer_current_write_position(__in ring_buf_handle ring_buf_p)
+uint32_t RingBuffer_current_write_position(__in ring_buffer_handle ring_handle)
 {
-	return ring_buf_p->in;
+	return ring_handle->in;
 }
 
-uint32_t RingBuffer_real_capacity(__in ring_buf_handle ring_buf_p) 
+uint32_t RingBuffer_real_capacity(__in ring_buffer_handle ring_handle) 
 {
-	return ring_buf_p->size;
+	return ring_handle->size;
 }
 
-extern inline uint32_t RingBuffer_available_read(__in ring_buf_handle ring_buf_p)
+extern inline uint32_t RingBuffer_available_read(__in ring_buffer_handle ring_handle)
 {
-	return ring_buf_p->in - ring_buf_p->out;
+	return ring_handle->in - ring_handle->out;
 }
 
-extern inline uint32_t RingBuffer_available_write(__in ring_buf_handle ring_buf_p)
+extern inline uint32_t RingBuffer_available_write(__in ring_buffer_handle ring_handle)
 {
-	return ring_buf_p->size - RingBuffer_available_read(ring_buf_p);
+	return ring_handle->size - RingBuffer_available_read(ring_handle);
 }
 
-uint32_t RingBuffer_write(__in ring_buf_handle ring_buf_p, __in const void* source, __in uint32_t size)
+uint32_t RingBuffer_write(__in ring_buffer_handle ring_handle, __in const void* source, __in uint32_t size)
 {
-	if (ring_buf_p == NULL || source == NULL || size == 0)
+	if (ring_handle == NULL || source == NULL || size == 0)
 	{
 		return 0;
 	}
@@ -189,7 +189,7 @@ uint32_t RingBuffer_write(__in ring_buf_handle ring_buf_p, __in const void* sour
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
-	uint32_t available_space = RingBuffer_available_write(ring_buf_p);
+	uint32_t available_space = RingBuffer_available_write(ring_handle);
 	if (available_space == 0)
 	{
 		return 0;
@@ -202,25 +202,25 @@ uint32_t RingBuffer_write(__in ring_buf_handle ring_buf_p, __in const void* sour
 	}
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	/* first put the data starting from fifo->in to buffer end */
-	start = ring_buf_p->in & (ring_buf_p->size - 1);
-	uint32_t first_part_max_len = ring_buf_p->size - start;
+	start = ring_handle->in & (ring_handle->size - 1);
+	uint32_t first_part_max_len = ring_handle->size - start;
 	first_part_len = TAKE_MIN(size, first_part_max_len);
 	if (first_part_len)
 	{
-		memcpy(ring_buf_p->buf + start, source, first_part_len);
+		memcpy(ring_handle->buf + start, source, first_part_len);
 	}
 	/* then put the rest_len (if any) at the beginning of the buffer */
 	if ((rest_len = size - first_part_len) > 0)
 	{
-		memcpy(ring_buf_p->buf, (char*)source + first_part_len, rest_len);
+		memcpy(ring_handle->buf, (char*)source + first_part_len, rest_len);
 	}
-	ring_buf_p->in += size;
+	ring_handle->in += size;
 	return size;
 }
 
-static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, void* target, uint32_t size, bool is_peek)
+static uint32_t RingBuffer_read_internal(ring_buffer_handle ring_handle, void* target, uint32_t size, bool is_peek)
 {
-	if (ring_buf_p == NULL || size == 0)
+	if (ring_handle == NULL || size == 0)
 	{
 		return 0;
 	}
@@ -228,7 +228,7 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, void* targe
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
-	uint32_t available_data = RingBuffer_available_read(ring_buf_p);
+	uint32_t available_data = RingBuffer_available_read(ring_handle);
 	if (available_data == 0)
 	{
 		return 0;
@@ -243,38 +243,38 @@ static uint32_t RingBuffer_read_internal(ring_buf_handle ring_buf_p, void* targe
 	if (target)
 	{
 		/* first get the data from fifo->out until the end of the buffer */
-		start = ring_buf_p->out & (ring_buf_p->size - 1);
-		uint32_t first_part_max_len = ring_buf_p->size - start;
+		start = ring_handle->out & (ring_handle->size - 1);
+		uint32_t first_part_max_len = ring_handle->size - start;
 		first_part_len = TAKE_MIN(size, first_part_max_len);
 		if (first_part_len)
 		{
-			memcpy(target, ring_buf_p->buf + start, first_part_len);
+			memcpy(target, ring_handle->buf + start, first_part_len);
 		}
 		/* then get the rest_len (if any) from the beginning of the buffer */
 		rest_len = size - first_part_len;
 		if (rest_len)
 		{
-			memcpy((char*)target + first_part_len, ring_buf_p->buf, rest_len);
+			memcpy((char*)target + first_part_len, ring_handle->buf, rest_len);
 		}
 	}
 	if (!is_peek)
 	{
-		ring_buf_p->out += size;
+		ring_handle->out += size;
 	}
 	return size;
 }
 
-uint32_t RingBuffer_read(__in ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size)
+uint32_t RingBuffer_read(__in ring_buffer_handle ring_handle, __out void* target, __in uint32_t size)
 {
-	return target == NULL ? 0 : RingBuffer_read_internal(ring_buf_p, target, size, false);
+	return target == NULL ? 0 : RingBuffer_read_internal(ring_handle, target, size, false);
 }
 
-uint32_t RingBuffer_peek(__in ring_buf_handle ring_buf_p, __out void* target, __in uint32_t size)
+uint32_t RingBuffer_peek(__in ring_buffer_handle ring_handle, __out void* target, __in uint32_t size)
 {
-	return RingBuffer_read_internal(ring_buf_p, target, size, true);
+	return RingBuffer_read_internal(ring_handle, target, size, true);
 }
 
-uint32_t RingBuffer_discard(__in ring_buf_handle ring_buf_p, __in uint32_t size)
+uint32_t RingBuffer_discard(__in ring_buffer_handle ring_handle, __in uint32_t size)
 {
-	return RingBuffer_read_internal(ring_buf_p, NULL, size, false);
+	return RingBuffer_read_internal(ring_handle, NULL, size, false);
 }

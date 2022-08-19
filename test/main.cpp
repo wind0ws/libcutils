@@ -3,35 +3,32 @@
 #include "thread/thread_wrapper.h"
 #include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
-#include "log/xlog.h"
+
+#define LOG_TAG "MAIN"
+#include "log/logger.h"
 #include "log/file_logger.h"
-#include "libcutils.h"
-#include <locale.h> /* for setlocale */
+#include "libcutils.h"       /* for libcutils_get_version */
+#include <locale.h>          /* for setlocale */
 #ifdef _WIN32
-#include <conio.h> /* for kbhit */
+#include <conio.h>           /* for kbhit */
 #endif // _WIN32
 
 #define KB_TIMEOUT      (5)   // seconds
 
-//#define ENUM_STATES(GENERATOR)           \
-//         GENERATOR(STATE_START)          \
-//         GENERATOR(STATE_STOP)           
-//DECLARE_ENUM(STATES, ENUM_STATES);
-//DEFINIE_ENUM_STRINGS(STATES, ENUM_STATES);
+typedef int (*test_case_func_t)();
+#define DECLARE_TEST_FUNC(func_name) extern int func_name()
 
-typedef int(*test_case_func)();
-
-#define RUN_TEST(func_name) do                                                          \
-{                                                                                       \
-   LOGD("\n%s\nNow run --> %s()", XLOG_STAR_LINE, #func_name);                          \
-   int ret_##func_name = func_name();                                                   \
-   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, XLOG_STAR_LINE); \
-   ASSERT_ABORT(ret_##func_name == 0);                                                  \
+#define RUN_TEST(func_name) do                                                         \
+{                                                                                      \
+   LOGD("\n%s\nNow run --> %s()", LOG_STAR_LINE, #func_name);                          \
+   int ret_##func_name = func_name();                                                  \
+   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
+   ASSERT_ABORT(0 == ret_##func_name);                                                 \
 } while (0)
 
 typedef struct
 {
-	test_case_func p_func;
+	test_case_func_t p_func;
 	char* str_description;
 } test_case_t;
 
@@ -41,27 +38,31 @@ static int memleak_test();
 
 EXTERN_C_START
 
-extern int allocator_test();
+DECLARE_TEST_FUNC(allocator_test);
 
-#define TEST_FILE_LOGGER (0)
-extern int file_logger_test_begin();
-extern int file_logger_test_end();
-extern int ini_test();
+#define TEST_FILE_LOGGER (1)
+#if(_LCU_LOGGER_TYPE_XLOG != LCU_LOGGER_SELECTOR && 0 != TEST_FILE_LOGGER)
+#error "FILE_LOGGER only support XLOG!"
+#endif
+DECLARE_TEST_FUNC(file_logger_test_begin);
+DECLARE_TEST_FUNC(file_logger_test_end);
+DECLARE_TEST_FUNC(ini_test);
 
-extern int thread_wrapper_test();
-extern int basic_test();
-extern int autocover_buffer_test();
-extern int mplite_test();
-extern int file_util_test();
-extern int thpool_test();
-extern int string_test();
-extern int time_util_test();
-extern int url_encoder_decoder_test();
-extern int base64_test();
-extern int str_params_test();
-extern int msg_queue_handler_test();
-extern int integer_test();
-extern int list_test();
+DECLARE_TEST_FUNC(thread_wrapper_test);
+DECLARE_TEST_FUNC(basic_test);
+DECLARE_TEST_FUNC(autocover_buffer_test);
+DECLARE_TEST_FUNC(mplite_test);
+DECLARE_TEST_FUNC(file_util_test);
+DECLARE_TEST_FUNC(thpool_test);
+DECLARE_TEST_FUNC(string_test);
+DECLARE_TEST_FUNC(time_util_test);
+
+DECLARE_TEST_FUNC(url_encoder_decoder_test);
+DECLARE_TEST_FUNC(base64_test);
+DECLARE_TEST_FUNC(str_params_test);
+DECLARE_TEST_FUNC(msg_queue_handler_test);
+DECLARE_TEST_FUNC(integer_test);
+DECLARE_TEST_FUNC(list_test);
 
 static test_case_t g_all_test_cases[] =
 {
@@ -71,6 +72,7 @@ static test_case_t g_all_test_cases[] =
 	{ autocover_buffer_test, "test auto-cover buffer" },
 	{ mplite_test, "test mem-pool" },
 	{ file_util_test, "test file util" },
+	{ thread_wrapper_test, "test thread wrapper and xlog"},
 	{ thpool_test, "test thread pool" },
 	{ string_test, "test string op" },
 	{ time_util_test, "test time op" },
@@ -84,19 +86,19 @@ static test_case_t g_all_test_cases[] =
 
 EXTERN_C_END
 
-#define SAVE_LOG 1
+#define SAVE_LOG    (0)
 
-#if SAVE_LOG && TEST_FILE_LOGGER == 0
+#if( SAVE_LOG && 0 == TEST_FILE_LOGGER)
 #ifdef _WIN32
 #define LOG_PATH ("d:/mylog.log")
 #else
 #define LOG_PATH ("mylog.log")
 #endif // _WIN32
-#define STDOUT2FILE() do{ printf("\n redirect print to file \n"); xlog_stdout2file(LOG_PATH); } while(0);
-#define BACK2STDOUT() do{ xlog_back2stdout(); printf("\n redirect print to console \n"); } while(0);
+#define STDOUT2FILE() do{ fprintf(stderr, "\n ==> redirect print to file \n"); LOG_STD2FILE(LOG_PATH); } while(0)
+#define BACK2STDOUT() do{ LOG_BACK2STD(); fprintf(stderr, "\n <== now redirect print to console \n"); } while(0)
 #else
-#define STDOUT2FILE()
-#define BACK2STDOUT()
+#define STDOUT2FILE() do { } while (0)
+#define BACK2STDOUT() do { } while (0)
 #endif
 
 EXTERN_C
@@ -151,8 +153,8 @@ int main(int argc, char* argv[])
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
-		RUN_TEST(time_util_test);
-		//RUN_TEST(thread_wrapper_test);
+		//RUN_TEST(time_util_test);
+		RUN_TEST(thread_wrapper_test);
 		//RUN_TEST(url_encoder_decoder_test);
 		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
@@ -168,6 +170,7 @@ int main(int argc, char* argv[])
 
 	LOGI("...bye bye...  %d\n", ret);
 
+	LOG_DEINIT(NULL);
 	DEINIT_MEM_CHECK();
 	return ret;
 }
@@ -196,12 +199,16 @@ static void setup_console()
 
 	//_CrtSetBreakAlloc(104);
 #endif // _WIN32
+	LOG_INIT(NULL);
+	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
+#if(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
 	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
 	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL);
 	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
 	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP);
 	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL);
 	//xlog_set_format(LOG_FORMAT_RAW);
+#endif // XLOG
 }
 
 static int get_testcase_from_kb(int* p_testcases, int test_case_size)

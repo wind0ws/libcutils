@@ -1,8 +1,10 @@
 #include "ring/autocover_buffer.h"
 #include "common_macro.h"
-#include "log/xlog.h"
 #include "thread/thread_wrapper.h"
 #include <string.h>
+
+#define LOG_TAG "AUTOCOVER"
+#include "log/logger.h"
 
 typedef struct 
 {

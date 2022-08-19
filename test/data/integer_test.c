@@ -1,7 +1,7 @@
 #include "data/integer.h"
-#include "log/xlog.h"
 
 #define LOG_TAG "INTEGER_TEST"
+#include "log/logger.h"
 
 int integer_test()
 {

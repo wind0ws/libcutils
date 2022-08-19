@@ -4,10 +4,15 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <ctype.h>
+#include <ctype.h> /* for tolower/toupper */
+#include <stdio.h> /* for snprintf */
 #ifndef _WIN32
 #include <strings.h> //for bcopy/bzero
 #endif // !_WIN32
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 #ifndef bcopy
 #define bcopy(src, dest, len) memcpy((dest), (src), (len))
@@ -17,20 +22,17 @@
 #endif // !bzero
 
 #ifdef _WIN32
-// stricmp is win32 function. suggest to use strcasecmp for cross platform
-#define strcasecmp(s1, s2)                   stricmp(s1, s2)
-#define strncasecmp(s1, s2, n)               strnicmp(s1, s2, n)
 //to make MSC happy
 #define stricmp(s1, s2)                      _stricmp(s1, s2)
 #define strnicmp(s1, s2, n)                  _strnicmp(s1, s2, n)
+// stricmp is win32 function. suggest to use strcasecmp for cross platform
+#define strcasecmp(s1, s2)                   stricmp(s1, s2)
+#define strncasecmp(s1, s2, n)               strnicmp(s1, s2, n)
 #ifndef strdup
 #define strdup(s)                            _strdup(s)
 #endif // !strdup
 #ifndef strndup  //windows not implement strndup, let's do it.
-    #ifdef __cplusplus
-    extern "C" 
-    #endif // __cplusplus
-	char* strndup(const char* s, size_t n);
+char* strndup(const char* s, size_t n);
 #endif // !strndup
 
 /**
@@ -60,17 +62,16 @@
 #define STRING2LOWER(s)                      _STRING_TRANSFORM(s, __LINE__, tolower)
 #endif // !STRING2LOWER
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
 
 #if defined(__GLIBC__) || defined(_WIN32)
 	/* Declaration of strlcpy() for platforms that don't already have it. */
 
-	/**
-	 * Copy src to string dst of size size.  At most size-1 characters
+	/*
+	 * Copy src to string dst of size size.  At most (size - 1) characters
 	 * will be copied.  Always NUL terminates (unless size == 0).
-	 * Returns strlen(src); if retval >= size, truncation occurred.
+	 * so easy way to copy string: strlcpy(dst_buf, src_str, sizeof(dst_buf))
+	 *
+	 * @return Returns strlen(src); if retval >= size, truncation occurred.
 	 */
 	size_t strlcpy(char* dst, const char* src, size_t size);
 
@@ -78,8 +79,9 @@ extern "C" {
 	 * Appends src to string dst of size "size" (unlike strncat, size is the
 	 * full size of dst, not space left).  At most size-1 characters
 	 * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
-	 * Returns strlen(src) + MIN(size, strlen(initial dst)).
-	 * If retval >= size, truncation occurred.
+	 * 
+	 * @return Returns strlen(src) + MIN(size, strlen(initial dst)).
+	 *         If retval >= size, truncation occurred.
 	 */
 	size_t strlcat(char* dst, const char* src, size_t size);
 
@@ -88,9 +90,11 @@ extern "C" {
 	/**
 	 * replace the "pattern" to "replacement" from "original".
 	 * WARN: return string is allocated, need free after use!
+	 * 
 	 * @param original: the str to replace
 	 * @param pattern: the replace pattern
 	 * @param replacement: replace pattern to this
+	 * @return replaced string, this memory on heap, need free after use!
 	 */
 	char* strreplace(char const* const original,
 		char const* const pattern, char const* const replacement);
@@ -98,10 +102,10 @@ extern "C" {
 	/**
 	 * split string by delimiter
 	 * @param recv_splited_str: the pointer you want to receive spited string.
-	 * @param p_splited_nums: how many char * do you provide in rec_splited_str,
+	 * @param p_splited_nums: how many (char *) do you provide in rec_splited_str,
 	 *                        this value will rewrite to real split numbers after return.
 	 * @param src_str: the origin str that you want to split
-	 * @param delimiter: the string of delimiter
+	 * @param delimiter: the string of delimiter, for example ","
 	 */
 	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
 		const char* src_str, const char* delimiter);
@@ -109,7 +113,7 @@ extern "C" {
 	/**
 	 * trim string.
 	 * Remove the part of the string from left and from right composed just of
-	 * contiguous characters found in 'cset', that is a null terminted C string.
+	 * contiguous characters found in 'cset', that is a null terminated C string.
 	 *
 	 * Example:
 	 *
@@ -140,8 +144,19 @@ extern "C" {
 	 */
 	size_t strnutf8len(const char* utf8str, size_t max_count);
 
+	/**
+	 * transform char to hex.
+	 *
+	 * @param out_hex_str: place hex result, should provide (3 * chars_count + 1) memory
+	 * @param out_hex_str_capacity: the size of out_hex_str you provide, should include NULL terminator
+	 * @param chars: the chars you want to transform to hex
+	 * @param chars_count: the count of chars
+	 */
+	size_t str_char2hex(char* out_hex_str, size_t out_hex_str_capacity,
+		const char* chars, size_t chars_count);
+
 #ifdef __cplusplus
 };
 #endif // __cplusplus
 
-#endif // LCU_STRINGS_H
+#endif // !LCU_STRINGS_H

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_BUILD_CONFIG_H
-#define __LCU_BUILD_CONFIG_H
+#ifndef _LCU_BUILD_CONFIG_H
+#define _LCU_BUILD_CONFIG_H
 
 //Attention: do not change this file directly, the header file will generate by cmake.
 
@@ -9,9 +9,9 @@
 #define LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB    (0)
 #define LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE (1)
 
-#define _LCU_CFG_WIN_PTHREAD_MODE @LCU_WIN_PTHREAD_MODE@
+#define _LCU_CFG_WIN_PTHREAD_MODE @PRJ_WIN_PTHREAD_MODE@
 
-#endif //_WIN32
+#endif // _WIN32
 
 
-#endif //__LCU_BUILD_CONFIG_H
+#endif // !_LCU_BUILD_CONFIG_H

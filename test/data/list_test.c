@@ -1,8 +1,8 @@
 #include "data/list.h"
-#include "log/xlog.h"
 #include "common_macro.h"
 
 #define LOG_TAG "LIST_TEST"
+#include "log/logger.h"
 
 static void my_free_fn(void* ptr)
 {
@@ -62,7 +62,7 @@ static int testcase()
 	
 	my_list_iter_context ctx = { 0 };
 	list_foreach(p_list, my_iter_list_fn, &ctx);
-	TLOGD(LOG_TAG, "list_count=%u", ctx.count);
+	TLOGD(LOG_TAG, "list_count=%zu", ctx.count);
 	list_free(p_list);
 	return 0;
 }

@@ -2,17 +2,17 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdbool.h>
-#include "log/simple_log.h"
+#include "log/slog.h"
 
 #define RING_BUF_TAKE_MIN(a, b) ((a) > (b) ? (b) : (a))
 
 #define __RING_LOG_TAG        "R_BUF"
 
-#define RING_LOGV(fmt,...)    SIMPLE_LOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)    SIMPLE_LOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)    SIMPLE_LOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)    SIMPLE_LOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)    SIMPLE_LOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)    SLOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)    SLOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)    SLOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)    SLOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)    SLOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 struct __ring_buf_t 
 {
@@ -47,14 +47,14 @@ ring_handle ring_buf_create(const size_t size)
 {
 	if (size < 3)
 	{
-		RING_LOGE("buf size too small. %zu", size);
+		RING_LOGE("buf size(%zu) too small", size);
 		return NULL;
 	}
 	const size_t expect_mem_size = size + sizeof(struct __ring_buf_t);
 	char* pbuf = (char*)malloc(expect_mem_size);
 	if (!pbuf) 
 	{
-		RING_LOGE("failed alloc %zu size for ring_buf", expect_mem_size);
+		RING_LOGE("failed alloc(%zu) size for ring_buf", expect_mem_size);
 		return NULL;
 	}
 	ring_handle handle = ring_buf_create_with_mem(pbuf, expect_mem_size);

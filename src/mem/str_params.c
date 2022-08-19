@@ -1,8 +1,10 @@
-#include "mem/asprintf.h"
+#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE /* needed for (v)asprintf, affects '#include <stdio.h>' */
+#endif // __GNUC__
 #include "mem/mem_debug.h"
+#include "mem/asprintf.h"
 #include "mem/str_params.h"
 
-//#define _GNU_SOURCE 1
 #include <errno.h>
 #include <stdint.h>
 #include "mem/strings.h"
@@ -10,7 +12,6 @@
 #include "log/xlog.h"
 
 #define LOG_TAG "str_params"
-//#define LOG_NDEBUG 0
 
 /* When an object is allocated but not freed in a function,
  * because its ownership is released to other object like a hashmap,
@@ -20,7 +21,7 @@
  * is enough to confuse the clang static analyzer.
  */
 #ifdef __clang_analyzer__
-static void* released_pointer;
+static void* released_pointer = NULL;
 #define RELEASE_OWNERSHIP(x) { released_pointer = x; released_pointer = NULL; }
 #else
 #define RELEASE_OWNERSHIP(x) { (void)(x); }

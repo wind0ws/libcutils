@@ -1,10 +1,10 @@
 #include "net/url_encoder_decoder.h"
-#include "log/xlog.h"
 #include <string.h>
 #include <malloc.h>
 #include "common_macro.h"
 
 #define LOG_TAG "URL_EN_DE"
+#include "log/logger.h"
 
 static int url_encoder_test()
 {

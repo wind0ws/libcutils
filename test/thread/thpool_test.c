@@ -2,27 +2,27 @@
 #include <stdio.h>
 #include "thread/thpool.h"
 #include "thread/thread_wrapper.h"
-#include "log/xlog.h"
 
-#define LOG_TAG_THPOOL_TEST "thpool_test"
+#define LOG_TAG "thpool_test"
+#include "log/logger.h"
 
 //===============================TEST POOL==========================================BEGIN
 static void task1(void* param) 
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task1", (unsigned int)gettid());
+	TLOGD(LOG_TAG, "Thread#%u working on task1", (unsigned int)gettid());
 }
 
 static void task2(void* param) 
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "Thread#%u working on task2", (unsigned int)gettid());
+	TLOGD(LOG_TAG, "Thread#%u working on task2", (unsigned int)gettid());
 }
 
 static int thpool_test_basic()
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "Making threadpool with 4 threads");
+	TLOGD(LOG_TAG, "Making threadpool with 4 threads");
 	threadpool thpool = thpool_init(4);
 
-	TLOGD(LOG_TAG_THPOOL_TEST, "Adding 40 tasks to threadpool");
+	TLOGD(LOG_TAG, "Adding 40 tasks to threadpool");
 	int i;
 	for (i = 0; i < 20; i++) 
 	{
@@ -30,9 +30,9 @@ static int thpool_test_basic()
 		thpool_add_work(thpool, (void*)task2, NULL);
 	};
 
-	TLOGI(LOG_TAG_THPOOL_TEST, "Waiting till all the jobs have completed");
+	TLOGI(LOG_TAG, "Waiting till all the jobs have completed");
 	thpool_wait(thpool);
-	TLOGD(LOG_TAG_THPOOL_TEST, "Killing threadpool");
+	TLOGD(LOG_TAG, "Killing threadpool");
 	thpool_destroy(thpool);
 
 	return 0;
@@ -43,9 +43,9 @@ static int thpool_test_basic()
 //===============================TEST WAIT==========================================BEGIN
 static void worker_sleep_1(int* secs)
 {
-	TLOGD(LOG_TAG_THPOOL_TEST, "%d in", gettid());
+	TLOGD(LOG_TAG, "%d in", gettid());
 	sleep(*secs);
-	TLOGD(LOG_TAG_THPOOL_TEST, "%d out", gettid());
+	TLOGD(LOG_TAG, "%d out", gettid());
 }
 
 static int thpool_test_wait()
@@ -79,14 +79,14 @@ static int thpool_test_wait()
 static void sleep_4_secs(void* parm) 
 {
 	const char* task_name = (const char*)parm;
-	TLOGD_TRACE(LOG_TAG_THPOOL_TEST, "%s now exec on %d...", task_name, gettid());
+	TLOGD_TRACE(LOG_TAG, "%s now exec on %d...", task_name, gettid());
 	//sleep(4);
 	for (int i = 0; i < 100; i++)
 	{
 		usleep(40000);
 		printf("  [%d: %02d ]  ", gettid(), i);
 	}
-	TLOGD_TRACE(LOG_TAG_THPOOL_TEST, "%s exec finshed on %d...", task_name, gettid());
+	TLOGD_TRACE(LOG_TAG, "%s exec finshed on %d...", task_name, gettid());
 }
 
 static int thpool_test_pause_resume() 
@@ -101,9 +101,9 @@ static int thpool_test_pause_resume()
 	thpool_add_work(thpool, (void*)sleep_4_secs, "MyTask0");
 	thpool_add_work(thpool, (void*)sleep_4_secs, "MyTask1");
 
-	TLOGD_TRACE(LOG_TAG_THPOOL_TEST, "thpool is paused, 2 work is added. now sleeping 3s...");
+	TLOGD_TRACE(LOG_TAG, "thpool is paused, 2 work is added. now sleeping 3s...");
 	sleep(3);
-	TLOGD_TRACE(LOG_TAG_THPOOL_TEST, "awake after 3s... now resume thpool..");
+	TLOGD_TRACE(LOG_TAG, "awake after 3s... now resume thpool..");
 
 	// Now we will start threads in no-parallel with main
 	thpool_resume(thpool);

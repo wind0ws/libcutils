@@ -30,6 +30,7 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
+#include <windows.h>
 
 // Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the
 // allocations to be of _CLIENT_BLOCK type
@@ -47,7 +48,7 @@
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
 }
 // nothing to do on deinit
-#define DEINIT_MEM_CHECK() 
+#define DEINIT_MEM_CHECK()  do { } while (0)
 #endif // _DEBUG && !_ENABLE_LCU_MEM_CHECK_FEATURE
 #endif // _WIN32
 
@@ -93,7 +94,7 @@ void* operator new[](size_t size, const char* fileName, const char* funcName, in
 
 void operator delete(void* ptr) noexcept
 {
-	if (ptr == nullptr)
+	if (nullptr == ptr)
 	{
 		return;
 	}
@@ -102,7 +103,7 @@ void operator delete(void* ptr) noexcept
 
 void operator delete[](void* ptr) noexcept
 {
-	if (ptr == nullptr)
+	if (nullptr == ptr)
 	{
 		return;
 	}
@@ -116,7 +117,7 @@ void operator delete[](void* ptr) noexcept
 #define DEINIT_MEM_CHECK() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
 
 #if(defined(free) || defined(malloc) || defined(calloc) || defined(realloc) || defined(strdup) || defined(strndup))
-#error free/malloc/calloc/realloc/strdup/strndup is defined. you should put "mem_debug.h" on your source file first line.
+#error "free/malloc/calloc/realloc/strdup/strndup is defined. you should put \"mem_debug.h\" on your source file first line."
 #endif 
 #define free(p)            lcu_free(p)
 #define malloc(s)          lcu_malloc_trace(s, __FILE__, __func__, __LINE__)
@@ -128,8 +129,8 @@ void operator delete[](void* ptr) noexcept
 #endif // !_CRTDBG_MAP_ALLOC && _ENABLE_LCU_MEM_CHECK_FEATURE
 
 #ifndef INIT_MEM_CHECK 
-#define INIT_MEM_CHECK() 
-#define DEINIT_MEM_CHECK() 
-#endif // ! INIT_MEM_CHECK 
+#define INIT_MEM_CHECK()   do { } while (0)
+#define DEINIT_MEM_CHECK() do { } while (0)
+#endif // !INIT_MEM_CHECK 
 
-#endif // LCU_MEM_DEBUG_H
+#endif // !LCU_MEM_DEBUG_H

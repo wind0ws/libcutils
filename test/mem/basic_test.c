@@ -1,9 +1,9 @@
 #include "common_macro.h"
 #include "mem/strings.h"
-#include "log/xlog.h"
 #include <stdio.h>
 
 #define LOG_TAG "BASIC_TEST"
+#include "log/logger.h"
 
 int basic_test()
 {

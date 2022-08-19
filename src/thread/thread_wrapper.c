@@ -1,13 +1,13 @@
 #include "thread/thread_wrapper.h"
 #if defined(__linux__)
-#include <sys/prctl.h>
+#include <sys/prctl.h> /* for prctl */
 #endif // __linux__
 
 #ifdef _WIN32
 //reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
 #include <windows.h>
 static const DWORD MS_VC_EXCEPTION = 0x406D1388;
-#pragma pack(push,8)
+#pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO
 {
 	DWORD dwType; // Must be 0x1000.
@@ -16,6 +16,7 @@ typedef struct tagTHREADNAME_INFO
 	DWORD dwFlags; // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
+
 //The SetWin32ThreadName function shown below demonstrates this exception-based approach. 
 //Note that the thread name will be automatically copied to the thread, 
 //so that the memory for the threadName parameter can be released after the SetThreadName call is completed.
@@ -58,7 +59,7 @@ int pthread_set_name(pthread_t thr, const char* name)
 #if(defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP)
 	ret = pthread_setname_np(thr, name);
 #elif defined(__linux__)
-	/* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
+	/* Use prctl (<sys/prctl.h>) instead to prevent using _GNU_SOURCE flag and implicit declaration */
 	ret = prctl(PR_SET_NAME, name);
 #elif defined(__APPLE__) && defined(__MACH__)
 	ret = pthread_setname_np(name);
@@ -79,4 +80,4 @@ pid_t gettid()
 		return GetCurrentThreadId();
 	#endif
 }
-#endif  // __ANDROID__
+#endif  // !__ANDROID__

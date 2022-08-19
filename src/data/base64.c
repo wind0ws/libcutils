@@ -126,6 +126,6 @@ int lcu_base64_decode(char *out_buf_plain, const char *src_buf_encoded)
     }
 
     *(bufout++) = '\0';
-    nbytesdecoded -= (4 - nprbytes) & 3;
+    nbytesdecoded -= ((4 - nprbytes) & 3);
     return nbytesdecoded;
 }

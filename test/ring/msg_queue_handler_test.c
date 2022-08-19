@@ -1,9 +1,9 @@
 #include "ring/msg_queue_handler.h"
 #include "common_macro.h"
 #include "thread/thread_wrapper.h"
-#include "log/xlog.h"
 
 #define LOG_TAG "HDL_TEST"
+#include "log/logger.h"
 
 typedef struct
 {

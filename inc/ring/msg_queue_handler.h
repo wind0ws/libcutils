@@ -31,7 +31,7 @@ typedef struct
     char obj[0]; /* must be last field of struct */
 } queue_msg_t;
 
-typedef struct __msg_queue_handler *msg_queue_handler;
+typedef struct _msg_queue_handler_s *msg_queue_handler;
 
 /**
  * callback to handle msg
@@ -39,7 +39,7 @@ typedef struct __msg_queue_handler *msg_queue_handler;
  * @param queue_msg_t pointer to popped msg. do not free this msg memory.
  * @param user_data user data pointer in msg_queue_handler_create
  */
-typedef void (*msg_handler_callback)(queue_msg_t *msg_p, void *user_data);
+typedef void (*msg_handler_callback_t)(queue_msg_t *msg_p, void *user_data);
 
 /**
  * create fixed_queue_handler
@@ -48,38 +48,39 @@ typedef void (*msg_handler_callback)(queue_msg_t *msg_p, void *user_data);
  * @param callback_userdata user_data will pass in callback
  * @return queue handler ptr
  */
-msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size, __in msg_handler_callback callback, __in void* callback_userdata);
+msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size, 
+    __in msg_handler_callback_t callback, __in void* callback_userdata);
 
 /**
  * send msg to queue handler
  * note: if you send msg on multi-thread, you should lock this method.
- * @param handler_p queue handler ptr
+ * @param handler queue handler ptr
  * @param msg_p msg ptr
  * @return status. 0 succeed. otherwise failed(see error code details on msg_queue_errno.h)
  */
-MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler_p, __in queue_msg_t *msg_p);
+MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler, __in queue_msg_t *msg_p);
 
 /**
  * available push byte size 
- * <Note: this size is NOT completely equal msg size>
- * @param handler_p queue handler ptr
+ * <Note: this is byte size is NOT completely equal msg count>
+ * @param handler queue handler ptr
  * @return byte size
  */
-uint32_t msg_queue_handler_available_push_bytes(__in msg_queue_handler handler_p);
+uint32_t msg_queue_handler_available_push_bytes(__in msg_queue_handler handler);
 
 /**
  * available pop byte size 
- * <Note: this size is NOT completely equal msg size>
- * @param handler_p queue handler ptr
+ * <Note: this is byte size is NOT completely equal msg count>
+ * @param handler queue handler ptr
  * @return byte size
  */
-uint32_t msg_queue_handler_available_pop_bytes(__in msg_queue_handler handler_p);
+uint32_t msg_queue_handler_available_pop_bytes(__in msg_queue_handler handler);
 
 /**
  * destroy queue handler
- * @param handler_p queue handler ptr
+ * @param handler queue handler ptr
  */
-void msg_queue_handler_destroy(__inout msg_queue_handler *handler_pp);
+void msg_queue_handler_destroy(__inout msg_queue_handler *handler_p);
 
 #ifdef __cplusplus
 }

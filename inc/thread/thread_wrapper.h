@@ -24,6 +24,7 @@
 #endif // !sleep
 
 #else /* for unix */
+
 #ifndef _GNU_SOURCE // for enable pthread_setname_np
 #define _GNU_SOURCE
 #endif // !_GNU_SOURCE
@@ -33,7 +34,8 @@
 #ifndef Sleep
 #define Sleep(millseconds)       usleep((millseconds) * 1000)
 #endif // !Sleep
-#endif /* #ifdef _WIN32 */
+
+#endif // _WIN32
 
 // For gettid.
 #if defined(__APPLE__)
@@ -75,4 +77,4 @@ extern "C" {
 };
 #endif
 
-#endif /* #ifdef LCU_THREAD_WRAPPER_H*/
+#endif // !LCU_THREAD_WRAPPER_H

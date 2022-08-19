@@ -16,7 +16,7 @@ set BUILD_DIR=build_android_%BUILD_ABI%
 TITLE=%BUILD_DIR%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%
-::set output_dir=.\\output\\android\\armeabi-v7a
+::set OUTPUT_DIR=.\\output\\android\\armeabi-v7a
 rmdir /S /Q %BUILD_DIR:"=% 2>nul
 mkdir %BUILD_DIR:"=%
 %CMAKE_BIN% -H.\ -B.\%BUILD_DIR:"=%                         ^
@@ -29,7 +29,7 @@ mkdir %BUILD_DIR:"=%
 			-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
 			-DANDROID_PLATFORM=android-19                   ^
 			-DANDROID_STL=c++_static 
-::			-DARG_LCU_OUTPUT_DIR=%output_dir% 
+::			-DARG_PRJ_OUTPUT_DIR=%OUTPUT_DIR% 
 
 set ERR_CODE=%ERRORLEVEL%
 IF %ERR_CODE% NEQ 0 (
@@ -39,10 +39,10 @@ IF %ERR_CODE% NEQ 0 (
 
 %NINJA_BIN% -C .\%BUILD_DIR:"=%
 set ERR_CODE=%ERRORLEVEL%
-::mkdir %output_dir%
-::copy /Y .\build_android_v7a\libcutils_test %output_dir%\\
-::copy /Y .\build_android_v7a\liblcu_a.a %output_dir%\\
-::copy /Y .\build_android_v7a\liblcu.so %output_dir%\\
+::mkdir %OUTPUT_DIR%
+::copy /Y .\build_android_v7a\libcutils_test %OUTPUT_DIR%\\
+::copy /Y .\build_android_v7a\liblcu_a.a %OUTPUT_DIR%\\
+::copy /Y .\build_android_v7a\liblcu.so %OUTPUT_DIR%\\
 
 @echo.
 @echo "compile finished. bye bye..."

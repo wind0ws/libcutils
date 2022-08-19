@@ -1,9 +1,9 @@
 #include "data/base64.h"
-#include "log/xlog.h"
 #include "mem/strings.h"
 #include <malloc.h>
 
 #define LOG_TAG "BASE64_TEST"
+#include "log/logger.h"
 
 int base64_test()
 {

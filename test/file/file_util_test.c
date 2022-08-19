@@ -1,6 +1,8 @@
 #include "file/file_util.h"
 #include "mem/strings.h"
-#include "log/xlog.h"
+
+#define LOG_TAG "FILE_UTIL_TEST"
+#include "log/logger.h"
 
 int file_util_test()
 {

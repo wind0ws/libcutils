@@ -115,7 +115,7 @@ char* strreplace(char const* const original,
 	const char* patloc;
 
 	// find how many times the pattern occurs in the original string
-	for (oriptr = original; (patloc = strstr(oriptr, pattern)) != NULL; oriptr = patloc + patlen)
+	for (oriptr = original; NULL != (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
 	{
 		++patcnt;
 	}
@@ -123,7 +123,7 @@ char* strreplace(char const* const original,
 	// allocate memory for the new string
 	size_t const retlen = orilen + patcnt * (replen - patlen);
 	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
-	if (returned != NULL)
+	if (NULL != returned)
 	{
 		//memset(returned, '\0', sizeof(char) * (retlen + 1));
 		returned[0] = '\0';
@@ -134,10 +134,12 @@ char* strreplace(char const* const original,
 		{
 			size_t const skplen = patloc - oriptr;
 			// copy the section until the occurrence of the pattern
-			strncpy(retptr, oriptr, skplen);
+			//strncpy(retptr, oriptr, skplen);
+			memcpy(retptr, oriptr, skplen);
 			retptr += skplen;
 			// copy the replacement 
-			strncpy(retptr, replacement, replen);
+			//strncpy(retptr, replacement, replen);
+			memcpy(retptr, replacement, replen);
 			retptr += replen;
 		}
 		// copy the rest of the string.

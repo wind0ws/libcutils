@@ -3,6 +3,7 @@
 #define LCU_RING_BUF_H
 
 #include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

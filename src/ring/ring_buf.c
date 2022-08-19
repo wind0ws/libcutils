@@ -47,14 +47,14 @@ ring_handle ring_buf_create(const size_t size)
 {
 	if (size < 3)
 	{
-		RING_LOGE("buf size too small. %zu", size);
+		RING_LOGE("buf size(%zu) too small", size);
 		return NULL;
 	}
 	const size_t expect_mem_size = size + sizeof(struct __ring_buf_t);
 	char* pbuf = (char*)malloc(expect_mem_size);
 	if (!pbuf) 
 	{
-		RING_LOGE("failed alloc %zu size for ring_buf", expect_mem_size);
+		RING_LOGE("failed alloc(%zu) size for ring_buf", expect_mem_size);
 		return NULL;
 	}
 	ring_handle handle = ring_buf_create_with_mem(pbuf, expect_mem_size);

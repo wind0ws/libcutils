@@ -28,7 +28,7 @@ LogLevel slog_get_min_level()
 	return _g_slog_min_level;
 }
 
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:4996) //for disable freopen warning
@@ -36,7 +36,6 @@ LogLevel slog_get_min_level()
 
 void slog_stdout2file(char* file_path)
 {
-
 	if (NULL == file_path)
 	{
 		return;
@@ -75,7 +74,7 @@ void slog_back2stdout()
 #pragma warning(pop)
 #endif // _WIN32
 
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 void __slog_internal_hex_print(int level, char* tag, char* chars, size_t chars_count)
 {

@@ -38,7 +38,7 @@ typedef enum
 extern "C" {
 #endif // __cplusplus
 
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 	/**
 	 * redirect stdout from console to file.
 	 * note: NOT THREAD-SAFE. call it on begin of your program.
@@ -50,7 +50,7 @@ extern "C" {
 	 * note: NOT THREAD-SAFE. call it on end of your program.
 	 */
 	void xlog_back2stdout();
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 	/**
 	 * auto increase low level to trigger_level.

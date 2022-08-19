@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.5.2 LANGUAGES C CXX)
+project(libcutils VERSION 1.5.3 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -12,13 +12,18 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
 option(BUILD_TESTS "Build test programs" ON)
+IF(WIN32)
+  # for export all symbols on windows 
+  # cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE
+  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "export dll ALL_SYMBOLS" ON)
+ENDIF(WIN32)
 
 #detect current TARGET_ABI
 IF(ANDROID)
@@ -38,60 +43,63 @@ ELSE()
 ENDIF(ANDROID)
 
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
-#get lcu root dirs,because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
-get_filename_component(LCU_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
-message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n LCU_ROOT_DIR => ${LCU_ROOT_DIR}\n")
+#get lcu root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
+get_filename_component(PRJ_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
+message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n PRJ_ROOT_DIR => ${PRJ_ROOT_DIR}\n")
 
 # 获取当前的GIT_HASH
-set(GIT_HASH "unknown")
-get_git_hash(GIT_HASH ${LCU_ROOT_DIR})
-message(STATUS "Git hash is ${GIT_HASH}")
+set(PRJ_VER_REVISION "unknown")
+get_git_hash(PRJ_VER_REVISION ${PRJ_ROOT_DIR})
+message(STATUS "Git hash is ${PRJ_VER_REVISION}")
 
 # 获取当前的分支
-set(GIT_BRANCH "unknown")
-get_git_branch(GIT_BRANCH ${LCU_ROOT_DIR})
-message(STATUS "Git branch is ${GIT_BRANCH}")
-# 设置版本号，供下面的lcu.version.h.in使用
-set(LCU_VER_MAJOR "${PROJECT_VERSION}")
+set(PRJ_VER_BRANCH "unknown")
+get_git_branch(PRJ_VER_BRANCH ${PRJ_ROOT_DIR})
+message(STATUS "Git branch is ${PRJ_VER_BRANCH}")
+# 设置版本号，供下面的lcu_version.h.in使用
+set(PRJ_VER_MAJOR "${PROJECT_VERSION}")
 
 if(WIN32)
-	set(LCU_WIN_PTHREAD_MODE 0)
-	if(ARG_LCU_WIN_PTHREAD_MODE)
-		message(STATUS "ARG_LCU_WIN_PTHREAD_MODE is set, value is ${ARG_LCU_WIN_PTHREAD_MODE}")
-		if(("${ARG_LCU_WIN_PTHREAD_MODE}" STREQUAL  ""))
-			message(WARNING "ARG_LCU_WIN_PTHREAD_MODE value is empty.")
-		else()
-			set(LCU_WIN_PTHREAD_MODE ${ARG_LCU_WIN_PTHREAD_MODE})
+	#set(PRJ_WIN_PTHREAD_MODE 0)
+	if(PRJ_WIN_PTHREAD_MODE)
+		message(STATUS "PRJ_WIN_PTHREAD_MODE is set, value is ${PRJ_WIN_PTHREAD_MODE}")
+		if(("${PRJ_WIN_PTHREAD_MODE}" STREQUAL  ""))
+			message(WARNING "PRJ_WIN_PTHREAD_MODE value is empty.")
+			set(PRJ_WIN_PTHREAD_MODE 0)
 		endif()
 	else()
-		message(STATUS "ARG_LCU_WIN_PTHREAD_MODE is not set.")
-	endif(ARG_LCU_WIN_PTHREAD_MODE)
+		message(STATUS "PRJ_WIN_PTHREAD_MODE is not set.")
+		set(PRJ_WIN_PTHREAD_MODE 0)
+	endif(PRJ_WIN_PTHREAD_MODE)
 	
-	message(STATUS "LCU_WIN_PTHREAD_MODE => ${LCU_WIN_PTHREAD_MODE}")
+	message(STATUS "PRJ_WIN_PTHREAD_MODE => ${PRJ_WIN_PTHREAD_MODE}")
 endif(WIN32)  
 
-set(LCU_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
-if(ARG_LCU_OUTPUT_DIR)
-    message(STATUS "ARG_LCU_OUTPUT_DIR is set, value is ${ARG_LCU_OUTPUT_DIR}")
-	if(("${ARG_LCU_OUTPUT_DIR}" STREQUAL  ""))
-		message(WARNING "ARG_LCU_OUTPUT_DIR value is empty.")
+#set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
+if(PRJ_OUTPUT_DIR)
+    message(STATUS "PRJ_OUTPUT_DIR is set, value is ${PRJ_OUTPUT_DIR}")
+	if(("${PRJ_OUTPUT_DIR}" STREQUAL  ""))
+		message(WARNING "PRJ_OUTPUT_DIR value is empty.")
+		set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
 	else()
-	    get_filename_component(LCU_OUTPUT_DIR ${ARG_LCU_OUTPUT_DIR} ABSOLUTE)
-		#set(LCU_OUTPUT_DIR ${ARG_LCU_OUTPUT_DIR})
+	    get_filename_component(PRJ_OUTPUT_DIR ${ARG_PRJ_OUTPUT_DIR} ABSOLUTE)
+		#set(PRJ_OUTPUT_DIR ${ARG_PRJ_OUTPUT_DIR})
 	endif()
 else()
-   message(STATUS "ARG_LCU_OUTPUT_DIR is not set.")
-endif(ARG_LCU_OUTPUT_DIR)
-message(STATUS "current LCU_OUTPUT_DIR => ${LCU_OUTPUT_DIR}")
+   message(STATUS "ARG_PRJ_OUTPUT_DIR is not set. use default")
+   set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
+endif(PRJ_OUTPUT_DIR)
+message(STATUS "current PRJ_OUTPUT_DIR => ${PRJ_OUTPUT_DIR}")
 
 IF (WIN32)
-  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/windows")
+  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/windows")
 ELSEIF (ANDROID)
-  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/android")
+  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/android")
 ELSE()
-  set(DEPLOY_DIR "${LCU_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/linux")
+  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}/linux")
 ENDIF (WIN32)
-  set(DEPLOY_DIR "${DEPLOY_DIR}/${TARGET_ABI}")
+
+set(DEPLOY_DIR "${DEPLOY_DIR}/${TARGET_ABI}")
 message(STATUS  "DEPLOY_DIR => ${DEPLOY_DIR}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DEPLOY_DIR})
@@ -111,62 +119,64 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
 
 
 
-set(LCU_HEADER_ROOT_DIR ${LCU_ROOT_DIR}/inc)
+set(PRJ_HEADER_ROOT_DIR ${PRJ_ROOT_DIR}/inc)
 configure_file(
-  ${LCU_HEADER_ROOT_DIR}/config/lcu_version.h.in
+  ${PRJ_HEADER_ROOT_DIR}/config/lcu_version.h.in
   ${CMAKE_BINARY_DIR}/generate/config/lcu_version.h
   @ONLY)
 
 configure_file(
-  ${LCU_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
+  ${PRJ_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
   ${CMAKE_BINARY_DIR}/generate/config/lcu_build_config.h
   @ONLY)
 
 #collect header(*.h) directories
-#scan_header_dirs(${LCU_HEADER_ROOT_DIR} LCU_HEADER_DIRS)
+#scan_header_dirs(${PRJ_HEADER_ROOT_DIR} LCU_HEADER_DIRS)
 #message(STATUS "LCU_HEADER_DIRS => \n ${LCU_HEADER_DIRS}\n")
-include_directories(${LCU_HEADER_ROOT_DIR}
+include_directories(${PRJ_HEADER_ROOT_DIR}
 					${CMAKE_BINARY_DIR}/generate/)
 
 #=====================PUBLISH HEADER BEGIN=====================
 #method1: collect all header files, and copy to output dir. the flaw is can't keep dir structure.
 #collect header files, exclude cmake configure_file(.h.in)
-#file(GLOB_RECURSE HEADER_FILES "${LCU_ROOT_DIR}/inc/*.h" "${LCU_ROOT_DIR}/inc/*.hpp")
+#file(GLOB_RECURSE HEADER_FILES "${PRJ_ROOT_DIR}/inc/*.h" "${PRJ_ROOT_DIR}/inc/*.hpp")
+
 #file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #method2: copy header dir to output dir, and remove cmake configure_file, and copy generate configure_file.
-file(COPY ${LCU_HEADER_ROOT_DIR} DESTINATION ${LCU_OUTPUT_DIR}/)
-file(GLOB_RECURSE OUT_H_IN_FILES ${LCU_OUTPUT_DIR}/inc/config/*.h.in)
+file(COPY ${PRJ_HEADER_ROOT_DIR} DESTINATION ${PRJ_OUTPUT_DIR}/)
+file(GLOB_RECURSE OUT_H_IN_FILES ${PRJ_OUTPUT_DIR}/inc/config/*.h.in)
 file(REMOVE ${OUT_H_IN_FILES})
 file(GLOB_RECURSE GENERATE_H_FILES ${CMAKE_BINARY_DIR}/generate/*.h)
-file(COPY ${GENERATE_H_FILES} DESTINATION ${LCU_OUTPUT_DIR}/inc/config/)
-#file(COPY ${LCU_ROOT_DIR}/libs/ DESTINATION ${LCU_OUTPUT_DIR}/libs/)
+file(COPY ${GENERATE_H_FILES} DESTINATION ${PRJ_OUTPUT_DIR}/inc/config/)
+#file(COPY ${PRJ_ROOT_DIR}/libs/ DESTINATION ${PRJ_OUTPUT_DIR}/libs/)
 #=====================PUBLISH HEADER END=====================
 
 #=====================COLLECT SRC BEGIN=====================
-#collect src to "LCU_SRCS" 
-#aux_source_directory(${LCU_ROOT_DIR}/src LCU_SRCS)
-set(LCU_SRC_DIR "${LCU_ROOT_DIR}/src")
-file(GLOB_RECURSE LCU_SRCS "${LCU_SRC_DIR}/*.c" "${LCU_SRC_DIR}/*.cpp" "${LCU_SRC_DIR}/*.hpp" "${LCU_SRC_DIR}/*.cxx")
-message(STATUS "\n LCU_SRCS => ${LCU_SRCS}\n ")
+#collect src to "PRJ_SRCS" 
+#aux_source_directory(${PRJ_ROOT_DIR}/src PRJ_SRCS)
+set(PRJ_SRC_DIR "${PRJ_ROOT_DIR}/src")
+file(GLOB_RECURSE PRJ_SRCS "${PRJ_SRC_DIR}/*.c" "${PRJ_SRC_DIR}/*.cpp" "${PRJ_SRC_DIR}/*.hpp" "${PRJ_SRC_DIR}/*.cxx")
+message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 
-#set(LCU_TEST_SRCS
-#		${LCU_ROOT_DIR}/test/file_util_test.c
-#		${LCU_ROOT_DIR}/test/file_logger_test.c
-#		${LCU_ROOT_DIR}/test/main.c
+#set(PRJ_TEST_SRCS
+#		${PRJ_ROOT_DIR}/test/file_util_test.c
+#		${PRJ_ROOT_DIR}/test/file_logger_test.c
+#		${PRJ_ROOT_DIR}/test/main.c
 #)
-set(LCU_TEST_SRC_DIR "${LCU_ROOT_DIR}/test")
-file(GLOB_RECURSE LCU_TEST_SRCS "${LCU_TEST_SRC_DIR}/*.c" "${LCU_TEST_SRC_DIR}/*.cpp" "${LCU_TEST_SRC_DIR}/*.hpp")
-message(STATUS "\n LCU_TEST_SRCS => ${LCU_TEST_SRCS}\n ")
+set(PRJ_TEST_SRC_DIR "${PRJ_ROOT_DIR}/test")
+file(GLOB_RECURSE PRJ_TEST_SRCS "${PRJ_TEST_SRC_DIR}/*.c" "${PRJ_TEST_SRC_DIR}/*.cpp" "${PRJ_TEST_SRC_DIR}/*.hpp")
+message(STATUS "\n PRJ_TEST_SRCS => ${PRJ_TEST_SRCS}\n ")
 #=====================COLLECT SRC END=====================
 
 #====================SOURCE_GROUP BEGIN====================
 # make Source tree as same as your folder structure.		
 # Reference: https://stackoverflow.com/a/56496104 		
-# Create the source groups for source tree with root at LCU_ROOT_DIR. 
+# Create the source groups for source tree with root at PRJ_ROOT_DIR. 
 # Support from cmake 3.8
-source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_SRCS})
-source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
+source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_SRCS})
+source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_TEST_SRCS})
+#source_group(TREE ${PRJ_ROOT_DIR} FILES ${HEADER_FILES})
 
 #SET(HEADER_FILE_LIST "")
 #file(GLOB_RECURSE TMP_HEADERS ${CMAKE_BINARY_DIR}/generate/*.h)
@@ -177,47 +187,49 @@ source_group(TREE ${LCU_ROOT_DIR} FILES ${LCU_TEST_SRCS})
 #ENDFOREACH ()
 #LIST(REMOVE_DUPLICATES HEADER_FILE_LIST)
 #message(STATUS "HEADER_FILE_LIST => \n ${HEADER_FILE_LIST}\n")
-#source_group(TREE ${LCU_ROOT_DIR} PREFIX "inc" FILES ${HEADER_FILE_LIST})
+#source_group(TREE ${PRJ_ROOT_DIR} PREFIX "inc" FILES ${HEADER_FILE_LIST})
 
 #file(GLOB_RECURSE project_headers *.h)
 #file(GLOB_RECURSE project_cpps *.cpp)
 #set(all_files ${project_headers} ${project_cpps})
-#set(all_files ${HEADER_FILE_LIST} ${LCU_TEST_SRCS} ${LCU_SRCS})
+#set(all_files ${HEADER_FILE_LIST} ${PRJ_TEST_SRCS} ${PRJ_SRCS})
 #其中all_files是保存了所有文件名的变量。注意，这里用的是变量名，而没有引用其值。
 #source_group_by_dir(all_files)
 #====================SOURCE_GROUP   END====================
 
-set(target_lcu_static "lcu")
-set(target_lcu_shared "lcu_shared")
-set(target_lcu_test   "libcutils_test")
+set(target_prj_static "lcu")
+set(target_prj_shared "lcu_shared")
+set(target_prj_test   "lcu_test")
 
-add_library(${target_lcu_static}
+add_library(${target_prj_static}
 			STATIC
 			
-			${LCU_SRCS})
+			${HEADER_FILES}
+			${PRJ_SRCS})
 			
-add_library(${target_lcu_shared}
+add_library(${target_prj_shared}
 			SHARED
 			
-			${LCU_SRCS}
-			${LCU_SRC_DIR}/libcutils.def)
+			${HEADER_FILES}
+			${PRJ_SRCS})
 			
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(${target_lcu_static} PROPERTIES OUTPUT_NAME "lcu_a")
-set_target_properties(${target_lcu_shared} PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(${target_prj_static} PROPERTIES OUTPUT_NAME "lcu_a")
+set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "lcu")
 if(NOT MSVC)
-# strip 
-set_target_properties(${target_lcu_static} PROPERTIES LINK_FLAGS_RELEASE -s)
-set_target_properties(${target_lcu_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
-endif()
+  # strip 
+  set_target_properties(${target_prj_static} PROPERTIES LINK_FLAGS_RELEASE -s)
+  set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
+endif(NOT MSVC)
 # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
-#set_target_properties(${target_lcu_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-#set_target_properties(${target_lcu_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(${target_prj_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+#set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-set_target_properties(${target_lcu_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
 			
-add_executable(${target_lcu_test}
-		${LCU_TEST_SRCS})			
+add_executable(${target_prj_test}
+
+			   ${PRJ_TEST_SRCS})			
 
 IF(UNIX)
   message(STATUS "Current build system is unix!")
@@ -253,17 +265,17 @@ ELSEIF(WIN32)
   message(STATUS "Current build system is WIN32!")
   set(HAVE_PTHREAD_SETNAME_NP 1)
   # set vs startup project
-  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_lcu_test})
-  #set_property(TARGET ${target_lcu_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
-  if("${LCU_WIN_PTHREAD_MODE}" MATCHES "0")
+  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_test})
+  #set_property(TARGET ${target_prj_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
+  if("${PRJ_WIN_PTHREAD_MODE}" MATCHES "0")
 	 message(STATUS "use pthread_win_lib")
 	 #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
-	 set(pthread-lib "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.lib")
+	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.lib")
 	 
-	 #copy_file_on_post_build(${target_lcu_test} "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
-	 #copy_file_on_post_build_to_all_targets("${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
-	 set(dll_files "${pthread-lib}" "${LCU_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build(${target_prj_test} "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
 	 message(STATUS "dll_files => ${dll_files}")
 	 #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
 	 copy_file_on_post_build_to_all_targets(dll_files)
@@ -286,7 +298,7 @@ message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
 #
 #add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
 #add_definitions("-DCURL_STATICLIB")
-if(HAVE_PTHREAD_SETNAME_NP STREQUAL "1")
+if("${HAVE_PTHREAD_SETNAME_NP}" STREQUAL "1")
   add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
 endif()
 #add compile/optimize options for DEBUG/RELEASE
@@ -343,30 +355,25 @@ ELSE() # for unix
   add_definitions(-D_GNU_SOURCE)
 ENDIF(WIN32)
 
-#依赖的动态库目录
-#link_directories(
-#     /xxx/xxx/lib
-#)	
-
 #================declare dependencies of build target BEGIN================
 target_link_libraries( # Specifies the target library.
-        ${target_lcu_static} PUBLIC
+        ${target_prj_static} PUBLIC
 
 		${pthread-lib}
         ${log-lib}
         )
 		
 target_link_libraries( # Specifies the target library.
-        ${target_lcu_shared} PUBLIC
+        ${target_prj_shared} PUBLIC
 
 		${pthread-lib}
         ${log-lib}
         )		
 
 target_link_libraries( # Specifies the target library.
-        ${target_lcu_test}
+        ${target_prj_test}
 
-		${target_lcu_static}
+		${target_prj_static}
 		#${pthread-lib}
 		#${log-lib}
         )		

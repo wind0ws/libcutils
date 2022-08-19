@@ -5,7 +5,7 @@
 #include <stdbool.h>      /* for true/false                    */
 #include <stddef.h>       /* for size_t                        */
 #include <stdint.h>       /* for int32_t                       */
-#include <stdlib.h>       /* for abort,random                  */
+#include <stdlib.h>       /* for abort,random,free             */
 #include <stdio.h>        /* for FILE                          */
 #include <assert.h>       /* for assert                        */
 #include <sys/types.h>    /* for ssize_t                       */
@@ -70,18 +70,21 @@ typedef float               FLOAT;
 
 // for API_EXPORT/IMPORT
 #if defined(_MSC_VER) //  Microsoft 
-#define API_EXPORT __declspec(dllexport)
-#define API_IMPORT __declspec(dllimport)
+#ifdef _EXPORTING
+#define API_DECLSPEC __declspec(dllexport)
+#else
+#define API_DECLSPEC __declspec(dllimport)
+#endif // _EXPORTING
+#define API_VISIBLE 
 #define API_HIDDEN 
 #elif defined(__GNUC__) //  GCC
-#define API_EXPORT __attribute__((visibility("default")))
-#define API_IMPORT
-#define API_HIDDEN __attribute__((visibility("hidden")))
-#else
-//  do nothing and hope for the best?
-#define API_EXPORT
-#define API_IMPORT
-#define API_HIDDEN
+#define API_DECLSPEC 
+#define API_VISIBLE __attribute__((visibility("default")))
+#define API_HIDDEN  __attribute__((visibility("hidden")))
+#else //  do nothing and hope for the best?
+#define API_DECLSPEC 
+#define API_VISIBLE 
+#define API_HIDDEN 
 #pragma warning Unknown dynamic link import/export/hidden semantics.
 #endif // _MSC_VER
 
@@ -109,7 +112,7 @@ typedef float               FLOAT;
 #endif // !__BEGIN_DECLS
 
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
-//sigh: windows ONLY defined size_t on vcruntime.h. so we need define ssize_t
+//msvc ONLY defined size_t on vcruntime.h. so we need define ssize_t
 #ifdef _WIN32
 #if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
 typedef intptr_t ssize_t;
@@ -245,6 +248,7 @@ typedef intptr_t ssize_t;
 #define X_OK 1
 #define W_OK 2
 #define R_OK 4
+
 //just to make MSC happy
 #define access(path_name, mode)   _access(path_name, mode)
 #define mkdir(path, mode)         _mkdir(path)
@@ -280,6 +284,7 @@ static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
              GENERATOR(STATE_STOP)
 DEF_ENUM(STATES, FOREACH_STATES_ITEM);
 DECLARE_ENUM_STRS(STATES);
+
 // def enum string on source file
 DEF_ENUM_STRS(STATES, FOREACH_STATES_ITEM);
 //now you can print enum str

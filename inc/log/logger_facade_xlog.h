@@ -9,13 +9,13 @@
 #define _LOG_SET_MIN_LEVEL_IMPL(min_level) do { xlog_set_min_level(min_level); } while(0)
 #define _LOG_GET_MIN_LEVEL_IMPL()          xlog_get_min_level()
 
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #define _LOG_STD2FILE_IMPL(file_path)       do { xlog_stdout2file(file_path); } while(0)
 #define _LOG_BACK2STD_IMPL()                do { xlog_back2stdout(); } while(0)   
 #else
 #define _LOG_STD2FILE_IMPL(file_path)       do { (void)(file_path); } while (0)
 #define _LOG_BACK2STD_IMPL()                do {} while (0)
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 #define _LOGV_TRACE_IMPL(tag, func_name, line_num, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, func_name, line_num, fmt, ##__VA_ARGS__)
 #define _LOGD_TRACE_IMPL(tag, func_name, line_num, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, func_name, line_num, fmt, ##__VA_ARGS__)

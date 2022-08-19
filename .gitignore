@@ -2,10 +2,12 @@
 cmake-build-debug/
 cmake-build-release/
 .idea/
+.vs/
 build/build_android_v7a/
 build/build_android_v8a/
 build/build_linux32/
 build/build_linux64/
-build/build_win32/
-build/build_win64/
+build/build_Win32/
+build/build_Win64/
 build/output/
+build/out/

@@ -21,7 +21,7 @@ extern "C" {
 	typedef struct
 	{
 #define MAX_LOG_FOLDER_PATH_SIZE (128)
-#define MAX_LOG_FILE_NAME_PREFIX_SIZE (16)
+#define MAX_LOG_FILE_NAME_PREFIX_SIZE (32)
 		char log_folder_path[MAX_LOG_FOLDER_PATH_SIZE];
 		char log_file_name_prefix[MAX_LOG_FILE_NAME_PREFIX_SIZE];
 		size_t one_piece_file_max_len;

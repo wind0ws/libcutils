@@ -7,7 +7,6 @@
 #define LOG_TAG          ("TIME_TEST")
 #include "log/logger.h"
 
-
 #define HOUR_TO_SECONDS  (3600)
 
 static void test_rfc_1123_2822()

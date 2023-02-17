@@ -80,8 +80,7 @@ int file_util_mkdirs(__in const char* folder_path)
 			//folder already exists
 			continue;
 		}
-		ret = MKDIR(tmp_dir_path);
-		if (ret != 0)
+		if (0 != (ret = MKDIR(tmp_dir_path)))
 		{
 			//error occurred on mkdir
 			return ret;
@@ -137,7 +136,7 @@ static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_cou
 		int once_op_size = (int)target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
 		if (once_op_size < 1)
 		{
-			//error occurred
+			//0:normal rw complete, otherwise error occurred
 			break;
 		}
 		cur_char_count += once_op_size;

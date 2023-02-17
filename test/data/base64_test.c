@@ -16,22 +16,22 @@ int base64_test()
 	int ret;
 	if ((ret = lcu_base64_encode(encode_buf, plain_utf8_str, plain_str_len)) < (int)plain_str_len)
 	{
-		TLOGE(LOG_TAG, "failed on encode base64");
+		LOGE("failed on encode base64");
 		free(encode_buf);
 		return ret;
 	}
-	TLOGI(LOG_TAG, "succeed encode \"%s\" ==> \"%s\"", plain_utf8_str, encode_buf);
+	LOGI("succeed encode \"%s\" ==> \"%s\"", plain_utf8_str, encode_buf);
 
 	size_t decode_buf_len = lcu_base64_decode_buf_size(encode_buf_len);
 	char* decode_buf = (char*)malloc(decode_buf_len);
 
 	if ((ret = lcu_base64_decode(decode_buf, encode_buf)) != (int)plain_str_len)
 	{
-		TLOGE(LOG_TAG, "failed on decode base64");
+		LOGE("failed on decode base64");
 	}
 	else
 	{
-		TLOGI(LOG_TAG, "succeed decode \"%s\" ==> \"%s\"", encode_buf, decode_buf);
+		LOGI("succeed decode \"%s\" ==> \"%s\"", encode_buf, decode_buf);
 	}
 
 	free(encode_buf);

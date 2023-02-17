@@ -12,7 +12,7 @@ typedef struct
 
 static void handler_cb(queue_msg_t* msg_p, void* user_data)
 {
-	TLOGD(LOG_TAG, "receive msg(what=%d, obj_len=%d): %s", msg_p->what, msg_p->obj_len, msg_p->obj);
+	LOGD("receive msg(what=%d, obj_len=%d): %s", msg_p->what, msg_p->obj_len, msg_p->obj);
 }
 
 #define MSG_OBJ_MAX_SIZE  (2048)
@@ -35,13 +35,13 @@ static int run_msg_queue_handler_testcase()
 			status_send = msg_queue_handler_send(my_hdl.handler, msg_p);
 			if (status_send == MSG_Q_CODE_FULL)
 			{
-				TLOGW(LOG_TAG, "full. %d sleeping", i);
+				LOGW("queue full. sleeping at %d", i);
 				usleep(2000);
 			}
 		} while (status_send != 0 && retry_counter++ < 2);
 		if (status_send)
 		{
-			TLOGE(LOG_TAG, "error(%d) on send msg. %d", status_send, i);
+			LOGE("error(%d) on send msg. %d", status_send, i);
 		}
 	}
 	free(msg_p);

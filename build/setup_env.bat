@@ -1,6 +1,6 @@
 @ECHO OFF &PUSHD %~DP0 &TITLE setup_env &color 0A
 
-set CMAKE_BIN=D:\Env\cmake\bin\cmake.exe
+set CMAKE_BIN=D:\env\cmake\bin\cmake.exe
 
 ::set ANDROID_SDK=D:\Android\android-sdk
 ::set ANDROID_NDK=D:\Android\android-sdk\ndk\21.3.6528147
@@ -11,16 +11,22 @@ set ANDROID_TOOLCHAIN_FILE=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 ::set cmake_version=3.10.2.4988404
 ::set CMAKE_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 ::set NINJA_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
-set NINJA_BIN=D:\Env\cmake\bin\ninja.exe
+set NINJA_BIN=D:\env\cmake\bin\ninja.exe
 
 @echo ===================Your Environment===================
 @echo.
 @echo CMAKE_BIN=%CMAKE_BIN%
+@echo.
 @echo NINJA_BIN=%NINJA_BIN%
 @echo ANDROID_NDK=%ANDROID_NDK%
 @echo ANDROID_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE%
 @echo.
 @echo ======================================================
+
+if not exist %CMAKE_BIN% (
+	@echo %CMAKE_BIN% not exists!!
+	@exit /b 2
+)
 
 
 set BUILD_ABI=%1

@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
 	{
-		if ((is_press_kb = _kbhit()))
+		if ((is_press_kb = (0 != _kbhit())))
 		{
 			pressed_char = _getch();
 			break;
@@ -297,7 +297,7 @@ static int run_test_case_from_user()
 		fprintf(stderr, "\n<== End Run testcase[%d]: %s, ret=%d\n\n", i, p_case->str_description, ret);
 		if (ret)
 		{
-			LOGI("failed run last test case, break. %d", ret);
+			LOGE("failed(%d) run last test case, break", ret);
 			break;
 		}
 	}

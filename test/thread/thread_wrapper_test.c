@@ -17,6 +17,7 @@ static void* thread_test_func(void* args)
 	{
 		LOGE_TRACE("error on sem_wait, code=%d", code);
 	}
+
 EXIT:
 	LOGW_TRACE("sem_wait exited, thread now exit");
 	return NULL;

@@ -2,9 +2,9 @@
 #ifndef LCU_LOGGER_H
 #define LCU_LOGGER_H
 
-//don't forget "#define LOG_TAG "xxx" " before include this header
+//don't forget to '#define LOG_TAG "xxx" ' before include this header
 #ifndef LOG_TAG
-#pragma message( "you are forget define LOG_TAG before include this header!!!" )
+#pragma message( "you forgot to define LOG_TAG before include this header!!!" )
 #endif // !LOG_TAG
 
 #define _LCU_LOGGER_TYPE_XLOG   (0)
@@ -16,17 +16,17 @@
 //#define LCU_LOGGER_SELECTOR  _LCU_LOGGER_TYPE_SLOG
 #endif // !LCU_LOGGER_SELECTOR
 
-#if(_LCU_LOGGER_TYPE_SLOG == LCU_LOGGER_SELECTOR)
+#if(LCU_LOGGER_SELECTOR == _LCU_LOGGER_TYPE_SLOG)
 
 #include "log/logger_facade_slog.h"
 
-#elif(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
+#elif(LCU_LOGGER_SELECTOR == _LCU_LOGGER_TYPE_XLOG)
 	
 #include "log/logger_facade_xlog.h"
 
 #else
 
-#error "unsupport LCU_LOGGER_SELECTOR type"
+#error "unsupport this LCU_LOGGER_SELECTOR type"
 
 #endif // LCU_LOGGER_SELECTOR
 

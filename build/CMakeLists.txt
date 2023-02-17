@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(libcutils VERSION 1.5.3 LANGUAGES C CXX)
+project(lcu VERSION 1.5.3 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
+
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # 使用utility.cmake
@@ -9,6 +10,7 @@ include(utility)
 include(CheckSymbolExists)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+SET(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
@@ -62,7 +64,7 @@ set(PRJ_VER_MAJOR "${PROJECT_VERSION}")
 if(WIN32)
 	#set(PRJ_WIN_PTHREAD_MODE 0)
 	if(PRJ_WIN_PTHREAD_MODE)
-		message(STATUS "PRJ_WIN_PTHREAD_MODE is set, value is ${PRJ_WIN_PTHREAD_MODE}")
+		message(STATUS "PRJ_WIN_PTHREAD_MODE is set, value = ${PRJ_WIN_PTHREAD_MODE}")
 		if(("${PRJ_WIN_PTHREAD_MODE}" STREQUAL  ""))
 			message(WARNING "PRJ_WIN_PTHREAD_MODE value is empty.")
 			set(PRJ_WIN_PTHREAD_MODE 0)
@@ -77,7 +79,7 @@ endif(WIN32)
 
 #set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
 if(PRJ_OUTPUT_DIR)
-    message(STATUS "PRJ_OUTPUT_DIR is set, value is ${PRJ_OUTPUT_DIR}")
+    message(STATUS "PRJ_OUTPUT_DIR is set, value = ${PRJ_OUTPUT_DIR}")
 	if(("${PRJ_OUTPUT_DIR}" STREQUAL  ""))
 		message(WARNING "PRJ_OUTPUT_DIR value is empty.")
 		set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/output")
@@ -197,9 +199,10 @@ source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_TEST_SRCS})
 #source_group_by_dir(all_files)
 #====================SOURCE_GROUP   END====================
 
-set(target_prj_static "lcu")
-set(target_prj_shared "lcu_shared")
-set(target_prj_test   "lcu_test")
+#====================DECLARE TARGET START==================
+set(target_prj_static "${CMAKE_PROJECT_NAME}_static")
+set(target_prj_shared "${CMAKE_PROJECT_NAME}_shared")
+set(target_prj_test   "${CMAKE_PROJECT_NAME}_test")
 
 add_library(${target_prj_static}
 			STATIC
@@ -214,8 +217,8 @@ add_library(${target_prj_shared}
 			${PRJ_SRCS})
 			
 # 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(${target_prj_static} PROPERTIES OUTPUT_NAME "lcu_a")
-set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "lcu")
+set_target_properties(${target_prj_static} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}_a")
+set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}")
 if(NOT MSVC)
   # strip 
   set_target_properties(${target_prj_static} PROPERTIES LINK_FLAGS_RELEASE -s)
@@ -229,8 +232,85 @@ set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION}
 			
 add_executable(${target_prj_test}
 
-			   ${PRJ_TEST_SRCS})			
+			   ${PRJ_TEST_SRCS})
+#====================DECLARE TARGET END==================			   
 
+
+#==================== SETUP FLAGS BEGIN==================
+IF(WIN32)
+  # suppress warnings for VS: 
+  # C4819: suppress utf8 coding page warning
+  # C4001：suppress single line comment warning
+  # C5105: suppress winbase.h undefined behavior warning
+  add_compile_options( /wd4819 /wd4001 /wd5105 )
+  #add optimiziation options
+  add_compile_options(/bigobj /nologo /EHsc /GF /MP)
+  #solution folder
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  #put ZERO_CHECK/ALL_BUILD in all_targets folder
+  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
+  #set vs startup project
+  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_test})
+  
+  #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
+ELSE() # for unix
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+  # Android 5.0 以上需要在此处设置 PIE
+  string(APPEND CMAKE_C_FLAGS          " -fPIC")
+  string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
+  #add _GNU_SOURCE for pthread_setname_np
+  add_definitions(-D_GNU_SOURCE)
+ENDIF(WIN32)
+
+# 小知识
+# add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，
+# 而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
+# add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
+# 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
+#
+#add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
+#add_definitions("-DCURL_STATICLIB")
+if("${HAVE_PTHREAD_SETNAME_NP}" STREQUAL "1")
+  add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
+endif()
+#add compile/optimize options for DEBUG/RELEASE
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
+if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
+	string(APPEND CMAKE_C_FLAGS_RELEASE        " /O2 /Ot /MT")
+	string(APPEND CMAKE_C_FLAGS_DEBUG          " /Od /MTd /DEBUG")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /O2 /Ot /MT")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /Od /MTd /DEBUG /Zi")
+	#string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
+	#string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
+	
+	set(COMMON_C_FLGAS   " /utf-8 /W3")
+	set(COMMON_CXX_FLAGS "")
+else()
+	string( TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER )
+    if (BUILD_TYPE_LOWER STREQUAL "debug")
+        message(STATUS "Debug build detected")
+        add_definitions("-D_DEBUG=1")
+    else()
+        message(STATUS "Release build detected")
+		add_definitions("-DNDEBUG")
+    endif()
+	string(APPEND CMAKE_C_FLAGS_RELEASE    " -O3")
+	string(APPEND CMAKE_C_FLAGS_DEBUG      " -Og")
+	string(APPEND CMAKE_CXX_FLAGS_RELEASE  " -O3")
+	string(APPEND CMAKE_CXX_FLAGS_DEBUG    " -Og")
+	
+	set(COMMON_C_FLGAS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-unknown-pragmas")
+    set(COMMON_CXX_FLAGS " -Wno-write-strings")
+endif()
+string(APPEND CMAKE_C_FLAGS   "${COMMON_C_FLGAS}")
+string(APPEND CMAKE_CXX_FLAGS "${COMMON_C_FLGAS} ${COMMON_CXX_FLGAS}")
+#==================== SETUP FLAGS END==================
+
+
+#==================== FIND DEPENDENCY LIB BEGIN ==================
 IF(UNIX)
   message(STATUS "Current build system is unix!")
   find_package(Threads REQUIRED)
@@ -264,18 +344,16 @@ IF(UNIX)
 ELSEIF(WIN32)
   message(STATUS "Current build system is WIN32!")
   set(HAVE_PTHREAD_SETNAME_NP 1)
-  # set vs startup project
-  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_test})
   #set_property(TARGET ${target_prj_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   if("${PRJ_WIN_PTHREAD_MODE}" MATCHES "0")
 	 message(STATUS "use pthread_win_lib")
 	 #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
-	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.lib")
+	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.lib")
 	 
-	 #copy_file_on_post_build(${target_prj_test} "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
-	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
-	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/win/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build(${target_prj_test} "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
+	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
 	 message(STATUS "dll_files => ${dll_files}")
 	 #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
 	 copy_file_on_post_build_to_all_targets(dll_files)
@@ -290,72 +368,10 @@ ENDIF(UNIX)
 message(STATUS "HAVE_PTHREAD_SETNAME_NP => ${HAVE_PTHREAD_SETNAME_NP}")
 message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
 
-# 小知识
-# add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，
-# 而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
-# add_definitions(-DFOO) 这个也是向编译器、源码添加选项，但是这个设计的初衷是为了添加宏定义的
-# 所以，如果你要是想向编译器添加选项就用 add_compile_options，否则就用 add_definitions
-#
-#add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
-#add_definitions("-DCURL_STATICLIB")
-if("${HAVE_PTHREAD_SETNAME_NP}" STREQUAL "1")
-  add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
-endif()
-#add compile/optimize options for DEBUG/RELEASE
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ")
-if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
-	string(APPEND CMAKE_C_FLAGS_RELEASE        " /O2 /Ot /MT")
-	string(APPEND CMAKE_C_FLAGS_DEBUG          " /Od /MTd /DEBUG")
-	string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /O2 /Ot /MT")
-	string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /Od /MTd /DEBUG /Zi")
-	#string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
-	#string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
-	
-	string(APPEND CMAKE_C_FLAGS   " /utf-8 /W3")
-    string(APPEND CMAKE_CXX_FLAGS " /utf-8 /W3")
-else()
-	string( TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER )
-    if (BUILD_TYPE_LOWER STREQUAL "debug")
-        message(STATUS "Debug build detected")
-        add_definitions("-D_DEBUG=1")
-    else()
-        message(STATUS "Release build detected")
-		add_definitions("-DNDEBUG")
-    endif()
-	string(APPEND CMAKE_C_FLAGS_RELEASE    " -O3")
-	string(APPEND CMAKE_C_FLAGS_DEBUG      " -Og")
-	string(APPEND CMAKE_CXX_FLAGS_RELEASE  " -O3")
-	string(APPEND CMAKE_CXX_FLAGS_DEBUG    " -Og")
-	
-    string(APPEND CMAKE_C_FLAGS   " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment")
-    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-write-strings")
-endif()
+#==================== FIND DEPENDENCY LIB END ==================
 
 
-IF(WIN32)
-  #supress warnings for VS
-  add_compile_options( /wd4819 /wd4001 )
-  #add optimiziation options
-  add_compile_options(/bigobj /nologo /EHsc /GF /MP)
-  #solution folder
-  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-  #put ZERO_CHECK/ALL_BUILD in all_targets folder
-  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
-  
-  #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
-  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4477 /wd4819" CACHE STRING "")
-ELSE() # for unix
-  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-  # Android 5.0 以上需要在此处设置 PIE
-  string(APPEND CMAKE_C_FLAGS          " -fPIC")
-  string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
-  string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
-  #add _GNU_SOURCE for pthread_setname_np
-  add_definitions(-D_GNU_SOURCE)
-ENDIF(WIN32)
-
-#================declare dependencies of build target BEGIN================
+#================SETUP dependencies of build target BEGIN================
 target_link_libraries( # Specifies the target library.
         ${target_prj_static} PUBLIC
 
@@ -377,4 +393,4 @@ target_link_libraries( # Specifies the target library.
 		#${pthread-lib}
 		#${log-lib}
         )		
-#================declare dependencies of build target END================
+#================SETUP dependencies of build target END==================

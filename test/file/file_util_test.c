@@ -6,7 +6,8 @@
 
 int file_util_test()
 {
-	char log_path[64] = "./log/sub";
+	char log_path[64] = { 0 };
+	strlcpy(log_path, "./log/sub", sizeof(log_path));
 	file_util_append_slash_on_path_if_needed(log_path, sizeof(log_path));
 	if (file_util_access(log_path, F_OK))
 	{

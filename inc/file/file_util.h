@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __LCU_FILE_UTIL_H
-#define __LCU_FILE_UTIL_H
+#ifndef LCU_FILE_UTIL_H
+#define LCU_FILE_UTIL_H
 
 #include "common_macro.h"
 
@@ -10,11 +10,14 @@ extern "C" {
 
 	/**
 	 * append slash("/" or "\\") if "folder_path" NOT end with slash("/" or "\\")
+	 * Note: "folder_path" must be readable and writable
 	 */
 	int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size);
 
 	/**
 	 * check folder_path is exists.
+	 * @param path: folder path
+	 * @param access_mode: F_OK(0)
 	 * @return 0 means access by mode is ok, otherwise it is error code.
 	 */
 	int file_util_access(__in const char* path, __in const int access_mode);
@@ -41,14 +44,14 @@ extern "C" {
 
 	/**
 	 * read on file_handle(file descriptor).
-	 * if you read a real file(FILE), use fread instead.
+	 * Note: if you read a real file(FILE), use "fread" instead.
 	 * @return read size
 	 */
 	int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count);
 
 	/**
 	 * write on file_handle(file descriptor).
-	 * if you write a real file(FILE), use fwrite instead.
+	 * Note: if you write a real file(FILE), use "fwrite" instead.
 	 * @return write size
 	 */
 	int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count);
@@ -57,4 +60,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif // __LCU_FILE_UTIL_H
+#endif // !LCU_FILE_UTIL_H

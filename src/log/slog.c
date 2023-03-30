@@ -76,9 +76,9 @@ void slog_back2stdout()
 
 #endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
-void __slog_internal_hex_print(int level, char* tag, char* chars, size_t chars_count)
+void __slog_internal_hex_print(int level, const char* tag, char* chars, size_t chars_count)
 {
-	char buf[256] = { 0 };
+	char buf[256];
 	str_char2hex(buf, sizeof(buf), chars, chars_count);
 	switch (level)
 	{

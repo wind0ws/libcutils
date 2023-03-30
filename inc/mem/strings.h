@@ -63,7 +63,7 @@ char* strndup(const char* s, size_t n);
 #endif // !STRING2LOWER
 
 
-#if defined(__GLIBC__) || defined(_WIN32)
+#if (defined(__GLIBC__) || defined(_WIN32))
 	/* Declaration of strlcpy() for platforms that don't already have it. */
 
 	/*

@@ -143,12 +143,12 @@ void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 		{
 			break;//send complete
 		}
-		MY_LOGE("failed(%d) on send log to queue. maybe queue is full!", status);
+		MY_LOGE("failed(%d) on send log to queue. queue full?", status);
 		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break;
 		}
-		MY_LOGE("try again later...");
+		MY_LOGE("try put it again later...");
 		++retry_counter;
 		usleep(1500);//1.5ms
 	} while (MSG_Q_CODE_SUCCESS != status && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL 

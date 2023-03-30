@@ -22,7 +22,7 @@ extern "C" {
 	void slog_back2stdout();
 #endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
 
-	void __slog_internal_hex_print(int level, char* tag, char* chars, size_t chars_count);
+	void __slog_internal_hex_print(int level, const char* tag, char* chars, size_t chars_count);
 	
 #ifdef __cplusplus
 }

@@ -29,7 +29,7 @@ typedef int (*test_case_func_t)();
 typedef struct
 {
 	test_case_func_t p_func;
-	char* str_description;
+	const char* str_description;
 } test_case_t;
 
 static void setup_console();

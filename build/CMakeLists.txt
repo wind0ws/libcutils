@@ -20,7 +20,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
-option(BUILD_TESTS "Build test programs" ON)
+option(BUILD_DEMO "Build demo programs" ON)
+message(STATUS "BUILD_STATIC_LIBS=${BUILD_STATIC_LIBS} BUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} BUILD_DEMO=${BUILD_DEMO}\n")
 IF(WIN32)
   # for export all symbols on windows 
   # cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE
@@ -161,14 +162,14 @@ set(PRJ_SRC_DIR "${PRJ_ROOT_DIR}/src")
 file(GLOB_RECURSE PRJ_SRCS "${PRJ_SRC_DIR}/*.c" "${PRJ_SRC_DIR}/*.cpp" "${PRJ_SRC_DIR}/*.hpp" "${PRJ_SRC_DIR}/*.cxx")
 message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 
-#set(PRJ_TEST_SRCS
+#set(PRJ_DEMO_SRCS
 #		${PRJ_ROOT_DIR}/test/file_util_test.c
 #		${PRJ_ROOT_DIR}/test/file_logger_test.c
 #		${PRJ_ROOT_DIR}/test/main.c
 #)
-set(PRJ_TEST_SRC_DIR "${PRJ_ROOT_DIR}/test")
-file(GLOB_RECURSE PRJ_TEST_SRCS "${PRJ_TEST_SRC_DIR}/*.c" "${PRJ_TEST_SRC_DIR}/*.cpp" "${PRJ_TEST_SRC_DIR}/*.hpp")
-message(STATUS "\n PRJ_TEST_SRCS => ${PRJ_TEST_SRCS}\n ")
+set(PRJ_DEMO_SRC_DIR "${PRJ_ROOT_DIR}/test")
+file(GLOB_RECURSE PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp" "${PRJ_DEMO_SRC_DIR}/*.hpp")
+message(STATUS "\n PRJ_DEMO_SRCS => ${PRJ_DEMO_SRCS}\n ")
 #=====================COLLECT SRC END=====================
 
 #====================SOURCE_GROUP BEGIN====================
@@ -177,7 +178,7 @@ message(STATUS "\n PRJ_TEST_SRCS => ${PRJ_TEST_SRCS}\n ")
 # Create the source groups for source tree with root at PRJ_ROOT_DIR. 
 # Support from cmake 3.8
 source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_SRCS})
-source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_TEST_SRCS})
+source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_DEMO_SRCS})
 #source_group(TREE ${PRJ_ROOT_DIR} FILES ${HEADER_FILES})
 
 #SET(HEADER_FILE_LIST "")
@@ -194,7 +195,7 @@ source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_TEST_SRCS})
 #file(GLOB_RECURSE project_headers *.h)
 #file(GLOB_RECURSE project_cpps *.cpp)
 #set(all_files ${project_headers} ${project_cpps})
-#set(all_files ${HEADER_FILE_LIST} ${PRJ_TEST_SRCS} ${PRJ_SRCS})
+#set(all_files ${HEADER_FILE_LIST} ${PRJ_DEMO_SRCS} ${PRJ_SRCS})
 #其中all_files是保存了所有文件名的变量。注意，这里用的是变量名，而没有引用其值。
 #source_group_by_dir(all_files)
 #====================SOURCE_GROUP   END====================
@@ -202,37 +203,45 @@ source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_TEST_SRCS})
 #====================DECLARE TARGET START==================
 set(target_prj_static "${CMAKE_PROJECT_NAME}_static")
 set(target_prj_shared "${CMAKE_PROJECT_NAME}_shared")
-set(target_prj_test   "${CMAKE_PROJECT_NAME}_test")
+set(target_prj_demo   "${CMAKE_PROJECT_NAME}_demo")
 
-add_library(${target_prj_static}
-			STATIC
-			
-			${HEADER_FILES}
-			${PRJ_SRCS})
-			
-add_library(${target_prj_shared}
-			SHARED
-			
-			${HEADER_FILES}
-			${PRJ_SRCS})
-			
-# 指定库的输出名称(静态库和动态库可以用相同的名称)
-set_target_properties(${target_prj_static} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}_a")
-set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}")
-if(NOT MSVC)
-  # strip 
-  set_target_properties(${target_prj_static} PROPERTIES LINK_FLAGS_RELEASE -s)
-  set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
-endif(NOT MSVC)
-# 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
-#set_target_properties(${target_prj_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-#set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-# 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
-			
-add_executable(${target_prj_test}
+IF (BUILD_STATIC_LIBS)
+  add_library(${target_prj_static}
+  			  STATIC
+  			  
+  			  ${HEADER_FILES}
+  			  ${PRJ_SRCS})
+  set_target_properties(${target_prj_static} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}_a")
+  #set_target_properties(${target_prj_static} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+  IF (NOT MSVC) # strip 
+    set_target_properties(${target_prj_static} PROPERTIES LINK_FLAGS_RELEASE -s)
+  ENDIF (NOT MSVC)
+ENDIF(BUILD_STATIC_LIBS)
 
-			   ${PRJ_TEST_SRCS})
+IF (BUILD_SHARED_LIBS)			
+  add_library(${target_prj_shared}
+  			  SHARED
+  			  
+  			  ${HEADER_FILES}
+  			  ${PRJ_SRCS})
+
+  # 指定库的输出名称(静态库和动态库可以用相同的名称)
+  set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}")
+  # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
+  #set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+  # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
+  set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+  IF (NOT MSVC) # strip 
+    set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
+  ENDIF (NOT MSVC)
+ENDIF (BUILD_SHARED_LIBS)
+			
+IF (BUILD_DEMO)			
+  add_executable(${target_prj_demo}
+  
+  			     ${PRJ_DEMO_SRCS})
+ENDIF (BUILD_DEMO)
+
 #====================DECLARE TARGET END==================			   
 
 
@@ -250,7 +259,7 @@ IF(WIN32)
   #put ZERO_CHECK/ALL_BUILD in all_targets folder
   set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "all_targets")
   #set vs startup project
-  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_test})
+  set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_demo})
   
   #string(REPLACE "/w4477" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4477 /wd4819" CACHE STRING "")
@@ -344,14 +353,14 @@ IF(UNIX)
 ELSEIF(WIN32)
   message(STATUS "Current build system is WIN32!")
   set(HAVE_PTHREAD_SETNAME_NP 1)
-  #set_property(TARGET ${target_prj_test} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
+  #set_property(TARGET ${target_prj_demo} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   if("${PRJ_WIN_PTHREAD_MODE}" MATCHES "0")
 	 message(STATUS "use pthread_win_lib")
 	 #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
 	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.lib")
 	 
-	 #copy_file_on_post_build(${target_prj_test} "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
 	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
 	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
 	 message(STATUS "dll_files => ${dll_files}")
@@ -372,25 +381,37 @@ message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
 
 
 #================SETUP dependencies of build target BEGIN================
-target_link_libraries( # Specifies the target library.
-        ${target_prj_static} PUBLIC
+IF (BUILD_STATIC_LIBS)	
+  target_link_libraries( # Specifies the target library.
+          ${target_prj_static} PUBLIC
+  
+  		  ${pthread-lib}
+          ${log-lib}
+          )
+ENDIF (BUILD_STATIC_LIBS)
 
-		${pthread-lib}
-        ${log-lib}
-        )
-		
-target_link_libraries( # Specifies the target library.
-        ${target_prj_shared} PUBLIC
+IF (BUILD_SHARED_LIBS)			
+  target_link_libraries( # Specifies the target library.
+          ${target_prj_shared} PUBLIC
+  
+  		  ${pthread-lib}
+          ${log-lib}
+          )
+ENDIF (BUILD_SHARED_LIBS)
 
-		${pthread-lib}
-        ${log-lib}
-        )		
-
-target_link_libraries( # Specifies the target library.
-        ${target_prj_test}
-
-		${target_prj_static}
-		#${pthread-lib}
-		#${log-lib}
-        )		
+IF (BUILD_DEMO)
+  if (BUILD_STATIC_LIBS)
+    set(demo_link_lcu_lib ${target_prj_static})
+  else()
+	set(demo_link_lcu_lib ${target_prj_shared})
+  endif (BUILD_STATIC_LIBS)  
+  target_link_libraries( # Specifies the target library.
+          ${target_prj_demo}
+  
+		  ${demo_link_lcu_lib}
+  		  #${target_prj_static}
+  		  #${pthread-lib}
+  		  #${log-lib}
+          )
+ENDIF (BUILD_DEMO)	
 #================SETUP dependencies of build target END==================

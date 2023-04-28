@@ -4,6 +4,7 @@
 
 #include <time.h>
 #include <stdint.h>
+
 #ifdef _WIN32
 #include <winsock.h>  /* for take struct timeval */
 #include <sys/timeb.h>
@@ -14,6 +15,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+	int time_util_global_init();
+
+	int time_util_global_deinit();
 
 #ifdef _WIN32
 
@@ -104,4 +109,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif // LCU_TIME_UTIL_H
+#endif // !LCU_TIME_UTIL_H

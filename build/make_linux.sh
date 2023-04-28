@@ -18,7 +18,8 @@ cmake -H./ -B./$BUILD_DIR -DCMAKE_BUILD_TYPE="$BUILD_TYPE"              \
                           -DCMAKE_C_FLAGS="$COMPILER_FLAGS"             \
 						  -DCMAKE_CXX_FLAGS="$COMPILER_FLAGS"           \
 						  -DCMAKE_SHARED_LINKER_FLAGS="$COMPILER_FLAGS" \
-						  -DCMAKE_EXE_LINKER_FLAGS="$COMPILER_FLAGS" 							
+						  -DCMAKE_EXE_LINKER_FLAGS="$COMPILER_FLAGS" 	\
+                          -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON						  
 #						  -DARG_LCU_OUTPUT_DIR="${LCU_OUTPUT_DIR}" 
 
 ERR_CODE=$?

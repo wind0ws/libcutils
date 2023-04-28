@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 //#include <pthread.h>
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include <errno.h>
 #include <time.h>
 #if defined(__linux__)

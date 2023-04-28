@@ -1,7 +1,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include "thread/thpool.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "thpool_test"
 #include "log/logger.h"

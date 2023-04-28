@@ -1,4 +1,4 @@
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #if defined(__linux__)
 #include <sys/prctl.h> /* for prctl */
 #endif // __linux__
@@ -19,8 +19,8 @@ typedef struct tagTHREADNAME_INFO
 
 //The SetWin32ThreadName function shown below demonstrates this exception-based approach. 
 //Note that the thread name will be automatically copied to the thread, 
-//so that the memory for the threadName parameter can be released after the SetThreadName call is completed.
-static void SetWin32ThreadName(DWORD dwThreadID, const char* threadName) 
+//so that the memory for the threadName parameter can be released after the SetWin32ThreadName call is completed.
+static void pri_set_win32_thread_name(DWORD dwThreadID, const char* threadName) 
 {
 	THREADNAME_INFO info = {0};
 	info.dwType = 0x1000;
@@ -41,14 +41,18 @@ static void SetWin32ThreadName(DWORD dwThreadID, const char* threadName)
 
 int pthread_setname_np(pthread_t thr, const char* name)
 {
+	if (NULL == name || '\0' == name[0])
+	{
+		return -1;
+    }
 #if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB
 	DWORD thr_id = pthread_getw32threadid_np(thr);
 #elif _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE
-	DWORD thr_id = thr.mThreadID;
+	DWORD thr_id = thr ? thr->mThreadID : GetCurrentThreadId();
 #else
 #error " unknow _LCU_CFG_WIN32_PTHREAD_MODE "
 #endif // _LCU_CFG_WIN_PTHREAD_MODE
-	SetWin32ThreadName(thr_id, name);
+	pri_set_win32_thread_name(thr_id, name);
 	return 0;
 }
 #endif // _WIN32
@@ -56,6 +60,10 @@ int pthread_setname_np(pthread_t thr, const char* name)
 int pthread_set_name(pthread_t thr, const char* name)
 {
 	int ret = -1;
+	if (NULL == name || '\0' == name[0])
+	{
+		return ret;
+	}
 #if(defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP)
 	ret = pthread_setname_np(thr, name);
 #elif defined(__linux__)

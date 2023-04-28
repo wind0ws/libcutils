@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 #include "mem/allocation_tracker.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include "mem/strings.h"

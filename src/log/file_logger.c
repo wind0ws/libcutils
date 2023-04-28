@@ -5,7 +5,7 @@
 #include "data/integer.h"          /* for integer_roundup_pow_of_two */
 #include "common_macro.h"
 #include "file/file_util.h"        /* for mkdir */
-#include "thread/thread_wrapper.h" /* for sleep */ 
+#include "thread/posix_thread.h"   /* for sleep */ 
 #include "time/time_util.h"        /* for timestamp file name */
 
 #define TRACE_FILE_LOGGER          1

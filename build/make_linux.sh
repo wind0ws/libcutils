@@ -1,5 +1,6 @@
 #!/bin/bash
 #Attention: Unix sh file shouldn't use CR LF, just use LF
+# use dos2unix to transform it
 
 chmod +x ./setup_env.sh
 source ./setup_env.sh 

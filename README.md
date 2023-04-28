@@ -94,10 +94,10 @@
 ----
 ## Release Log
 
-* **1.5.4**
-  > 1. add more simple win32 pthread function(build with PRJ_WIN_PTHREAD_MODE=1 )
+* **1.5.5**
+  > 1. add more simple win32 pthread function(build with PRJ_WIN_PTHREAD_MODE=1)
   > 2. fix xlog macro wrong call
-  > 3. support various vs version build on windows
+  > 3. support various visual studio version on windows build script
 
 * **1.5.3**
   > 1. add logger_facade, and xlog/slog implement it

@@ -107,7 +107,7 @@ extern "C" {
 	/**
 	 * set log header format.
 	 * default format is (LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL)
-	 * android logcat won't use this header format, be aware of that.
+	 * android logcat won't use this header format, just log pure log msg, be aware of that.
 	 */
 	void xlog_set_format(int format);
 
@@ -133,13 +133,13 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX or TLOGX macro instead.
 	 */
-	void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...);
+	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX_HEX or TLOGX_HEX macro instead.
 	 */
-	void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_count);
+	void __xlog_internal_hex_print(LogLevel level, const char* tag, char* chars, size_t chars_count);
 
 #ifdef __cplusplus
 }

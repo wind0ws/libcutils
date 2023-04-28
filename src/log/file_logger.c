@@ -5,9 +5,12 @@
 #include "data/integer.h"          /* for integer_roundup_pow_of_two */
 #include "common_macro.h"
 #include "file/file_util.h"        /* for mkdir */
-#include "thread/thread_wrapper.h" /* for sleep */ 
+#include "thread/posix_thread.h"   /* for sleep */ 
 #include "time/time_util.h"        /* for timestamp file name */
-#include "log/slog.h"
+
+#define TRACE_FILE_LOGGER          1
+#if(TRACE_FILE_LOGGER)
+#include "log/slog.h"   // here we shouldn't use xlog to print this moudle, because may cause infinite loop 
 
 #define LOG_TAG                     "FILE_LOGGER"
 #define MY_LOGV(fmt, ...)            SLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
@@ -15,6 +18,13 @@
 #define MY_LOGI(fmt, ...)            SLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
 #define MY_LOGW(fmt, ...)            SLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
 #define MY_LOGE(fmt, ...)            SLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
+#else
+#define MY_LOGV(fmt, ...)
+#define MY_LOGD(fmt, ...)
+#define MY_LOGI(fmt, ...)
+#define MY_LOGW(fmt, ...)
+#define MY_LOGE(fmt, ...)
+#endif // TRACE_FILE_LOGGER
 
 #define MAX_FULL_PATH_BUFFER (256)
 
@@ -133,12 +143,12 @@ void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 		{
 			break;//send complete
 		}
-		MY_LOGE("failed(%d) on send log to queue. maybe queue is full!", status);
+		MY_LOGE("failed(%d) on send log to queue. queue full?", status);
 		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break;
 		}
-		MY_LOGE("try again later...");
+		MY_LOGE("try put it again later...");
 		++retry_counter;
 		usleep(1500);//1.5ms
 	} while (MSG_Q_CODE_SUCCESS != status && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL 

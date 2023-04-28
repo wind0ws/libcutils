@@ -2,6 +2,16 @@ call setup_env.bat %*
 
 @ECHO OFF &PUSHD %~DP0 &TITLE android &color 0A
 
+if not exist %NINJA_BIN% (
+	@echo ERROR: %NINJA_BIN% not exists!!
+	@exit /b 2
+)
+
+if not exist %ANDROID_TOOLCHAIN_FILE% (
+	@echo ERROR: %ANDROID_TOOLCHAIN_FILE% not exists!!
+	@exit /b 2
+)
+
 :label_check_params
 if "%BUILD_ABI%" EQU "armeabi-v7a" goto label_main
 if "%BUILD_ABI%" EQU "arm64-v8a" goto label_main
@@ -28,7 +38,8 @@ mkdir %BUILD_DIR:"=%
 			-DCMAKE_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE% ^
 			-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
 			-DANDROID_PLATFORM=android-19                   ^
-			-DANDROID_STL=c++_static 
+			-DANDROID_STL=c++_static                        ^
+			-DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
 ::			-DARG_PRJ_OUTPUT_DIR=%OUTPUT_DIR% 
 
 set ERR_CODE=%ERRORLEVEL%

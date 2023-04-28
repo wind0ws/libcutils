@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LCU_THREAD_WRAPPER_H
-#define LCU_THREAD_WRAPPER_H
+#ifndef LCU_POSIX_THREAD_H
+#define LCU_POSIX_THREAD_H
 
 #include "config/lcu_build_config.h"
 
@@ -77,4 +77,4 @@ extern "C" {
 };
 #endif
 
-#endif // !LCU_THREAD_WRAPPER_H
+#endif // !LCU_POSIX_THREAD_H

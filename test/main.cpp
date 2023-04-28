@@ -1,6 +1,6 @@
 #include "mem/mem_debug.h"
 #include "common_macro.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
 
@@ -29,7 +29,7 @@ typedef int (*test_case_func_t)();
 typedef struct
 {
 	test_case_func_t p_func;
-	char* str_description;
+	const char* str_description;
 } test_case_t;
 
 static void setup_console();
@@ -40,7 +40,7 @@ EXTERN_C_START
 
 DECLARE_TEST_FUNC(allocator_test);
 
-#define TEST_FILE_LOGGER (1)
+#define TEST_FILE_LOGGER (0)
 #if(_LCU_LOGGER_TYPE_XLOG != LCU_LOGGER_SELECTOR && 0 != TEST_FILE_LOGGER)
 #error "FILE_LOGGER only support XLOG!"
 #endif
@@ -48,7 +48,7 @@ DECLARE_TEST_FUNC(file_logger_test_begin);
 DECLARE_TEST_FUNC(file_logger_test_end);
 DECLARE_TEST_FUNC(ini_test);
 
-DECLARE_TEST_FUNC(thread_wrapper_test);
+DECLARE_TEST_FUNC(posix_thread_test);
 DECLARE_TEST_FUNC(basic_test);
 DECLARE_TEST_FUNC(autocover_buffer_test);
 DECLARE_TEST_FUNC(mplite_test);
@@ -67,12 +67,11 @@ DECLARE_TEST_FUNC(list_test);
 static test_case_t g_all_test_cases[] =
 {
 	{ ini_test, "test ini" },
-	{ thread_wrapper_test, "test multi-thread and xlog" },
 	{ basic_test, "simple fwrite test case" },
 	{ autocover_buffer_test, "test auto-cover buffer" },
 	{ mplite_test, "test mem-pool" },
 	{ file_util_test, "test file util" },
-	{ thread_wrapper_test, "test thread wrapper and xlog"},
+	{ posix_thread_test, "test posix_thread_test and xlog"},
 	{ thpool_test, "test thread pool" },
 	{ string_test, "test string op" },
 	{ time_util_test, "test time op" },
@@ -107,6 +106,7 @@ int main(int argc, char* argv[])
 	int ret = 0;
 	setup_console();
 	INIT_MEM_CHECK();
+	libcutils_init();
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 
 	bool is_press_kb = true; // default status true for unix
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
 	{
-		if ((is_press_kb = _kbhit()))
+		if ((is_press_kb = (0 != _kbhit())))
 		{
 			pressed_char = _getch();
 			break;
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
 		//RUN_TEST(time_util_test);
-		RUN_TEST(thread_wrapper_test);
+		RUN_TEST(posix_thread_test);
 		//RUN_TEST(url_encoder_decoder_test);
 		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
 	LOGI("...bye bye...  %d\n", ret);
 
 	LOG_DEINIT(NULL);
+	libcutils_deinit();
 	DEINIT_MEM_CHECK();
 	return ret;
 }
@@ -197,7 +198,7 @@ static void setup_console()
 	//fclose(f);
 	//LOGD("你好");
 
-	//_CrtSetBreakAlloc(104);
+	//_CrtSetBreakAlloc(81);
 #endif // _WIN32
 	LOG_INIT(NULL);
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
@@ -297,7 +298,7 @@ static int run_test_case_from_user()
 		fprintf(stderr, "\n<== End Run testcase[%d]: %s, ret=%d\n\n", i, p_case->str_description, ret);
 		if (ret)
 		{
-			LOGI("failed run last test case, break. %d", ret);
+			LOGE("failed(%d) run last test case, break", ret);
 			break;
 		}
 	}

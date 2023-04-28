@@ -25,7 +25,7 @@
 
 typedef ssize_t (*rw_func_t)(int file_handle, void* buffer, size_t max_char_count);
 
-static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
+static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
 
 int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size)
 {
@@ -34,7 +34,7 @@ int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in con
 		return -1;
 	}
 	const size_t path_len = strnlen(folder_path, folder_path_size);
-	char slash_char = (strstr(folder_path, "/")) ? '/' : '\\';
+	char slash_char = (NULL != strstr(folder_path, "\\")) ? '\\' : '/';
 	if (folder_path[path_len - 1] == slash_char)
 	{
 		return 0;
@@ -64,7 +64,7 @@ int file_util_mkdirs(__in const char* folder_path)
 	size_t dir_path_len = strlen(folder_path);
 	if (dir_path_len > MAX_FOLDER_PATH_LEN)
 	{
-		return -2;
+		return -2; // dir too long
 	}
 	char tmp_dir_path[MAX_FOLDER_PATH_LEN] = { 0 };
 	for (size_t i = 0; i < dir_path_len; ++i)
@@ -75,13 +75,12 @@ int file_util_mkdirs(__in const char* folder_path)
 			//not a folder
 			continue;
 		}
-		if (ACCESS(tmp_dir_path, 0) == 0)
+		if (0 == ACCESS(tmp_dir_path, 0))
 		{
 			//folder already exists
 			continue;
 		}
-		ret = MKDIR(tmp_dir_path);
-		if (ret != 0)
+		if (0 != (ret = MKDIR(tmp_dir_path)))
 		{
 			//error occurred on mkdir
 			return ret;
@@ -92,9 +91,9 @@ int file_util_mkdirs(__in const char* folder_path)
 
 long file_util_get_size_by_path(__in const char* file_path)
 {
-	struct stat buf;
+	struct stat buf = { 0 };
 	int stat_ret;
-	if ((stat_ret = stat(file_path, &buf))!=0) 
+	if ( 0 != (stat_ret = stat(file_path, &buf))) 
 	{
 		return (long)stat_ret;
 	}
@@ -121,15 +120,15 @@ long file_util_get_size_by_fs(__in FILE* fs)
 
 int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count)
 {
-	return __internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&READ_FUNC);
+	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&READ_FUNC);
 }
 
 int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count)
 {
-	return __internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&WRITE_FUNC);
+	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&WRITE_FUNC);
 }
 
-static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
+static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
 {
 	int cur_char_count = 0;
 	do
@@ -137,10 +136,55 @@ static int __internal_rw_file(int file_handle, void* buffer, size_t max_char_cou
 		int once_op_size = (int)target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
 		if (once_op_size < 1)
 		{
-			//error occurred
+			//0:normal rw complete, otherwise error occurred
 			break;
 		}
 		cur_char_count += once_op_size;
 	} while (cur_char_count != max_char_count);
 	return cur_char_count;
+}
+
+int file_util_read_txt(__in char* file_path,
+	__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+	__in void* user_data)
+{
+	int ret = 0;
+	FILE* fp;
+	int line_num;
+	char* p, buf[1024];
+
+	fp = fopen(file_path, "r");
+	if (fp == NULL)
+	{
+		return -1;
+	}
+
+	for (line_num = 0; fgets(buf, sizeof(buf), fp) != NULL; ++line_num) 
+	{
+		if (NULL == (p = strchr(buf, '\n'))) 
+		{
+			p = buf + strlen(buf);
+		}
+		if (p > buf && p[-1] == '\r') 
+		{
+			--p;
+		}
+		*p = '\0';
+		for (p = buf; *p != '\0' && isspace((int)*p); ++p) 
+		{
+			;
+		}
+		if (*p == '\0' /* || *p == '#' */) 
+		{
+			continue;
+		}
+
+		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data))) 
+		{
+			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, buf);
+			break;
+		}
+	}
+	fclose(fp);
+	return ret;
 }

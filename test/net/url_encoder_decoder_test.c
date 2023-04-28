@@ -18,10 +18,10 @@ static int url_encoder_test()
 	{
 		if (real_encode_strlen < 1)
 		{
-			TLOGE(LOG_TAG, "failed on encode url. %d", real_encode_strlen);
+			LOGE("failed on encode url. %d", real_encode_strlen);
 			break;
 		}
-		TLOGI(LOG_TAG, "url(%s) encode succeed: %s ", url, out_encode_str);
+		LOGI("url(%s) encode succeed: %s ", url, out_encode_str);
 	} while (0);
 
 	free(out_encode_str);
@@ -43,11 +43,11 @@ static int url_decoder_test()
 	{
 		if ((decode_ret = lcu_url_decode(decode_url, decode_url_buf_size, encode_url, encode_url_strlen, &last_src_pos)) < 0)
 		{
-			TLOGE(LOG_TAG, "failed on decode: %s", encode_url);
+			LOGE("failed on decode: %s", encode_url);
 			break;
 		}
 		ASSERT(last_src_pos == (encode_url + encode_url_strlen));
-		TLOGI(LOG_TAG, "succeed decode \"%s\" to \"%s\"",encode_url, decode_url);
+		LOGI("succeed decode \"%s\" to \"%s\"",encode_url, decode_url);
 	} while (0);
 
 	free(decode_url);

@@ -1,6 +1,6 @@
 #include "ring/autocover_buffer.h"
 #include "common_macro.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include <string.h>
 
 #define LOG_TAG "AUTOCOVER"
@@ -93,7 +93,7 @@ static void* thread_producer(void* param)
 
 int autocover_buffer_test()
 {
-	LOGD("now test autocover_buffer!");
+	LOGD("--> now test autocover_buffer!");
 	cover_case_data case_data = { 0 };
 	case_data.data_in_counter = 0;
 	case_data.exit_flag = false;
@@ -119,6 +119,6 @@ int autocover_buffer_test()
 	pthread_mutex_destroy(&case_data.mutex_coverbuf);
 
 	auto_cover_buf_destroy(&case_data.cover_buf_p);
-	LOGD("autocover_buffer test finished.");
+	LOGD("<-- autocover_buffer test finished.");
 	return 0;
 }

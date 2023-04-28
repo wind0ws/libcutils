@@ -1,5 +1,5 @@
 #include "log/file_logger.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include "log/xlog.h"
 #include "mem/strings.h"
 
@@ -14,7 +14,7 @@ typedef struct
 	file_logger_handle logger_hdl;
 } logger_context_t;
 
-static logger_context_t g_logger_ctx = {0};
+static logger_context_t g_logger_ctx;
 
 #ifdef _WIN32
 #define FILE_LOGGER_PATH ("D:/temp/log") 

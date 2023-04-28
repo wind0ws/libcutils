@@ -2,11 +2,10 @@
 #include "time/time_util.h"
 #include "time/time_rfc1123.h"
 #include "time/time_rfc2822.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG          ("TIME_TEST")
 #include "log/logger.h"
-
 
 #define HOUR_TO_SECONDS  (3600)
 

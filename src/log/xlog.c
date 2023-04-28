@@ -21,6 +21,7 @@
 #include <windows.h>
 #endif
 
+/* for get tid */
 #ifdef __ANDROID__
 #include <android/log.h>
 #define XLOG_GETTID()      (int)gettid()
@@ -44,7 +45,7 @@ typedef struct xlog_cb_pack
 {
 	xlog_user_callback_fn cb;
 	void* cb_user_data;
-}xlog_cb_pack_t;
+} xlog_cb_pack_t;
 
 #define XLOG_DEFAULT_TAG_MAX_SIZE (24)
 typedef struct xlog_config
@@ -93,11 +94,11 @@ static xlog_config_t g_xlog_cfg =
 
 #define XLOG_IS_LEVEL_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
-static char g_map_level_chars[] = {'0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?'};
+static char g_map_level_chars[] = { '0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?' };
 
 #if defined(__ANDROID__)
-static int g_map_android_level[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
-			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR};
+static int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
+			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR };
 #endif // __ANDROID__
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
@@ -239,7 +240,7 @@ LogFlushMode xlog_get_flush_mode()
 #define USE_SNPRINTF_HEADER (0)
 
 #if(!defined(USE_SNPRINTF_HEADER) || !USE_SNPRINTF_HEADER)
-static inline int print_level_tag(char* buffer, LogLevel level, char* tag)
+static inline int print_level_tag(char* buffer, LogLevel level, const char* tag)
 {
 	int fmt_len = 0;
 	buffer[fmt_len++] = ' ';
@@ -344,7 +345,7 @@ static inline int print_func_line(char* buffer, const char* func, int line_num)
 
 #endif // !USE_SNPRINTF_HEADER
 
-void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int file_line, char* fmt, ...)
+void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...)
 {
 	va_list va;
 	//no need init buffer.
@@ -356,10 +357,6 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 	size_t header_len = 0;
 	bool is_log2console;
 	bool is_log2usercb;
-	if (LOG_TARGET_NONE == g_xlog_cfg.target)
-	{
-		return;
-	}
 	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
@@ -454,7 +451,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 #if defined(__ANDROID__)
 	if (XLOG_IS_ANDROID_LOGABLE)
 	{   // android log no need our own log header, just skip it
-		__android_log_print(g_map_android_level[level], tag, "%s", buffer_log + header_len);
+		__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
 
@@ -481,7 +478,7 @@ void __xlog_internal_print(LogLevel level, char* tag, const char* func_name, int
 #pragma warning(pop)
 #endif // _WIN32
 
-void __xlog_internal_hex_print(LogLevel level, char* tag, char* chars, size_t chars_count)
+void __xlog_internal_hex_print(LogLevel level, const char* tag, char* chars, size_t chars_count)
 {
 	char hex_str[DEFAULT_LOG_BUF_SIZE];
 	if (!XLOG_IS_LEVEL_LOGABLE(level))

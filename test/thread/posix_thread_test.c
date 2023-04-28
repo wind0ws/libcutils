@@ -1,4 +1,4 @@
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #define LOG_TAG "THREAD_TEST"
 #include "log/logger.h"
 #include <string.h>
@@ -17,6 +17,7 @@ static void* thread_test_func(void* args)
 	{
 		LOGE_TRACE("error on sem_wait, code=%d", code);
 	}
+
 EXIT:
 	LOGW_TRACE("sem_wait exited, thread now exit");
 	return NULL;
@@ -205,7 +206,7 @@ static void test_log()
 	LOGI("LOG test finished!!!");
 }
 
-int thread_wrapper_test()
+int posix_thread_test()
 {
 	LOGD("Hello World, thread id: %d", gettid());
 	test_log();

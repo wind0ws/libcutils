@@ -9,7 +9,7 @@ char* strndup(const char* s, size_t n)
 		return NULL;
 	}
 	// n == 0 is acceptable: just empty string.
-	const size_t target_len = strnlen(s, n);
+	const size_t target_len = (0 == n ? 0 : strnlen(s, n));
 	char *target_str = (char *)malloc((target_len + 1U));
 	if (!target_str)
 	{
@@ -32,7 +32,6 @@ char* strndup(const char* s, size_t n)
 
 #if defined(__GLIBC__) || defined(_WIN32)
 /* Implementation of strlcpy() for platforms that don't already have it. */
-
 size_t strlcpy(char* dst, const char* src, size_t size)
 {
 	char* d = dst;

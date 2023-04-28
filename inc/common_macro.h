@@ -114,13 +114,13 @@ typedef float               FLOAT;
 //for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 //msvc ONLY defined size_t on vcruntime.h. so we need define ssize_t
 #ifdef _WIN32
-#if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
+#if (!defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED))
 typedef intptr_t ssize_t;
 #define SSIZE_MAX INTPTR_MAX
 #define _SSIZE_T_      
 #define _SSIZE_T_DEFINED 
 #endif // !_SSIZE_T_ && !_SSIZE_T_DEFINED
-#if(defined(_MSC_VER) && _MSC_VER < 1800)
+#if (defined(_MSC_VER) && _MSC_VER < 1800)
 /* __LP64__ is defined by compiler. If set to 1 means this is 64bit build system */
 #ifdef __LP64__
 #define SIZE_T_FORMAT   "%lu"
@@ -183,7 +183,7 @@ typedef intptr_t ssize_t;
 #define _EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", fmt, ##__VA_ARGS__)
 #else
 #define _EMERGENCY_LOG_FOR_PLATFORM(fmt, ...) 
-#endif //__ANDROID__
+#endif // __ANDROID__
 
 //for log emergency error message.
 #define EMERGENCY_LOG(fmt, ...)                                                     \
@@ -287,9 +287,12 @@ DECLARE_ENUM_STRS(STATES);
 
 // def enum string on source file
 DEF_ENUM_STRS(STATES, FOREACH_STATES_ITEM);
-//now you can print enum str
-printf("STATES[0]=%s", STATES_STR[STATE_START]);
+
+// now you can use enum str
+printf("STATES[0]=%s\n", STATES_STR[STATE_START]);
+printf("STATES[%d]=%s\n", (int)STATE_STOP, STATES_STR[STATE_STOP]);
  */
+
 #define _GENERATOR_ENUM_ITEM(item) item,
 #define _GENERATOR_ENUM_STR(item)  #item,
 #define _TEMP_FOR_DEF_ENUM(name, foreach_enum, generator_enum_item)       \

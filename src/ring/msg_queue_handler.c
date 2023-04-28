@@ -3,7 +3,7 @@
 #include "ring/msg_queue.h"
 #include "log/slog.h"
 #include <malloc.h>
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "MSG_Q_HDL"
 
@@ -95,7 +95,7 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	handler->callback = callback;
 	handler->callback_userdata = callback_userdata;
 	sem_init(&(handler->semaphore), 0, 0);
-	if (pthread_create(&(handler->thread_handler), NULL, thread_fun_handle_msg, handler) == 0)
+	if (0 == pthread_create(&(handler->thread_handler), NULL, thread_fun_handle_msg, handler))
 	{
 		char thr_name[32] = { 0 };
 		snprintf(thr_name, sizeof(thr_name), "q_hdl_%p", handler);

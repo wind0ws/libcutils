@@ -21,7 +21,7 @@ static bool my_iter_list_fn(void* data, void* context)
 {
 	ASSERT(data);
 	my_list_iter_context* p_ctx = (my_list_iter_context *)context;
-	TLOGD(LOG_TAG, "list[%u] => %d", p_ctx->count, *(int*)data);
+	LOGD("list[%u] => %d", p_ctx->count, *(int*)data);
 	++p_ctx->count;
 	return true;
 }
@@ -62,15 +62,15 @@ static int testcase()
 	
 	my_list_iter_context ctx = { 0 };
 	list_foreach(p_list, my_iter_list_fn, &ctx);
-	TLOGD(LOG_TAG, "list_count=%zu", ctx.count);
+	LOGD("list_count=%zu", ctx.count);
 	list_free(p_list);
 	return 0;
 }
 
 int list_test()
 {
-	TLOGD(LOG_TAG, " --> list test begin");
+	LOGD(" --> list test begin");
 	int code = testcase();
-	TLOGD(LOG_TAG, " <-- list test end. %d", code);
+	LOGD(" <-- list test end. %d", code);
 	return code;
 }

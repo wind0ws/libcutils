@@ -1,7 +1,7 @@
 #include "common_macro.h"
 #include "time/time_util.h"
 #include "mem/strings.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include <stdio.h>
 
 #if(TIME_STR_SIZE < 24)
@@ -25,11 +25,11 @@ typedef struct
 	char format_cache[TIME_STR_SIZE];
 } time_cache_t;
 
-static time_cache_t g_time_caches[2] = 
-{
+static time_cache_t g_time_caches[2] = {
 	{.rw_lock = PTHREAD_RWLOCK_INITIALIZER, },
 	{.rw_lock = PTHREAD_RWLOCK_INITIALIZER, }
 };
+
 #endif // USE_TIME_CACHE
 
 #ifdef _WIN32
@@ -57,7 +57,7 @@ typedef VOID(WINAPI* LcuGetSystemTimeFn) (LPFILETIME);
 static void WINAPI init_gettimeofday(LPFILETIME lpSystemTimeAsFileTime);
 
 /* Storage for the function we pick at runtime */
-static LcuGetSystemTimeFn lcu_get_system_time = &init_gettimeofday;
+static LcuGetSystemTimeFn g_get_system_time = &init_gettimeofday;
 
 /*
  * One time initializer.  Determine whether GetSystemTimePreciseAsFileTime
@@ -80,7 +80,7 @@ static void WINAPI init_gettimeofday(LPFILETIME lpSystemTimeAsFileTime)
 	 * version and development SDK specific...
 	 */
 	HMODULE kernel32 = GetModuleHandle(TEXT("kernel32.dll"));
-	if (kernel32 == NULL || (lcu_get_system_time = (LcuGetSystemTimeFn)GetProcAddress(kernel32,
+	if (kernel32 == NULL || (g_get_system_time = (LcuGetSystemTimeFn)GetProcAddress(kernel32,
 		"GetSystemTimePreciseAsFileTime")) == NULL)
 	{
 		/*
@@ -93,17 +93,17 @@ static void WINAPI init_gettimeofday(LPFILETIME lpSystemTimeAsFileTime)
 		 * serious problem, so just silently fall back to
 		 * GetSystemTimeAsFileTime irrespective of why the failure occurred.
 		 */
-		lcu_get_system_time = &GetSystemTimeAsFileTime;
+		g_get_system_time = &GetSystemTimeAsFileTime;
 	}
 
-	(*lcu_get_system_time) (lpSystemTimeAsFileTime);
+	(*g_get_system_time) (lpSystemTimeAsFileTime);
 }
 
 /*
  * timezone information is stored outside the kernel so tzp isn't used anymore.
  *
- * Note: this function is not for Win32 high precision timing purposes. See
- * elapsed_time().
+ * Note: this function is not for Win32 high precision timing purposes. 
+ * See elapsed_time().
  */
 int gettimeofday(struct timeval* tp, struct timezone* tzp)
 {
@@ -113,7 +113,7 @@ int gettimeofday(struct timeval* tp, struct timezone* tzp)
 	ULARGE_INTEGER ularge;
 	unsigned __int64 unix_epoch;
 
-	(*lcu_get_system_time) (&file_time);
+	(*g_get_system_time) (&file_time);
 	ularge.LowPart = file_time.dwLowDateTime;
 	ularge.HighPart = file_time.dwHighDateTime;
 
@@ -125,6 +125,25 @@ int gettimeofday(struct timeval* tp, struct timezone* tzp)
 }
 
 #endif // _WIN32
+
+int time_util_global_init()
+{
+	return 0;
+}
+
+int time_util_global_deinit()
+{
+#if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
+#if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
+	// destroy it(free it's memory), and reset the pointer
+	pthread_rwlock_destroy(&(g_time_caches[0].rw_lock));
+	pthread_rwlock_destroy(&(g_time_caches[1].rw_lock));
+	g_time_caches[0].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+	g_time_caches[1].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+#endif // USE_TIME_CACHE  
+#endif // _WIN32
+	return 0;
+}
 
 int time_util_zone_offset_seconds_to_utc()
 {
@@ -200,7 +219,7 @@ static inline int print_millisec(char* buffer, unsigned int num)
 	return 4;
 }
 
-static int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
+static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 	const char* time_format, const int timezone_hour, bool use_cache)
 {
 	int ftime_len = 0;
@@ -298,10 +317,10 @@ static inline uint64_t get_cached_performance_freq()
 	return g_cached_milli_perf_freq;
 }
 
-//onetime initializer
+// onetime initializer
 static uint64_t init_get_milli_perf_freq();
 
-static fn_get_performance_freq get_milli_perf_freq = &init_get_milli_perf_freq;
+static fn_get_performance_freq g_get_milli_perf_freq = &init_get_milli_perf_freq;
 
 static uint64_t init_get_milli_perf_freq()
 {
@@ -310,8 +329,8 @@ static uint64_t init_get_milli_perf_freq()
 	g_cached_milli_perf_freq = frequency.QuadPart / 1000;
 	ASSERT(g_cached_milli_perf_freq > 0);
 
-	get_milli_perf_freq = &get_cached_performance_freq;
-	return (*get_milli_perf_freq)();
+	g_get_milli_perf_freq = &get_cached_performance_freq;
+	return (*g_get_milli_perf_freq)();
 }
 #endif // _WIN32
 
@@ -321,7 +340,7 @@ void time_util_query_performance_ms(uint64_t* p_cur_ms)
 	//QueryPerformanceFrequency Retrieves the frequency of the performance counter. 
 	//The frequency of the performance counter is fixed at system boot and is consistent across all processors. 
 	//Therefore, the frequency need only be queried upon application initialization, and the result can be cached.
-	uint64_t milli_frequency = (*get_milli_perf_freq)();
+	uint64_t milli_frequency = (*g_get_milli_perf_freq)();
 	LARGE_INTEGER cur_counter;
 	QueryPerformanceCounter(&cur_counter);
 	*p_cur_ms = cur_counter.QuadPart / milli_frequency;

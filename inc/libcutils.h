@@ -8,9 +8,22 @@ extern "C" {
 
 	/**
 	 * get version of libcutils
-	 * note: return string pointer shouldn't free.
+	 * note: do not free returned string 
 	 */
-	char *libcutils_get_version();
+	char* libcutils_get_version();
+
+	/**
+	 * global init libcutils
+	 */
+	int libcutils_init();
+
+	/**
+	 * global deinit libcutils
+	 * 
+	 * call it at end of your app, 
+	 * otherwise maybe some resource not released
+	 */
+	int libcutils_deinit();
 	
 #ifdef __cplusplus	
 }

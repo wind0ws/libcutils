@@ -205,6 +205,7 @@ set(target_prj_static "${CMAKE_PROJECT_NAME}_static")
 set(target_prj_shared "${CMAKE_PROJECT_NAME}_shared")
 set(target_prj_demo   "${CMAKE_PROJECT_NAME}_demo")
 
+
 IF (BUILD_STATIC_LIBS)
   add_library(${target_prj_static}
   			  STATIC
@@ -216,6 +217,8 @@ IF (BUILD_STATIC_LIBS)
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_static} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)
+  
+  list(APPEND target_names ${target_prj_static})
 ENDIF(BUILD_STATIC_LIBS)
 
 IF (BUILD_SHARED_LIBS)			
@@ -234,12 +237,15 @@ IF (BUILD_SHARED_LIBS)
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)
+  
+  list(APPEND target_names ${target_prj_shared})
 ENDIF (BUILD_SHARED_LIBS)
 			
 IF (BUILD_DEMO)			
   add_executable(${target_prj_demo}
   
   			     ${PRJ_DEMO_SRCS})
+  list(APPEND target_names ${target_prj_demo})
 ENDIF (BUILD_DEMO)
 
 #====================DECLARE TARGET END==================			   
@@ -316,6 +322,27 @@ else()
 endif()
 string(APPEND CMAKE_C_FLAGS   "${COMMON_C_FLGAS}")
 string(APPEND CMAKE_CXX_FLAGS "${COMMON_C_FLGAS} ${COMMON_CXX_FLGAS}")
+
+if (WIN32 AND MSVC)
+    set(flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            )
+
+    foreach (variable ${flag_var})
+        if (${variable} MATCHES "/MD")
+            string(REGEX REPLACE "/MD" "/MT" ${variable} "${${variable}}")
+        endif ()
+    endforeach ()
+
+    foreach(prj_name ${target_names})
+        set_property(TARGET ${prj_name} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endforeach()
+    #set_property(TARGET ${target_prj_demo} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif (WIN32 AND MSVC)
+
 #==================== SETUP FLAGS END==================
 
 
@@ -369,6 +396,7 @@ ELSEIF(WIN32)
   else()
      set(pthread-lib "")
   endif()
+  add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
 ELSE()
   set(pthread-lib "")
   set(log-lib "")

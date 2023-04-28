@@ -38,7 +38,8 @@ mkdir %BUILD_DIR:"=%
 			-DCMAKE_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE% ^
 			-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
 			-DANDROID_PLATFORM=android-19                   ^
-			-DANDROID_STL=c++_static 
+			-DANDROID_STL=c++_static                        ^
+			-DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
 ::			-DARG_PRJ_OUTPUT_DIR=%OUTPUT_DIR% 
 
 set ERR_CODE=%ERRORLEVEL%

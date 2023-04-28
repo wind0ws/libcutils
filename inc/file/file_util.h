@@ -56,8 +56,12 @@ extern "C" {
 	 */
 	int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count);
 
+	int file_util_read_txt(__in char* file_path,
+		__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+		__in void* user_data);
+
 #ifdef __cplusplus
-}
+};
 #endif // __cplusplus
 
 #endif // !LCU_FILE_UTIL_H

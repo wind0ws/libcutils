@@ -1,5 +1,5 @@
 #include "log/file_logger.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include "log/xlog.h"
 #include "mem/strings.h"
 

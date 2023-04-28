@@ -1,6 +1,6 @@
 #include "ring/autocover_buffer.h"
 #include "common_macro.h"
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include <string.h>
 
 #define LOG_TAG "AUTOCOVER"

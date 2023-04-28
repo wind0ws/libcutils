@@ -1,5 +1,5 @@
 #include <malloc.h>
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
 #include "log/slog.h"

@@ -3,7 +3,7 @@
 #include "mem/mplite.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "thread/thread_wrapper.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "MPLITE_TEST"
 #include "log/logger.h"

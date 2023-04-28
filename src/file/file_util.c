@@ -143,3 +143,48 @@ static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_c
 	} while (cur_char_count != max_char_count);
 	return cur_char_count;
 }
+
+int file_util_read_txt(__in char* file_path,
+	__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+	__in void* user_data)
+{
+	int ret = 0;
+	FILE* fp;
+	int line_num;
+	char* p, buf[1024];
+
+	fp = fopen(file_path, "r");
+	if (fp == NULL)
+	{
+		return -1;
+	}
+
+	for (line_num = 0; fgets(buf, sizeof(buf), fp) != NULL; ++line_num) 
+	{
+		if (NULL == (p = strchr(buf, '\n'))) 
+		{
+			p = buf + strlen(buf);
+		}
+		if (p > buf && p[-1] == '\r') 
+		{
+			--p;
+		}
+		*p = '\0';
+		for (p = buf; *p != '\0' && isspace((int)*p); ++p) 
+		{
+			;
+		}
+		if (*p == '\0' /* || *p == '#' */) 
+		{
+			continue;
+		}
+
+		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data))) 
+		{
+			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, buf);
+			break;
+		}
+	}
+	fclose(fp);
+	return ret;
+}

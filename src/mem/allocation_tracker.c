@@ -57,15 +57,15 @@ typedef struct
 	void* report_fn_user_data;
 } allocation_free_checker_context;
 
-static bool allocation_entry_freed_checker(void *key, void *value, void* context);
-static bool allocation_memory_corruption_checker(allocation_t* allocation);
-
-static const size_t allocation_hash_map_size = 1024;
+#define ALLOCATION_MAP_INIT_CAPACITY    (1024)
 static const char* canary = "tinybird";
 
 static size_t canary_size = 0;
 static hashmap_t* allocations = NULL;
 static pthread_mutex_t allocations_lock;
+
+static bool allocation_entry_freed_checker(void* key, void* value, void* context);
+static bool allocation_memory_corruption_checker(allocation_t* allocation);
 
 static int lock_allocations_map(void* arg)
 {
@@ -97,7 +97,7 @@ void allocation_tracker_init(void)
        .acquire = lock_allocations_map,
        .release = unlock_allocations_map,
 	};
-	allocations = hashmap_create(allocation_hash_map_size, 
+	allocations = hashmap_create(ALLOCATION_MAP_INIT_CAPACITY,
 		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock);
 }
 

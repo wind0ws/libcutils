@@ -10,9 +10,10 @@ typedef struct
 	msg_queue_handler handler;
 }my_handler_t;
 
-static void handler_cb(queue_msg_t* msg_p, void* user_data)
+static int handler_cb(queue_msg_t* msg_p, void* user_data)
 {
 	LOGD("receive msg(what=%d, obj_len=%d): %s", msg_p->what, msg_p->obj_len, msg_p->obj);
+	return 0;
 }
 
 #define MSG_OBJ_MAX_SIZE  (2048)

@@ -104,9 +104,9 @@ EXTERN_C
 int main(int argc, char* argv[])
 {
 	int ret = 0;
+	libcutils_init();
 	setup_console();
 	INIT_MEM_CHECK();
-	libcutils_init();
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 
 	bool is_press_kb = true; // default status true for unix

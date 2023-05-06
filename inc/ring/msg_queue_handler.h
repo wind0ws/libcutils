@@ -39,7 +39,7 @@ typedef struct _msg_queue_handler_s *msg_queue_handler;
  * @param queue_msg_t pointer to popped msg. do not free this msg memory.
  * @param user_data user data pointer in msg_queue_handler_create
  */
-typedef void (*msg_handler_callback_t)(queue_msg_t *msg_p, void *user_data);
+typedef int (*msg_handler_callback_t)(queue_msg_t *msg_p, void *user_data);
 
 /**
  * create fixed_queue_handler

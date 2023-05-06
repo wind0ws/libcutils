@@ -36,7 +36,7 @@ LogLevel slog_get_min_level()
 
 void slog_stdout2file(char* file_path)
 {
-	if (NULL == file_path)
+	if (NULL == file_path || '\0' == file_path[0])
 	{
 		return;
 	}
@@ -95,10 +95,8 @@ void __slog_internal_hex_print(int level, const char* tag, char* chars, size_t c
 		SLOGW(tag, "%s", buf);
 		break;
 	case LOG_LEVEL_ERROR:
-		SLOGE(tag, "%s", buf);
-		break;
 	default:
-		//unknown level
+		SLOGE(tag, "%s", buf);
 		break;
 	}
 }

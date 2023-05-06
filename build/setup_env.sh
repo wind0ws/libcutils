@@ -1,5 +1,6 @@
 #!/bin/bash
-#sh script can't use CRLF, you can use dos2unix to tranform it
+# sh script can't use CRLF, you can use dos2unix to tranform it
+
 if [ $# -lt 2 ] ; then
   echo "Error: need more param to continue. your param count=$#"
   echo "  sample: $0 m32 Release"
@@ -30,5 +31,3 @@ else
     echo "unknown BUILD_TYPE=$BUILD_TYPE, only support Debug/Release"
 	exit 3
 fi
-
-

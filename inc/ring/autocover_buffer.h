@@ -2,7 +2,7 @@
 #ifndef LCU_AUTOCOVER_BUFFER_H
 #define LCU_AUTOCOVER_BUFFER_H
 
-#include <stdint.h>
+#include <stdint.h>	 /* for uint32_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +33,7 @@ extern "C" {
 	 * create auto_cover_buf.
 	 * @param capacity_size the size of auto cover buf size.
 	 * @param buf_lock_p lock auto_cover_buf instance in read/write
+	 *                   if you put NULL, you should protect read/write function!
 	 * @return auto_cover_buf_handle
 	 */
 	auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_buf_lock_t *buf_lock_p);
@@ -73,4 +74,4 @@ extern "C" {
 }
 #endif // __cplusplus
 
-#endif // LCU_AUTOCOVER_BUFFER_H
+#endif // !LCU_AUTOCOVER_BUFFER_H

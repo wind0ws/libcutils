@@ -1,11 +1,10 @@
 #include "common_macro.h"
 #include "ring/msg_queue_handler.h"
 #include "ring/msg_queue.h"
+#define LOG_TAG "MSG_Q_HDL"
 #include "log/slog.h"
 #include <malloc.h>
 #include "thread/posix_thread.h"
-
-#define LOG_TAG "MSG_Q_HDL"
 
 struct _msg_queue_handler_s
 {
@@ -72,7 +71,10 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 
 		queue_msg_t* msg = (queue_msg_t*)poped_msg_buf;
-		handler->callback(msg, handler->callback_userdata);
+		if (handler->callback(msg, handler->callback_userdata))
+		{
+			break;
+		}
 	}
 
 	if (poped_msg_buf)

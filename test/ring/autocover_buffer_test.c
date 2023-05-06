@@ -35,7 +35,7 @@ static void* thread_consumer(void* param)
 	{
 		if (data_p->data_in_counter < sizeof(buffer))
 		{
-			Sleep(1);
+			Sleep(1);// mock that we are not always get data from queue, let queue cycle it
 			continue;
 		}
 		memset(buffer, 0, sizeof(buffer));
@@ -45,7 +45,7 @@ static void* thread_consumer(void* param)
 		{
 			LOGI("now read_pos=%u", read_pos);
 		}*/
-		if (auto_cover_buf_read(data_p->cover_buf_p, read_pos, buffer, sizeof(buffer)) == sizeof(buffer))
+		if (sizeof(buffer) == auto_cover_buf_read(data_p->cover_buf_p, read_pos, buffer, sizeof(buffer)))
 		{
 			if (buffer[0] != 0x01 || buffer[11] != 0x04)
 			{
@@ -82,7 +82,7 @@ static void* thread_producer(void* param)
 		}
 		else
 		{
-			LOGE("failed on write!!! shouldn't reach here!!!");
+			LOGE("!!!failed on write!!! it's unusual. shouldn't reach here!!! ");
 		}
 		autocover_buf_unlock(param);
 		//Sleep(1);
@@ -104,6 +104,7 @@ int autocover_buffer_test()
 	//	.release = NULL,
 	//	.arg = &case_data
 	//};
+	// we do not provide buf_lock, so we protect read/write by ourselves!
 	case_data.cover_buf_p = auto_cover_buf_create(16, NULL/*&buf_lock*/);
 	ASSERT(case_data.cover_buf_p);
 
@@ -112,13 +113,14 @@ int autocover_buffer_test()
 	pthread_create(&pthread_consumer, NULL, thread_consumer, &case_data);
 	pthread_create(&pthread_producer, NULL, thread_producer, &case_data);
 
-	sleep(10);
+	LOGI("running....wait 20s...");
+	sleep(20);
 	case_data.exit_flag = true;
 	pthread_join(pthread_producer, NULL);
 	pthread_join(pthread_consumer, NULL);
-	pthread_mutex_destroy(&case_data.mutex_coverbuf);
 
 	auto_cover_buf_destroy(&case_data.cover_buf_p);
+	pthread_mutex_destroy(&case_data.mutex_coverbuf);
 	LOGD("<-- autocover_buffer test finished.");
 	return 0;
 }

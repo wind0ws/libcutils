@@ -10,9 +10,9 @@
 
 #define TRACE_FILE_LOGGER          1
 #if(TRACE_FILE_LOGGER)
+#define LOG_TAG                     "FILE_LOGGER"
 #include "log/slog.h"   // here we shouldn't use xlog to print this moudle, because may cause infinite loop 
 
-#define LOG_TAG                     "FILE_LOGGER"
 #define MY_LOGV(fmt, ...)            SLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
 #define MY_LOGD(fmt, ...)            SLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
 #define MY_LOGI(fmt, ...)            SLOGI(LOG_TAG, fmt, ##__VA_ARGS__)

@@ -49,7 +49,7 @@ typedef struct file_logger
 	logger_handle->cfg.lock.release(logger_handle->cfg.lock.arg);\
 };
 
-static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
+static int handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 {
@@ -200,11 +200,11 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	*handle_p = NULL;
 }
 
-static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
+static int handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 {
 	if (msg_p->obj_len < 1)
 	{
-		return;
+		return 0;
 	}
 	file_logger_handle handle = (file_logger_handle)user_data;
 	if (!handle->cur_fp)
@@ -224,7 +224,7 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 #if(!defined(NDEBUG) || defined(_DEBUG))
 		fprintf(stderr, "[DEBUG] log file handle still null at (%s:%d)!!\n", __FILE__, __LINE__);
 #endif // !NDEBUG || _DEBUG
-		return;
+		return 0;
 	}
 	int write_len = fprintf(handle->cur_fp, "%.*s\n", msg_p->obj_len, msg_p->obj);
 	if (write_len > 0) //if error, negative number will returned
@@ -243,4 +243,5 @@ static void handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 		fclose(handle->cur_fp);
 		handle->cur_fp = NULL;
 	}
+	return 0;
 }

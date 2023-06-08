@@ -34,7 +34,7 @@
 #undef strndup
 #endif // _USE_LCU_MEM_CHECK
 
-static const allocator_id_t alloc_allocator_id = 99;
+#define ALLOCTOR_ID  99
 
 char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_name, int file_line)
 {
@@ -45,7 +45,7 @@ char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_
 	{
 		return NULL;
 	}
-	char* new_string = allocation_tracker_notify_alloc(alloc_allocator_id,
+	char* new_string = allocation_tracker_notify_alloc(ALLOCTOR_ID,
 		ptr, size, file_path, func_name, file_line);
 	if (!new_string)
 	{
@@ -73,7 +73,7 @@ char* lcu_strndup_trace(const char* str, size_t len, const char* file_path, cons
 	{
 		return NULL;
 	}
-	char* new_string = allocation_tracker_notify_alloc(alloc_allocator_id,
+	char* new_string = allocation_tracker_notify_alloc(ALLOCTOR_ID,
 		ptr, size + 1, file_path, func_name, file_line);
 	if (!new_string)
 	{
@@ -97,7 +97,7 @@ void* lcu_malloc_trace(size_t size, const char* file_path, const char* func_name
 	{
 		return NULL;
 	}
-	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, size, file_path, func_name, file_line);
+	return allocation_tracker_notify_alloc(ALLOCTOR_ID, ptr, size, file_path, func_name, file_line);
 }
 
 void* lcu_malloc(size_t size)
@@ -114,7 +114,7 @@ void* lcu_calloc_trace(size_t item_count, size_t item_size, const char* file_pat
 	{
 		return NULL;
 	}
-	return allocation_tracker_notify_alloc(alloc_allocator_id, ptr, request_size, file_path, func_name, file_line);
+	return allocation_tracker_notify_alloc(ALLOCTOR_ID, ptr, request_size, file_path, func_name, file_line);
 }
 
 void* lcu_calloc(size_t item_count, size_t item_size)
@@ -130,9 +130,9 @@ void* lcu_calloc1(size_t size)
 
 void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const char* func_name, int file_line)
 {
-	if (size == 0)
+	if (0 == size)
 	{
-		//if size == 0, free the ptr, return NULL
+		//if 0 == size, free the ptr, return NULL
 		if (ptr)
 		{
 			lcu_free(ptr);
@@ -140,13 +140,13 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 		return NULL;
 	}
 
-	if (ptr == NULL)
+	if (NULL == ptr)
 	{
-		/* a little trick: give more memory than you need, for reduce realloc times */
+		/* a little trick: give more memory than you need, for maybe reduce realloc times */
 		return lcu_malloc_trace(size + 2048U, file_path, func_name, file_line);
 	}
 
-	size_t cur_ptr_size = allocation_tracker_ptr_size(alloc_allocator_id, ptr);
+	size_t cur_ptr_size = allocation_tracker_ptr_size(ALLOCTOR_ID, ptr);
 	if (cur_ptr_size && size <= cur_ptr_size)
 	{
 		//current size is enough, no need alloc new memory.
@@ -175,7 +175,7 @@ void lcu_free(void* ptr)
 	{
 		return;
 	}
-	void* real_ptr = allocation_tracker_notify_free(alloc_allocator_id, ptr);
+	void* real_ptr = allocation_tracker_notify_free(ALLOCTOR_ID, ptr);
 	if (real_ptr)
 	{
 		free(real_ptr);

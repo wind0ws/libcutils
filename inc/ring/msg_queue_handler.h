@@ -2,7 +2,7 @@
 #ifndef LCU_MSG_QUEUE_HANDLER_H
 #define LCU_MSG_QUEUE_HANDLER_H
 
-#include <stdint.h>
+#include <stdint.h>   /* for uint32_t */
 #include "ring/msg_queue_errno.h"
 
 #ifndef __in
@@ -34,10 +34,11 @@ typedef struct
 typedef struct _msg_queue_handler_s *msg_queue_handler;
 
 /**
- * callback to handle msg
+ * callback prototype that handle msg
  * note: you shouldn't do too much time-consuming operation on here.
  * @param queue_msg_t pointer to popped msg. do not free this msg memory.
- * @param user_data user data pointer in msg_queue_handler_create
+ * @param user_data user data pointer that you passed in msg_queue_handler_create
+ * @return 0 for normal status, otherwise will break the handler queue
  */
 typedef int (*msg_handler_callback_t)(queue_msg_t *msg_p, void *user_data);
 

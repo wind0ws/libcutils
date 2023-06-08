@@ -67,6 +67,7 @@ static pthread_mutex_t allocations_lock;
 static bool allocation_entry_freed_checker(void* key, void* value, void* context);
 static bool allocation_memory_corruption_checker(allocation_t* allocation);
 
+/*
 static int lock_allocations_map(void* arg)
 {
 	return pthread_mutex_lock((pthread_mutex_t*)arg);
@@ -76,6 +77,7 @@ static int unlock_allocations_map(void* arg)
 {
 	return pthread_mutex_unlock((pthread_mutex_t*)arg);
 }
+*/
 
 static bool pointer_key_equals(const void* x, const void* y)
 {
@@ -94,8 +96,8 @@ void allocation_tracker_init(void)
 	hashmap_lock_t map_lock = 
 	{
        .arg = &allocations_lock,
-       .acquire = lock_allocations_map,
-       .release = unlock_allocations_map,
+       .acquire = (int(*)(void*))pthread_mutex_lock, //lock_allocations_map,
+       .release = (int(*)(void*))pthread_mutex_unlock, //unlock_allocations_map,
 	};
 	allocations = hashmap_create(ALLOCATION_MAP_INIT_CAPACITY,
 		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock);

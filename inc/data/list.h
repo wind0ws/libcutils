@@ -5,9 +5,19 @@
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/include/list.h
 */
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include "common_macro.h"
+#include <stdbool.h> /* for true/false */
+#include <stddef.h>  /* for size_t     */
+
+#ifndef UNUSED
+#define UNUSED(x)           (void)(x)
+#endif // !UNUSED
+#ifndef UNUSED_ATTR
+#ifdef _WIN32
+#define UNUSED_ATTR 
+#else
+#define UNUSED_ATTR         __attribute__((unused))
+#endif // _WIN32
+#endif // !UNUSED_ATTR
 
 #ifdef __cplusplus
 extern "C" {
@@ -126,4 +136,4 @@ void *list_node(const list_node_t *node);
 }
 #endif
 
-#endif // LCU_LIST_H
+#endif // !LCU_LIST_H

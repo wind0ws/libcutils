@@ -30,7 +30,7 @@ if [ $ERR_CODE -ne 0 ];then
     exit $ERR_CODE                                                                    
 fi       
 
-cmake --build $BUILD_DIR --config $BUILD_TYPE
+cmake --build $BUILD_DIR --config $BUILD_TYPE -- -j12
 ERR_CODE=$?
 ##mkdir -p ${LCU_OUTPUT_DIR}
 ##cp ./build_linux32/libcutils_test ${LCU_OUTPUT_DIR}/

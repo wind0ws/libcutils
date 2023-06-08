@@ -48,7 +48,7 @@ IF %ERR_CODE% NEQ 0 (
    @exit /b %ERR_CODE%
 )
 
-%NINJA_BIN% -C .\%BUILD_DIR:"=%
+%NINJA_BIN% -C .\%BUILD_DIR:"=% -j 8
 set ERR_CODE=%ERRORLEVEL%
 ::mkdir %OUTPUT_DIR%
 ::copy /Y .\build_android_v7a\libcutils_test %OUTPUT_DIR%\\
@@ -58,5 +58,5 @@ set ERR_CODE=%ERRORLEVEL%
 @echo.
 @echo "compile finished. bye bye..."
 ::@pause>nul
-color 0F
+::color 0F
 @exit /b %ERR_CODE%

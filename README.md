@@ -1,4 +1,4 @@
-# Brief
+# Introduction [中文版](https://github.com/wind0ws/libcutils/blob/master/README_zh-CN.md)
   What's this: This is a common c utils library (works for unix(android)/windows).
   > note: api may change frequently at this stage. see commits log for more details
 
@@ -16,7 +16,7 @@
   also works on unix(linux/android).
 
 * **data**
-  > data structure : include ***array***, ***hashmap***, ***list***, ***base64*** ...
+  > common data structure and operation: include ***array***, ***hashmap***, ***list***, ***base64*** ...
 
 * **file**
   > file util: include **file_util_read/write**, **ini_reader/parser** ...
@@ -26,8 +26,8 @@
    *  **allocator** : can trace heap memory, help you find memory leak or memory corruption.
    *  **mplite** : a zero-malloc memory pool based on [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
-* **ring**
-  > ringbuffer: include ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
+* **ring_buffer**
+  > queue of ring: include ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
 
 * **time**
   > time_util: include ***current_milliseconds***, ***fast_second2date*** ...
@@ -35,8 +35,9 @@
 ----
 ## How to build
   
-  * ### common platforms
-    > go to ***build***  folder, and edit build script first(**to make sure cmake/ninja/NDK(for Android) location**), then execute script to build it, it will copy the compiled result to the specified location
+  * ### common platforms (windows/linux/android)
+    > go to ***build***  folder, and edit build script first(**for make sure cmake/ninja/ndk(for Android) location**), 
+	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
     
@@ -46,21 +47,20 @@
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
   
-  * ### other platforms
-    1. #### first, write cmake cross toolchain file on **build/cmake/** folder:
+  * ### other platforms (cross-compilation)
+    1. #### first, write cmake cross-compilation toolchain file on **build/cmake/** folder:
       > for define c/cxx compiler location and flags.
       
-      example: create *hisi.toolchain.cmake* file on *build/cmake/* folder:
-      ```
+      example: create **hisi.toolchain.cmake** file on **build/cmake/** folder, 
+	           and write some config like this:
+      ```cmake
       SET(UNIX TRUE CACHE BOOL "")
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
       
-      set(CROSS_TOOLCHAIN_PATH_PREFIX "/mnt/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
+      SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
       message(STATUS "Current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
-      if(("${CROSS_TOOLCHAIN_PATH_PREFIX}" STREQUAL  ""))
-        message(FATAL_ERROR  "you should set CROSS_TOOLCHAIN_PATH_PREFIX first")
-      endif()
+
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
       SET(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}g++")
@@ -69,9 +69,10 @@
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
       
-      string(APPEND CMAKE_C_FLAGS          " -fPIC")
-      string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
-      string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
+	  SET(PLATFORM_COMMON_FLAGS " -fPIC")
+      string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
+      string(APPEND CMAKE_CXX_FLAGS        "${PLATFORM_COMMON_FLAGS}")
+      string(APPEND CMAKE_EXE_LINKER_FLAGS "${PLATFORM_COMMON_FLAGS} -fPIE")
       add_definitions(-D_LCU_NOT_SUPPORT_PTHREAD_SETNAME) # custom compile definitions
       ```
   

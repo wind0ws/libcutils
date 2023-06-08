@@ -78,4 +78,4 @@ extern "C" {
 }
 #endif
 
-#endif //__LCU_ALLOCATOR_H
+#endif // !__LCU_ALLOCATOR_H

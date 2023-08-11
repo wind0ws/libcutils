@@ -15,13 +15,13 @@ static void report_leak_memory(void* ptr, size_t size,
 
 int allocator_test()
 {
-	char* str1 = malloc(16);
+	char* str1 = (char *)malloc(16);
 	strcpy(str1, "This is str1.");
 	LOGD("str1 => %s", str1);
 	FREE(str1);
 	allocation_tracker_expect_no_allocations(report_leak_memory, NULL);
 
-	char* str2 = calloc(1, 32);
+	char* str2 = (char*)calloc(1, 32);
 	strcpy(str2, "This is str2.");
 	LOGD("str2 => %s", str2);
 	//free(str2);

@@ -7,9 +7,9 @@
 #pragma message( "you forgot to define LOG_TAG before include this header!!!" )
 #endif // !LOG_TAG
 
-#define _LCU_LOGGER_TYPE_XLOG   (0)
-#define _LCU_LOGGER_TYPE_SLOG   (1)
 
+#define  _LCU_LOGGER_TYPE_XLOG  (0)
+#define  _LCU_LOGGER_TYPE_SLOG  (1)
 
 #ifndef LCU_LOGGER_SELECTOR
 #define LCU_LOGGER_SELECTOR  _LCU_LOGGER_TYPE_XLOG

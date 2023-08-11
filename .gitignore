@@ -6,4 +6,5 @@ cmake-build-release/
 build/backup/
 build/output/
 build/out/
+build/deploy/
 build/build_*

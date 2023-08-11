@@ -36,7 +36,8 @@
 ## How to build
   
   * ### common platforms (windows/linux/android)
-    > go to ***build***  folder, and edit build script first(**for make sure cmake/ninja/ndk(for Android) location**), 
+    > go to ***build***  folder, and edit setup env script first(**setup_env.bat/setup_env.sh**)
+	(**for make sure cmake/ninja/ndk(for Android) location**), 
 	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
@@ -55,7 +56,8 @@
 	           and write some config like this:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-      SET(CMAKE_SYSTEM_NAME Linux) # this one is important
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      SET(CMAKE_SYSTEM_NAME Hisi) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
@@ -90,7 +92,7 @@
   or just copy source and header file to your project.
 
 ## Want demo
-  > see test folder, it demonstrate to you simple use case.
+  > see `src_demo` folder, it demonstrate to you simple use case.
 
 ----
 ## Release Log
@@ -116,6 +118,6 @@
   > 3. extract msg_queue_errno to header.
 
 * **1.0.0 ~ 1.4.0**
-  > Release log not write here, see commit log for more details. btw: suggest use latest code
+  > Release log not record on here, see commit log for more details. btw: suggest use the latest code
   >    for example, ver 1.4.0 commit log url is https://github.com/wind0ws/libcutils/commits/1.4.0
   

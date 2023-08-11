@@ -136,10 +136,15 @@ int time_util_global_deinit()
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 	// destroy it(free it's memory), and reset the pointer
-	pthread_rwlock_destroy(&(g_time_caches[0].rw_lock));
-	pthread_rwlock_destroy(&(g_time_caches[1].rw_lock));
-	g_time_caches[0].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
-	g_time_caches[1].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
+	{
+		if (PTHREAD_RWLOCK_INITIALIZER == g_time_caches[i].rw_lock)
+		{
+			continue;
+		}
+		pthread_rwlock_destroy(&(g_time_caches[i].rw_lock));
+		g_time_caches[i].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+	}
 #endif // USE_TIME_CACHE  
 #endif // _WIN32
 	return 0;

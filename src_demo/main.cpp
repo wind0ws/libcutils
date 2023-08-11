@@ -15,20 +15,20 @@
 
 #define KB_TIMEOUT      (5)   // seconds
 
-typedef int (*test_case_func_t)();
+typedef int (*func_prototype_test_case_t)();
 #define DECLARE_TEST_FUNC(func_name) extern int func_name()
 
-#define RUN_TEST(func_name) do                                                         \
-{                                                                                      \
-   LOGD("\n%s\nNow run --> %s()", LOG_STAR_LINE, #func_name);                          \
-   int ret_##func_name = func_name();                                                  \
-   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
-   ASSERT_ABORT(0 == ret_##func_name);                                                 \
+#define RUN_TEST(func_name) do                                                            \
+{                                                                                         \
+   LOGD("\n%s\n--> %s() executing...", LOG_STAR_LINE, #func_name);                        \
+   int ret_##func_name = func_name();                                                     \
+   LOGD("\n<-- %s() finished with %d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
+   ASSERT_ABORT(0 == ret_##func_name);                                                    \
 } while (0)
 
 typedef struct
 {
-	test_case_func_t p_func;
+	func_prototype_test_case_t p_func;
 	const char* str_description;
 } test_case_t;
 
@@ -64,6 +64,8 @@ DECLARE_TEST_FUNC(msg_queue_handler_test);
 DECLARE_TEST_FUNC(integer_test);
 DECLARE_TEST_FUNC(list_test);
 
+EXTERN_C_END
+
 static test_case_t g_all_test_cases[] =
 {
 	{ ini_test, "test ini" },
@@ -83,7 +85,6 @@ static test_case_t g_all_test_cases[] =
 	{ list_test, "test list" },
 };
 
-EXTERN_C_END
 
 #define SAVE_LOG    (0)
 
@@ -104,9 +105,9 @@ EXTERN_C
 int main(int argc, char* argv[])
 {
 	int ret = 0;
+	MEM_CHECK_INIT();
 	libcutils_init();
 	setup_console();
-	INIT_MEM_CHECK();
 	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
 
 	bool is_press_kb = true; // default status true for unix
@@ -172,7 +173,7 @@ int main(int argc, char* argv[])
 
 	LOG_DEINIT(NULL);
 	libcutils_deinit();
-	DEINIT_MEM_CHECK();
+	MEM_CHECK_DEINIT();
 	return ret;
 }
 

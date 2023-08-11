@@ -111,7 +111,7 @@ typedef float               FLOAT;
 #define __END_DECLS      EXTERN_C_END
 #endif // !__BEGIN_DECLS
 
-//for size_t ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
+//for size_t/ssize_t. Note: in _WIN64 build system, _WIN32 is also defined.
 //msvc ONLY defined size_t on vcruntime.h. so we need define ssize_t
 #ifdef _WIN32
 #if (!defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED))
@@ -233,8 +233,8 @@ typedef intptr_t ssize_t;
  // Macros for safe integer to pointer conversion. In the C language, data is
  // commonly cast to opaque pointer containers and back for generic parameter
  // passing in callbacks. These macros should be used sparingly in new code
- // (never in C++ code). Whenever integers need to be passed as a pointer, use
- // these macros.
+ // (never in C++ code). Whenever integers need to be passed as a pointer, 
+ // use these macros.
 #define PTR_TO_UINT(p)  ((unsigned int) ((uintptr_t) (p)))
 #define UINT_TO_PTR(u)  ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))
@@ -308,4 +308,4 @@ printf("STATES[%d]=%s\n", (int)STATE_STOP, STATES_STR[STATE_STOP]);
 //================================DECLARE ENUM AND STRINGS================================
 
 
-#endif // LCU_COMMON_MACRO_H
+#endif // !LCU_COMMON_MACRO_H

@@ -14,13 +14,15 @@ extern "C" {
 
 	/**
 	 * global init libcutils
+	 * 
+	 * call at the beginning of your app.
 	 */
 	int libcutils_init();
 
 	/**
 	 * global deinit libcutils
 	 * 
-	 * call it at end of your app, 
+	 * call at ending of your app, 
 	 * otherwise maybe some resource not released
 	 */
 	int libcutils_deinit();

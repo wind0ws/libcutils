@@ -36,7 +36,8 @@
 ## 编译
   
   * ### 常见平台 (windows/linux/android)
-    > 进入 ***build***  文件夹, 打开编辑编译脚本(**为了确定 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
+    > 进入 ***build***  文件夹, 编辑环境路径脚本（**setup_env.bat/setup_env.sh**）
+	(**为了确定 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
 	然后执行脚本来编译, 编译完后会将产物拷贝到指定的位置
     
     > 简要示例:
@@ -55,7 +56,8 @@
 	        然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-      SET(CMAKE_SYSTEM_NAME Linux) # this one is important
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      SET(CMAKE_SYSTEM_NAME Hisi) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
@@ -89,7 +91,7 @@
   >  拷贝头文件和库（动态或静态）文件到你的项目中，并链接他们，或者直接拷贝源码到你的项目中。
 
 ## 示例
-  > 请看 **test** 目录，每个模块有对应的测试用例.
+  > 请看 **src_demo** 目录，每个模块有对应的测试用例.
 
 ----
 ## 发布日志
@@ -115,6 +117,6 @@
   > 3. 重构：提取 msg_queue_errno 到头文件.
 
 * **1.0.0 ~ 1.4.0**
-  > 这里没有记录发布日志, 详情请见提交日志. PS: 建议使用最新版本
+  > 这里没有记录详细日志, 详情请见提交日志. BTW: 建议使用最新版本
   >    示例：1.4.0 版本的URL是 https://github.com/wind0ws/libcutils/commits/1.4.0
   

@@ -70,9 +70,17 @@ static int ini_parser_test()
 		LOGE("failed parse ini string");
 		return 1;
 	}
+	INI_PARSER_CODE err;
+	err = ini_parser_have_section(parser, "config");
+	LOGD("have \"config\" section: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
+	ASSERT(err == INI_PARSER_CODE_SUCCEED);
+	err = ini_parser_have_section_key(parser, "config", "test");
+	LOGD("have \"[config] test\" section_key: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
+	ASSERT(err == INI_PARSER_CODE_SUCCEED);
+
 	double nNum = 0.0;
-	INI_PARSER_CODE err = ini_parser_get_double(parser, "config", "nNum3", &nNum);
-	if (err == INI_PARSER_ERR_SUCCEED)
+	err = ini_parser_get_double(parser, "config", "nNum3", &nNum);
+	if (err == INI_PARSER_CODE_SUCCEED)
 	{
 		LOGI("succeed get nNum3=%.3f", nNum);
 	}
@@ -80,6 +88,15 @@ static int ini_parser_test()
 	{
 		LOGE("failed get nNum3.  %d", err);
 	}
+	float num3 = 0.0f;
+	err = ini_parser_get_float(parser, "config", "nNum3", &num3);
+	LOGI("%d get nNum3=%.3f", err, num3);
+
+	buffer[0] = 'a';
+	buffer[1] = '\0';
+	err = ini_parser_get_string(parser, "config", "test", buffer, sizeof(buffer));
+	LOGI("%d get test=%s", err, buffer);
+	ASSERT(buffer[0] == '\0');// because \"test\" have empty value.
 
 	bool bool_result = true;
 	err = ini_parser_get_bool(parser, "config2", "auto_start", &bool_result);
@@ -92,29 +109,34 @@ static int ini_parser_test()
 	LOGI("%d get number_bool_state=%d", err, bool_result);
 
 	err = ini_parser_get_string(parser, "config3", "path", buffer, sizeof(buffer));
-	if (err == INI_PARSER_ERR_SUCCEED)
+	if (err == INI_PARSER_CODE_SUCCEED)
 	{
 		LOGI("succeed get path=%s", buffer);
 	}
 	else
 	{
-		LOGE("failed get path. err=%d", err);
+		LOGE("failed(%d) get path", err);
 	}
 
 	err = ini_parser_put_string(parser, "config", "new_key", "new_value");
-	LOGD("%s on put new config", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	LOGD("%s on put new config", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
 	err = ini_parser_delete_by_section_key(parser, "config", "test");
-	LOGD("%s on delete [config] test", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
-	err = ini_parser_delete_section(parser, "config3");
-	LOGD("%s on delete [config3]", err == INI_PARSER_ERR_SUCCEED ? "succeed" : "failed");
+	LOGD("%s on delete [config] test", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
+	err = ini_parser_delete_section(parser, "config4");
+	LOGD("%s on delete [config4]", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
 	//dump string should free after use.
 	char* ini_dump = ini_parser_dump(parser);
+	ASSERT(ini_dump);
 	if (ini_dump)
 	{
 		LOGI("succeed dump ini:\n%s", ini_dump);
 		free(ini_dump);
 	}
-	ini_parser_destory(&parser);
+	err = ini_parser_save(parser, "D:/temp/test.ini");
+	ASSERT(err == INI_PARSER_CODE_SUCCEED);
+
+	ini_parser_destroy(&parser);
+	ASSERT(NULL == parser);
 	return 0;
 }
 

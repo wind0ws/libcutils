@@ -12,8 +12,8 @@ static const char* test_ini_str = "[config]\r\n\
 #number=1\r\n\
 nNum1 = 6\r\n\
 test=\r\n\
-#中文注释\r\n\
-nNum2 = 2\r\n\
+#中文注释以及没有return符\n\
+nNum2 = 2\n\
 #test double number\r\n\
 nNum3 = 0.035\r\n\
 \r\n\
@@ -32,38 +32,47 @@ path= /sdcard/Android/data/  \r\n\
 run_mode =  \r\n\
 \r\n";
 
-//ini解析回调，return true继续，return false终止解析
-static bool my_ini_handler(void* user,
-	const char* section, const char* key, const char* value) 
+/**
+ * ini parse callback
+ *   return true continue, 
+ *   return false will cause 'ini_reader_parse' returned non-zero code. 
+ */
+static int my_ini_handler(void* user,
+	const char* section, const char* key, const char* value
+#if INI_HANDLER_LINENO
+	, int lineno
+#endif // INI_HANDLER_LINENO
+) 
 {
 	if (!section || !key)
 	{
-		return true;
+		return true; // just ignore and continue
 	}
 	LOGD("[%s] %s=%s", section, key, value);
-	#define INI_MATCH(s, k) strcmp(section, s) == 0 && strcmp(key, k) == 0
+	#define INI_MATCH(s, k) (strcmp(section, (s)) == 0 && strcmp(key, (k)) == 0)
 	if (INI_MATCH("config", "nNum1"))
 	{
-		LOGD("detect nNum1=%d", atoi(value));
+		LOGD("  ~~ hi ~~ detect nNum1=%d", atoi(value));
 	}
 	return true;
 }
 
 static int ini_reader_test()
 {
-	int ret = ini_parse_string(test_ini_str, my_ini_handler, NULL);
+	int ret = ini_reader_parse_string(test_ini_str, my_ini_handler, NULL);
 	if (ret)
 	{
-		LOGD("parse ini string occurrd error. %d", ret);
+		LOGE("parse ini string occurrd error. %d", ret);
 		return ret;
 	}
+	ASSERT(0 == ret);
 	LOGI("succeed parse ini string.");
 	return ret;
 }
 
 static int ini_parser_test()
 {
-	char buffer[128];
+	char buffer[128] = {0};
 	ini_parser_ptr parser = ini_parser_parse_str(test_ini_str);
 	if (!parser)
 	{
@@ -101,12 +110,15 @@ static int ini_parser_test()
 	bool bool_result = true;
 	err = ini_parser_get_bool(parser, "config2", "auto_start", &bool_result);
 	LOGI("%d get auto_start=%d", err, bool_result);
+	ASSERT(bool_result == false);
 
 	err = ini_parser_get_bool(parser, "config2", "enable_state", &bool_result);
 	LOGI("%d get enable_state=%d", err, bool_result);
+	ASSERT(bool_result == true);
 
 	err = ini_parser_get_bool(parser, "config2", "number_bool_state", &bool_result);
 	LOGI("%d get number_bool_state=%d", err, bool_result);
+	ASSERT(bool_result == false);
 
 	err = ini_parser_get_string(parser, "config3", "path", buffer, sizeof(buffer));
 	if (err == INI_PARSER_CODE_SUCCEED)

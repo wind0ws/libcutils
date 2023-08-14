@@ -1,9 +1,14 @@
 /* inih -- simple .INI file parser
+
 SPDX-License-Identifier: BSD-3-Clause
+
 Copyright (C) 2009-2020, Ben Hoyt
+
 inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
+
 https://github.com/benhoyt/inih
+
 */
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
@@ -19,25 +24,25 @@ https://github.com/benhoyt/inih
 #if !INI_USE_STACK
 #if INI_CUSTOM_ALLOCATOR
 #include <stddef.h>
-void* ini_malloc(size_t size);
-void ini_free(void* ptr);
-void* ini_realloc(void* ptr, size_t size);
+void* ini_reader_malloc(size_t size);
+void ini_reader_free(void* ptr);
+void* ini_reader_realloc(void* ptr, size_t size);
 #else
 #include <stdlib.h>
-#define ini_malloc malloc
-#define ini_free free
-#define ini_realloc realloc
+#define ini_reader_malloc malloc
+#define ini_reader_free free
+#define ini_reader_realloc realloc
 #endif
 #endif // !INI_USE_STACK
 
 #define MAX_SECTION 50
 #define MAX_NAME 50
 
-/* Used by ini_parse_string() to keep track of string parsing state. */
+/* Used by ini_reader_parse_string() to keep track of string parsing state. */
 typedef struct {
     const char* ptr;
     size_t num_left;
-} ini_parse_string_ctx;
+} ini_reader_parse_string_ctx;
 
 /* Strip whitespace chars off end of given string, in place. Return s. */
 static char* rstrip(char* s)
@@ -64,7 +69,7 @@ static char* find_chars_or_comment(const char* s, const char* chars)
 #if INI_ALLOW_INLINE_COMMENTS
     int was_space = 0;
     while (*s && (!chars || !strchr(chars, *s)) &&
-        !(was_space && strchr(INI_INLINE_COMMENT_PREFIXES, *s))) {
+           !(was_space && strchr(INI_INLINE_COMMENT_PREFIXES, *s))) {
         was_space = isspace((unsigned char)(*s));
         s++;
     }
@@ -89,13 +94,13 @@ static char* strncpy0(char* dest, const char* src, size_t size)
 }
 
 /* See documentation in header file. */
-int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
-    void* user)
+int ini_reader_parse_stream(ini_reader reader, void* stream, ini_reader_handler handler,
+                     void* user)
 {
     /* Uses a fair bit of stack (use heap instead if you need to) */
 #if INI_USE_STACK
     char line[INI_MAX_LINE];
-    int max_line = INI_MAX_LINE;
+    size_t max_line = INI_MAX_LINE;
 #else
     char* line;
     size_t max_line = INI_INITIAL_ALLOC;
@@ -135,9 +140,9 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
             max_line *= 2;
             if (max_line > INI_MAX_LINE)
                 max_line = INI_MAX_LINE;
-            new_line = ini_realloc(line, max_line);
+            new_line = ini_reader_realloc(line, max_line);
             if (!new_line) {
-                ini_free(line);
+                ini_reader_free(line);
                 return -2;
             }
             line = new_line;
@@ -154,8 +159,8 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
         start = line;
 #if INI_ALLOW_BOM
         if (lineno == 1 && (unsigned char)start[0] == 0xEF &&
-            (unsigned char)start[1] == 0xBB &&
-            (unsigned char)start[2] == 0xBF) {
+                           (unsigned char)start[1] == 0xBB &&
+                           (unsigned char)start[2] == 0xBF) {
             start += 3;
         }
 #endif
@@ -166,6 +171,12 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
         }
 #if INI_ALLOW_MULTILINE
         else if (*prev_name && *start && start > line) {
+#if INI_ALLOW_INLINE_COMMENTS
+            end = find_chars_or_comment(start, NULL);
+            if (*end)
+                *end = '\0';
+            rstrip(start);
+#endif
             /* Non-blank line with leading whitespace, treat as continuation
                of previous name's value (as per Python configparser). */
             if (!HANDLER(user, section, prev_name, start) && !error)
@@ -212,7 +223,7 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
             else if (!error) {
                 /* No '=' or ':' found on name[=:]value line */
 #if INI_ALLOW_NO_VALUE
-                * end = '\0';
+                *end = '\0';
                 name = rstrip(start);
                 if (!HANDLER(user, section, name, NULL) && !error)
                     error = lineno;
@@ -229,20 +240,20 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
     }
 
 #if !INI_USE_STACK
-    ini_free(line);
+    ini_reader_free(line);
 #endif
 
     return error;
 }
 
 /* See documentation in header file. */
-int ini_parse_file(FILE* file, ini_handler handler, void* user)
+int ini_reader_parse_file(FILE* file, ini_reader_handler handler, void* user)
 {
-    return ini_parse_stream((ini_reader)fgets, file, handler, user);
+    return ini_reader_parse_stream((ini_reader)fgets, file, handler, user);
 }
 
 /* See documentation in header file. */
-int ini_parse(const char* filename, ini_handler handler, void* user)
+int ini_reader_parse(const char* filename, ini_reader_handler handler, void* user)
 {
     FILE* file;
     int error;
@@ -250,15 +261,15 @@ int ini_parse(const char* filename, ini_handler handler, void* user)
     file = fopen(filename, "r");
     if (!file)
         return -1;
-    error = ini_parse_file(file, handler, user);
+    error = ini_reader_parse_file(file, handler, user);
     fclose(file);
     return error;
 }
 
 /* An ini_reader function to read the next line from a string buffer. This
-   is the fgets() equivalent used by ini_parse_string(). */
+   is the fgets() equivalent used by ini_reader_parse_string(). */
 static char* ini_reader_string(char* str, int num, void* stream) {
-    ini_parse_string_ctx* ctx = (ini_parse_string_ctx*)stream;
+    ini_reader_parse_string_ctx* ctx = (ini_reader_parse_string_ctx*)stream;
     const char* ctx_ptr = ctx->ptr;
     size_t ctx_num_left = ctx->num_left;
     char* strp = str;
@@ -283,11 +294,11 @@ static char* ini_reader_string(char* str, int num, void* stream) {
 }
 
 /* See documentation in header file. */
-int ini_parse_string(const char* string, ini_handler handler, void* user) {
-    ini_parse_string_ctx ctx;
+int ini_reader_parse_string(const char* string, ini_reader_handler handler, void* user) {
+    ini_reader_parse_string_ctx ctx;
 
     ctx.ptr = string;
     ctx.num_left = strlen(string);
-    return ini_parse_stream((ini_reader)ini_reader_string, &ctx, handler,
-        user);
+    return ini_reader_parse_stream((ini_reader)ini_reader_string, &ctx, handler,
+                            user);
 }

@@ -44,7 +44,7 @@ struct _ini_parser
 {
 	/* hold all sections, and each section(list_t *) hold key_value_t */
 	list_t* plist_sections;
-	/* prediction ini string size */
+	/* prediction all ini config string size, for dump ini string */
 	size_t prediction_str_size;
 	/* last used section  */
 	section_info_t* p_last_used_section;
@@ -73,8 +73,8 @@ static inline void allocator_my_free(void* ptr)
 static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
-//ini reader callback, return true for continue, return false for abort
-static bool ini_handler_cb(void* user,
+//ini reader callback, return non-zero for error
+static int ini_handler_cb(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
 	, int lineno
@@ -83,7 +83,7 @@ static bool ini_handler_cb(void* user,
 {
 	if (NULL == section || NULL == key)
 	{
-		return true;// just continue to parse file
+		return 0;// just continue to parse file
 	}
 	ini_parser_ptr parser_p = (ini_parser_ptr)user;
 	return ini_parser_put_string(parser_p, section, key, value) == INI_PARSER_CODE_SUCCEED;
@@ -103,7 +103,7 @@ ini_parser_ptr ini_parser_parse_str(const char* ini_content)
 		return NULL;
 	}
 	parser_p->plist_sections = plist_sections;
-	if (ini_content && ini_parse_string(ini_content, ini_handler_cb, parser_p) != 0)
+	if (ini_content && ini_reader_parse_string(ini_content, ini_handler_cb, parser_p) != 0)
 	{
 		ini_parser_destroy(&parser_p);
 		return NULL;
@@ -500,8 +500,6 @@ static long long parse_str2longlong(INI_PARSER_CODE* p_err, char* str_value)
 	return result;
 }
 
-
-
 static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type)
 {
@@ -541,7 +539,7 @@ if (!end_ptr || *end_ptr != '\0') { ret = INI_PARSER_CODE_FAILED; break; }\
 			long long num = parse_str2longlong(&ret, str_value);
 			if (INI_PARSER_CODE_SUCCEED == ret)
 			{
-				result = (0 == num ? true : false);
+				result = (0 == num ? false : true);
 			}
 		} while (0);
 		*((bool*)value) = result;

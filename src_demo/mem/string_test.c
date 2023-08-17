@@ -77,12 +77,12 @@ static int count_utf8str_words_test()
 
 static int strtrim_test()
 {
-	const char* const_str = "AA...AA.a.aa.aHelloWorld     :::";
+	const char* const_str = "AA...AA.a.aa.aHello : World     :::";
 	char str[64] = {0};
-	strlcpy(str, const_str, sizeof(str));
+	strlcpy(str, const_str, sizeof(str)); //strtrim need modify input string.
 	LOGD("origin_str: %s", str);
 	strtrim(str, "Aa. :");
-	LOGD("trimed_str: %s", str);
+	LOGD("trimed_str: %s", str);// should be "Hello : World"
 	return 0;
 }
 

@@ -20,7 +20,7 @@ typedef int (*func_prototype_test_case_t)();
 
 #define RUN_TEST(func_name) do                                                            \
 {                                                                                         \
-   LOGD("\n%s\n--> %s() executing...", LOG_STAR_LINE, #func_name);                        \
+   LOGD("\n%s\n--> %s() executing...\n", LOG_STAR_LINE, #func_name);                      \
    int ret_##func_name = func_name();                                                     \
    LOGD("\n<-- %s() finished with %d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
    ASSERT_ABORT(0 == ret_##func_name);                                                    \
@@ -88,7 +88,7 @@ static test_case_t g_all_test_cases[] =
 
 #define SAVE_LOG    (0)
 
-#if( SAVE_LOG && 0 == TEST_FILE_LOGGER)
+#if( SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
 #define LOG_PATH ("d:/mylog.log")
 #else

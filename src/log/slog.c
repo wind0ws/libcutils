@@ -78,7 +78,7 @@ void slog_back2stdout()
 
 void __slog_internal_hex_print(int level, const char* tag, char* chars, size_t chars_count)
 {
-	char buf[256];
+	char buf[512];
 	str_char2hex(buf, sizeof(buf), chars, chars_count);
 	switch (level)
 	{

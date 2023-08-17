@@ -6,23 +6,23 @@
 #include <stdbool.h>
 #include <malloc.h>
 
-// For gettid.
-#if defined(__APPLE__)
+// header for gettid.
+#if(defined(__APPLE__))
 #include "AvailabilityMacros.h"  // For MAC_OS_X_VERSION_MAX_ALLOWED
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <unistd.h>
-#elif defined(__linux__) || defined(__ANDROID__)
+#elif(defined(__linux__) || defined(__ANDROID__))
 #include <syscall.h>
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <windows.h>
 #endif
 
-/* for get tid */
-#ifdef __ANDROID__
+/* macro for gettid */
+#if(defined(__ANDROID__))
 #include <android/log.h>
 #define XLOG_GETTID()      (int)gettid()
 #elif defined(__APPLE__)
@@ -50,19 +50,20 @@ typedef struct xlog_cb_pack
 #define XLOG_DEFAULT_TAG_MAX_SIZE (24)
 typedef struct xlog_config
 {
+	/* min log level: log level must bigger or equal than this or will be discard. */
+	LogLevel min_level;
+	/* if log level bigger than min_level but small than this, transform log level to this */
+	LogLevel trigger_up_level;
+	/* if you don't pass in the TAG, use the default TAG. */
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
-	/* if log level bigger than min_level but small than this, transform log level to this */
-	LogLevel trigger_up_level;
-	/* the file pointer after redirect stdout */
-	FILE* fp_out;
-	/* min log level: if current level bigger or equal than this. */
-	LogLevel min_level;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */
 	int format;
+	/* the file pointer after redirect stdout */
+	FILE* fp_out;
 	/* LogFlushMode */
 	LogFlushMode flush_mode;
 	/* for calculate locale time */
@@ -72,32 +73,32 @@ typedef struct xlog_config
 #define DEFAULT_TIMEZONE_HOUR (8)
 static xlog_config_t g_xlog_cfg =
 {
-	"XLog",
-	{NULL},
-	LOG_LEVEL_OFF,
-	NULL,
 	LOG_LEVEL_VERBOSE,
+	LOG_LEVEL_OFF,
+	"XLog",
+	{NULL, NULL},
 #if defined(__ANDROID__)
 	LOG_TARGET_ANDROID, // NOLINT(hicpp-signed-bitwise)
 #else
 	LOG_TARGET_CONSOLE,
 #endif // __ANDROID__
 	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
+	NULL,
 	LOG_FLUSH_MODE_AUTO,
 	DEFAULT_TIMEZONE_HOUR
 };
 
-#define XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & log_target)
-#define XLOG_IS_CONSOLE_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
-#define XLOG_IS_ANDROID_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
-#define XLOG_IS_USER_CALLBACK_LOGABLE XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
+#define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & log_target)
+#define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
+#define XLOG_IS_ANDROID_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
+#define XLOG_IS_USER_CALLBACK_LOGABLE       _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
 #define XLOG_IS_LEVEL_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
-static char g_map_level_chars[] = { '0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?' };
+static const char g_map_level_chars[] = { '0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?' };
 
 #if defined(__ANDROID__)
-static int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
+static const int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
 			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR };
 #endif // __ANDROID__
 
@@ -108,13 +109,13 @@ static int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOS
 #endif // _WIN32
 void xlog_stdout2file(char* file_path)
 {
-	if (NULL == file_path)
+	if (NULL == file_path || '\0' == file_path[0])
 	{
 		return;
 	}
 	if (g_xlog_cfg.fp_out)
 	{
-		fprintf(stderr, "[XLog] (%s:%d) warn: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
+		fprintf(stderr, "[XLog] (%s:%d) warn: did you forgot to close the redirect stdout file stream!" _LOG_SUFFIX, __func__, __LINE__);
 		fflush(g_xlog_cfg.fp_out);
 		fclose(g_xlog_cfg.fp_out);
 	}
@@ -122,7 +123,7 @@ void xlog_stdout2file(char* file_path)
 	g_xlog_cfg.fp_out = freopen(file_path, "w", stdout);
 	if (!g_xlog_cfg.fp_out)
 	{
-		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen stdout to file(%s)\n", __func__, __LINE__, file_path);
+		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen stdout to file(%s)" _LOG_SUFFIX, __func__, __LINE__, file_path);
 	}
 }
 
@@ -138,7 +139,7 @@ void xlog_back2stdout()
 	g_xlog_cfg.fp_out = NULL;
 	if (!freopen(_STDOUT_NODE, "w", stdout))
 	{
-		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to stdout\n", __func__, __LINE__);
+		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to stdout" _LOG_SUFFIX, __func__, __LINE__);
 	}
 }
 #ifdef _WIN32
@@ -240,17 +241,26 @@ LogFlushMode xlog_get_flush_mode()
 #define USE_SNPRINTF_HEADER (0)
 
 #if(!defined(USE_SNPRINTF_HEADER) || !USE_SNPRINTF_HEADER)
-static inline int print_level_tag(char* buffer, LogLevel level, const char* tag)
+static inline int print_level_tag(char* buffer, const LogLevel level, const char* tag)
 {
 	int fmt_len = 0;
 	buffer[fmt_len++] = ' ';
 	buffer[fmt_len++] = g_map_level_chars[level];
 	buffer[fmt_len++] = '/';
-	size_t origin_tag_len = strlen(tag);
-	size_t cpy_tag_len = origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
-		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : origin_tag_len; // max copy 22 chars
+#if 0
+	const size_t origin_tag_len = strlen(tag);
+#else
+	char* tag_walker = (char *)tag;
+	size_t origin_tag_len = 0;
+	while (*tag_walker++ != '\0')
+	{
+		++origin_tag_len;
+	}
+#endif
+	const size_t cpy_tag_len = (const size_t)origin_tag_len > (XLOG_DEFAULT_TAG_MAX_SIZE - 2) ?
+		(XLOG_DEFAULT_TAG_MAX_SIZE - 2) : (const size_t)origin_tag_len; // max copy 22 chars
 #if 1
-	size_t align_tag_len = (cpy_tag_len < 8U ? 8U : cpy_tag_len);
+	const size_t align_tag_len = (cpy_tag_len < 8U ? 8U : cpy_tag_len);
 	for (size_t i = 0; i < align_tag_len; ++i)
 	{
 		buffer[fmt_len++] = (i < cpy_tag_len ? tag[i] : ' ');
@@ -324,7 +334,7 @@ static inline int my_int2str(int num, char* str)
 	return len_str;
 }
 
-//(func:line) 
+// (func:line)  
 static inline int print_func_line(char* buffer, const char* func, int line_num)
 {
 	char *str = buffer;
@@ -422,7 +432,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	va_end(va);
 	if (ret_vsn < 0)
 	{
-		fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length\n", __func__, __LINE__, ret_vsn);
+		fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length" _LOG_SUFFIX, __func__, __LINE__, ret_vsn);
 		return;
 	}
 	if (ret_vsn < (int)default_buffer_remaining_size)
@@ -435,7 +445,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 		buffer_log_size = buffer_strlen + need_fmt_str_size;
 		if (!(buffer_log = (char*)malloc(buffer_log_size)))
 		{
-			fprintf(stderr, "[XLOG] (%s:%d) failed malloc %zu byte on xlog\n", __func__, __LINE__, buffer_log_size);
+			fprintf(stderr, "[XLOG] (%s:%d) failed malloc(%zu) byte on xlog" _LOG_SUFFIX, __func__, __LINE__, buffer_log_size);
 			return; // oops, out of memory
 		} 
 		// here we only copy header to new buffer
@@ -450,14 +460,14 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 
 #if defined(__ANDROID__)
 	if (XLOG_IS_ANDROID_LOGABLE)
-	{   // android log no need our own log header, just skip it
+	{   // android platform log_print does not need our header information, just skip it
 		__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
 	}
 #endif // __ANDROID__
 
 	if (is_log2console)
 	{
-		_PRINTF_FUNC("%s" _SUFFIX_LOG, buffer_log);
+		_PRINTF_FUNC("%s" _LOG_SUFFIX, buffer_log);
 		if (g_xlog_cfg.flush_mode)
 		{
 			fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);

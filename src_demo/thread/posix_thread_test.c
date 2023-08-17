@@ -84,11 +84,11 @@ static void test_log()
 	TLOGW_TRACE(LOG_TAG, "this log is printed by TLOGW_TRACE");
 	TLOGE_TRACE(LOG_TAG, "this log is printed by TLOGE_TRACE");
 
-	char chars[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0xA0, 0xAF, 0xFD, 0xFE, 0xFF };
+	const char chars[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0xA0, 0xAF, 0xFD, 0xFE, 0xFF };
 	TLOGV_HEX("MyTag", chars, sizeof(chars));
 	LOGI_HEX(chars, sizeof(chars));
 
-	LOGD("there is long long log message: \n\
+	LOGD("there is a long long story: \n\
 		The Three Little Pigs Story \n\
 		Once, the three little pigs left their home as it was time they built their own houses. \n\
 \n\
@@ -110,17 +110,17 @@ static void test_log()
 \n\
 		Burnt, the wolf ran away but the pigs learnt their lesson.");
 
-	LOGD("another log: \n\
+	LOGD("another long log: \n\
 		[main]\n\
 		test = 2\n\
-		test = 2\n\
-		test = -1\n\
-		test = 0.070\n\
-		test = 3\n\
-		test = true\n\
-		test = 1\n\
-		test = false\n\
-		test = 0\n\
+		test1 = 2\n\
+		test2 = -1\n\
+		test3 = 0.070\n\
+		test4 = 3\n\
+		test5 = true\n\
+		test6 = 1\n\
+		test7 = false\n\
+		test8 = 0\n\
 \n\
 		[test]\n\
 		test_on = false\n\
@@ -132,50 +132,50 @@ static void test_log()
 		test_size = 512\n\
 		test_coef = /data/user/0/com.example/files/test\n\
 \n\
-		[test]\n\
+		[test1]\n\
 		test_on = true\n\
 		test_debug = false\n\
 		test = 20\n\
 \n\
-		[test]\n\
+		[test2]\n\
 		test_debug = false\n\
 		test_on = true\n\
 \n\
-		[test]\n\
+		[test3]\n\
 		test_on = true\n\
 		test_debug = false\n\
 \n\
-		[test]\n\
+		[test4]\n\
 		test_on = true\n\
 		test_overscale = true\n\
 \n\
-		[test]\n\
+		[test5]\n\
 		test_zero = true\n\
 		test_on = true\n\
 		test_debug = false\n\
 		test_post = false\n\
-		test_model = /data/user/0/com.example/lib/libtest.so\n\
-		test_model =\n\
+		#test_model00 = /data/user/0/com.example/lib/libtest.so\n\
+		test_model11 =\n\
 \n\
 		test_on = true\n\
 		test_model = /data/user/0/com.example/lib/libtest.so\n\
 		test_model_rec =\n\
 		test_delay_on = false\n\
 \n\
-		test_on = false\n\
-		test_model = /data/user/0/com.example/lib/libtest.so\n\
+		test_on0 = false\n\
+		test_model0 = /data/user/0/com.example/lib/libtest.so\n\
 \n\
 		test_on1 = true\n\
-		test_model = /data/user/0/com.example/lib/libtest.so\n\
+		test_model1 = /data/user/0/com.example/lib/libtest.so\n\
 		test_model_type = cldnn\n\
-		test_on = true\n\
+		test_on2 = true\n\
 		test_dynamic = true\n\
 		test_delay = 5\n\
 \n\
-		test_on2 = true\n\
-		test_model2 = /data/user/0/com.example/lib/libtest.so\n\
-		test_on2 = true\n\
-		test_model2 = /data/user/0/com.example/lib/libtest.so\n\
+		test_on3 = true\n\
+		test_model3 = /data/user/0/com.example/lib/libtest.so\n\
+		test_on3 = true\n\
+		test_model3 = /data/user/0/com.example/lib/libtest.so\n\
 		\n");
 
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_OFF);

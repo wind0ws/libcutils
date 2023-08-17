@@ -41,13 +41,13 @@ extern "C" {
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 	/**
 	 * redirect stdout from console to file.
-	 * note: NOT THREAD-SAFE. call it on begin of your program.
+	 * note: NOT THREAD-SAFE. call it at beginning of your program.
 	 */
 	void xlog_stdout2file(char* file_path);
 
 	/**
 	 * bring stdout print on console if current print to file.
-	 * note: NOT THREAD-SAFE. call it on end of your program.
+	 * note: NOT THREAD-SAFE. call it at ending of your program.
 	 */
 	void xlog_back2stdout();
 #endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
@@ -202,7 +202,8 @@ extern "C" {
 #define LOG_BACK2STD()                do {} while (0)
 #endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
 
-// better define LOG_TAG before include this xlog.h
+// better 'define LOG_TAG "xxx"' before include "xlog.h"
+// if not, we use default TAG which you called on xlog_set_default_tag
 #ifndef LOG_TAG
 #define LOG_TAG  NULL
 #endif // !LOG_TAG

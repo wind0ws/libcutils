@@ -40,13 +40,11 @@ static void* thread_worker(void *param)
 	time_util_current_ms(&start_millis);
 	while (counter++ < 100000)
 	{
-		//time_util_get_time_str_current(time_str, 8);
-		//printf("    [%d] %s at %d", tid, time_str, counter);
 		//Sleep(RANDOM(1,3));
 		time_util_get_time_str_current(time_str, 8);
 		time_util_current_ms(&cur_millis);
 		//printf("[%d] at %s    %llu", tid, time_str, cur_millis);
-		TLOGD_TRACE(LOG_TAG, "[%06d], at %s    %llu", tid, time_str, cur_millis);
+		LOGD("[%06d], at %s    %llu", tid, time_str, cur_millis);
 	}
 	time_util_current_ms(&cur_millis);
 	LOGI_TRACE("tid=%d end! cost %llums", tid, (cur_millis - start_millis));

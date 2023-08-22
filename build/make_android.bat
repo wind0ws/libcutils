@@ -26,10 +26,13 @@ set BUILD_DIR=./build_android_%BUILD_ABI%
 TITLE=%BUILD_DIR%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%
+@echo Your ANDROID_STL=%ANDROID_STL%
+@echo Your ANDROID_PLATFORM=%ANDROID_PLATFORM%
 ::set OUTPUT_DIR=.\\output\\android\\armeabi-v7a
 rmdir /S /Q "%BUILD_DIR:"=%" 2>nul
 mkdir "%BUILD_DIR:"=%"
-%CMAKE_BIN% -H.\ -B%BUILD_DIR:"=%                         ^
+
+%CMAKE_BIN% -H.\ -B%BUILD_DIR:"=%                           ^
 			"-GNinja"                                       ^
 			-DANDROID_ABI=%BUILD_ABI%                       ^
 			-DANDROID_NDK=%ANDROID_NDK%                     ^
@@ -37,8 +40,8 @@ mkdir "%BUILD_DIR:"=%"
 			-DANDROID_TOOLCHAIN=clang                       ^
 			-DCMAKE_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE% ^
 			-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
-			-DANDROID_PLATFORM=android-19                   ^
-			-DANDROID_STL=c++_static                        ^
+			-DANDROID_PLATFORM=%ANDROID_PLATFORM%           ^
+			-DANDROID_STL=%ANDROID_STL%                     ^
 			-DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
 ::			-DPRJ_OUTPUT_DIR_RELATIVE=%OUTPUT_DIR% 
 

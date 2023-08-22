@@ -488,7 +488,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 #pragma warning(pop)
 #endif // _WIN32
 
-void __xlog_internal_hex_print(LogLevel level, const char* tag, char* chars, size_t chars_count)
+void __xlog_internal_hex_print(LogLevel level, const char* tag, const char* chars, size_t chars_count)
 {
 	char hex_str[DEFAULT_LOG_BUF_SIZE];
 	if (!XLOG_IS_LEVEL_LOGABLE(level))

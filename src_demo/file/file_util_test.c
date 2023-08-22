@@ -16,9 +16,9 @@ int file_util_test()
 	{
 		file_util_mkdirs(".\\mylog\\");
 	}
-	strlcpy(log_path, ".\\mylog\\sub", sizeof(log_path));
+	strlcpy(log_path, ".\\mylog\\sub ", sizeof(log_path));
 #else
-	strlcpy(log_path, "./log/", sizeof(log_path));
+	strlcpy(log_path, "./log/ ", sizeof(log_path));
 #endif // _WIN32
 
 	file_util_append_slash_on_path_if_needed(log_path, sizeof(log_path));

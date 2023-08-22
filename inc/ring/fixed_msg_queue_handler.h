@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "ring/msg_queue_errno.h"
 
 #ifndef __in
 #define __in
@@ -29,7 +30,8 @@ extern "C" {
 #endif
 
 #define MSG_OBJ_MAX_CAPACITY (1024)
-typedef char MSG_OBJ_DATA_TYPE;
+
+typedef char fixed_msg_obj_t;
 
 /**
  * msg prototype
@@ -42,20 +44,21 @@ typedef struct
     struct 
     {
         int data_len;
-        MSG_OBJ_DATA_TYPE data[MSG_OBJ_MAX_CAPACITY];
+        fixed_msg_obj_t data[MSG_OBJ_MAX_CAPACITY];
     } obj;
 } fixed_msg_t;
 
 typedef struct _fixed_msg_queue_handler_s *fixed_msg_queue_handler;
 
 /**
- * callback to handle msg
+ * callback prototype of handle msg
  */
 typedef void (*fixed_msg_handler_callback_t)(fixed_msg_t *msg_p, void *user_data);
 
 /**
  * create fixed_queue_handler
- * @param max_msg_capacity MaxMsgCapacity
+ * 
+ * @param max_msg_capacity max capacity
  * @param callback handle msg function
  * @return queue handler ptr
  */
@@ -63,30 +66,34 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	__in fixed_msg_handler_callback_t callback, __in void* callback_userdata);
 
 /**
- * send msg to queue handler, 
+ * push msg at tail of queue handler,
  * you should lock this if you call it on multi-thread
+ * 
  * @param handler: queue handler ptr
  * @param msg_p: msg ptr
  * @return 0 succeed. otherwise failed
  */
-int fixed_msg_queue_handler_send(__in fixed_msg_queue_handler handler, __in fixed_msg_t *msg_p);
+MSG_Q_CODE fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t *msg_p);
 
 /**
- * current can send msg max amount
+ * current available push msg amount
+ * 
  * @param handler queue handler ptr
  * @return amount
  */
-uint32_t fixed_msg_queue_handler_available_send_msg_amount(__in fixed_msg_queue_handler handler);
+uint32_t fixed_msg_queue_handler_available_push_amount(__in fixed_msg_queue_handler handler);
 
 /**
  * current msg amount in queue handler
+ * 
  * @param handler queue handler ptr
  * @return amount
  */
-uint32_t fixed_msg_queue_handler_current_queue_msg_amount(__in fixed_msg_queue_handler handler);
+uint32_t fixed_msg_queue_handler_available_pop_amount(__in fixed_msg_queue_handler handler);
 
 /**
  * if current msg amount in queue handler is zero
+ * 
  * @param handler queue handler ptr
  * @return true indicate for empty.
  */
@@ -94,6 +101,7 @@ bool fixed_msg_queue_handler_is_empty(__in fixed_msg_queue_handler handler);
 
 /**
  * if current can send msg max amount is zero.
+ * 
  * @param handler queue handler ptr
  * @return true indicate queue is full
  */
@@ -102,12 +110,14 @@ bool fixed_msg_queue_handler_is_full(__in fixed_msg_queue_handler handler);
 /**
  * clear all msg in queue if msg has not handled.
  * <p>usually it will be fast, but if you stuck in callback, it will effect after the latest callback finished </p>
+ * 
  * @param handler queue handler ptr
  */
 void fixed_msg_queue_handler_clear(__in fixed_msg_queue_handler handler);
 
 /**
  * destroy queue handler
+ * 
  * @param handler queue handler ptr
  */
 void fixed_msg_queue_handler_destroy(__inout fixed_msg_queue_handler *handler_p);

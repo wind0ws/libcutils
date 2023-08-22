@@ -8,7 +8,7 @@
 typedef struct
 {
 	msg_queue_handler handler;
-}my_handler_t;
+} my_handler_t;
 
 static int handler_cb(queue_msg_t* msg_p, void* user_data)
 {
@@ -25,7 +25,7 @@ static int run_msg_queue_handler_testcase()
 
 	queue_msg_t* msg_p = (queue_msg_t*)calloc(1, sizeof(queue_msg_t) + MSG_OBJ_MAX_SIZE);
 	ASSERT_ABORT(msg_p);
-	for (int i = 0; i < 256; ++i)
+	for (int i = 0; i < 512; ++i)
 	{
 		msg_p->what = i;
 		msg_p->obj_len = snprintf(msg_p->obj, MSG_OBJ_MAX_SIZE, "hello, I'm queue msg %d", i) + 1;
@@ -33,8 +33,8 @@ static int run_msg_queue_handler_testcase()
 		int retry_counter = 0;
 		do
 		{
-			status_send = msg_queue_handler_send(my_hdl.handler, msg_p);
-			if (status_send == MSG_Q_CODE_FULL)
+			status_send = msg_queue_handler_push(my_hdl.handler, msg_p);
+			if (MSG_Q_CODE_FULL == status_send)
 			{
 				LOGW("queue full. sleeping at %d", i);
 				usleep(2000);

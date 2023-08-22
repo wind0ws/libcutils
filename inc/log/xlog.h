@@ -139,7 +139,7 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX_HEX or TLOGX_HEX macro instead.
 	 */
-	void __xlog_internal_hex_print(LogLevel level, const char* tag, char* chars, size_t chars_count);
+	void __xlog_internal_hex_print(LogLevel level, const char* tag, const char* chars, size_t chars_count);
 
 #ifdef __cplusplus
 }

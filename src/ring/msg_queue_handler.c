@@ -37,13 +37,14 @@ static void* thread_fun_handle_msg(void* thread_context)
 	char* poped_msg_buf = (char *)malloc(cur_msg_buf_size);
 	if (!poped_msg_buf)
 	{
-		SLOGE(LOG_TAG, "can't malloc(%zu) on %s:%d, now thread exit...", cur_msg_buf_size, __func__, __LINE__);
+		LOGE("can't malloc(%zu) on %s:%d, now thread exit...", cur_msg_buf_size, __func__, __LINE__);
 		return NULL;
 	}
+	LOGE("thread started...");
 	MSG_Q_CODE last_status = MSG_Q_CODE_SUCCESS;
-	while (!handler->flag_exit_thread)
+	for(;;)
 	{
-		if (last_status == MSG_Q_CODE_SUCCESS || last_status == MSG_Q_CODE_EMPTY)
+		if (MSG_Q_CODE_SUCCESS == last_status || MSG_Q_CODE_EMPTY == last_status)
 		{
 			sem_wait(&handler->semaphore);
 		}
@@ -62,7 +63,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 				poped_msg_buf = (char*)malloc(expect_buf_size);
 				if (!poped_msg_buf)
 				{
-					SLOGE(LOG_TAG, "can't malloc(%zu) on %s:%d", expect_buf_size, __func__, __LINE__);
+					LOGE("can't malloc(%zu) on %s:%d", expect_buf_size, __func__, __LINE__);
 					break;
 				}
 				cur_msg_buf_size = expect_buf_size;
@@ -73,6 +74,7 @@ static void* thread_fun_handle_msg(void* thread_context)
 		queue_msg_t* msg = (queue_msg_t*)poped_msg_buf;
 		if (handler->callback(msg, handler->callback_userdata))
 		{
+			LOGE("err on user process msg");
 			break;
 		}
 	}
@@ -81,16 +83,23 @@ static void* thread_fun_handle_msg(void* thread_context)
 	{
 		free(poped_msg_buf);
 	}
+	LOGE("thread exited...");
 	return NULL;
 }
 
 msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	__in msg_handler_callback_t callback, __in void* callback_userdata)
 {
-	SLOGD(LOG_TAG, "create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
+	LOGD("create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
+	if (queue_buf_size < 4 || !callback)
+	{
+		LOGE("queue_buf size should bigger than 4, and callback shouldn't be NULL");
+		return NULL;
+	}
 	msg_queue_handler handler = (msg_queue_handler)calloc(1, sizeof(struct _msg_queue_handler_s));
 	if (!handler)
 	{
+		LOGE("failed alloc queue_handler struct.");
 		return NULL;
 	}
 	handler->flag_exit_thread = false;
@@ -106,7 +115,7 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	}
 	else
 	{
-		SLOGE(LOG_TAG, "error on create pthread of queue handle msg");
+		LOGE("error on create pthread of queue handle msg");
 		sem_destroy(&(handler->semaphore));
 		free(handler);
 		handler = NULL;
@@ -114,9 +123,9 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	return handler;
 }
 
-MSG_Q_CODE msg_queue_handler_send(__in msg_queue_handler handler, __in queue_msg_t* msg_p)
+MSG_Q_CODE msg_queue_handler_push(__in msg_queue_handler handler, __in queue_msg_t* msg_p)
 {
-	if (!handler || handler->msg_queue_p == NULL || handler->flag_exit_thread)
+	if (!handler || !handler->msg_queue_p || handler->flag_exit_thread)
 	{
 		return MSG_Q_CODE_NULL_HANDLE;
 	}
@@ -148,9 +157,9 @@ void msg_queue_handler_destroy(__inout msg_queue_handler* handler_p)
 	handler->flag_exit_thread = true;
 	//send a signal to make sure thread is not stuck at sem_wait
 	sem_post(&(handler->semaphore));
-	if (pthread_join(handler->thread_handler, NULL) != 0)
+	if (0 != pthread_join(handler->thread_handler, NULL))
 	{
-		SLOGE(LOG_TAG, "error on join handle msg thread");
+		LOGE("error on join handle_msg_thread");
 	}
 	sem_destroy(&(handler->semaphore));
 	msg_queue_destroy(&handler->msg_queue_p);

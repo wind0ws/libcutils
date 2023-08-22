@@ -67,10 +67,12 @@ message(STATUS "current PRJ_OUTPUT_DIR => ${PRJ_OUTPUT_DIR}")
 # Standard cross-compiling stuff.
 #set(CMAKE_SYSTEM_NAME R328)
 IF (NOT DEFINED CMAKE_SYSTEM_NAME OR ("${CMAKE_SYSTEM_NAME}" STREQUAL ""))
-  MESSAGE(FATAL_ERROR "CMAKE_SYSTEM_NAME can not be empty")
+  MESSAGE(FATAL_ERROR "CMAKE_SYSTEM_NAME can not be empty!")
 ENDIF()
 #detect current TARGET_ABI
-IF(ANDROID)
+IF(DEFINED TARGET_ABI)
+  message(STATUS "TARGET_ABI(${TARGET_ABI}) is already defined.")
+ELSEIF(ANDROID)
   set(TARGET_ABI ${ANDROID_ABI})
 ELSE()
   IF(CMAKE_CL_64)
@@ -86,7 +88,7 @@ ELSE()
       set(TARGET_ABI x86)
 	endif()
   ENDIF(CMAKE_CL_64)
-ENDIF(ANDROID)
+ENDIF(DEFINED TARGET_ABI)
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" CMAKE_SYSTEM_NAME_TOLOWER)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_TOLOWER)
 IF (NOT DEFINED DEPLOY_DIR)
@@ -273,7 +275,7 @@ ENDIF(WIN32)
 #
 #add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
 #add_definitions("-DCURL_STATICLIB")
-if("${HAVE_PTHREAD_SETNAME_NP}" STREQUAL "1")
+if("x${HAVE_PTHREAD_SETNAME_NP}" STREQUAL "x1")
   add_definitions(-DHAVE_PTHREAD_SETNAME_NP=${HAVE_PTHREAD_SETNAME_NP})
 endif()
 #add compile/optimize options for DEBUG/RELEASE
@@ -289,14 +291,6 @@ if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) 
 	set(COMMON_C_FLGAS   " /utf-8 /W3")
 	set(COMMON_CXX_FLAGS "")
 else()
-    if (CMAKE_BUILD_TYPE_TOLOWER STREQUAL "debug")
-        message(STATUS "Debug build detected")
-        add_definitions("-D_DEBUG=1")
-    else()
-        message(STATUS "Release build detected")
-		add_definitions("-DNDEBUG")
-    endif()
-	
 	set(COMMON_C_FLGAS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-unknown-pragmas")
     set(COMMON_CXX_FLAGS " -Wno-write-strings")
 endif()
@@ -337,25 +331,12 @@ IF(UNIX)
   check_symbol_exists(pthread_setname_np "pthread.h" HAVE_PTHREAD_SETNAME_NP)
 
   if(ANDROID)
-    # Searches for a specified prebuilt library and stores the path as a
-    # variable. Because CMake includes system libraries in the search path by
-    # default, you only need to specify the name of the public NDK library
-    # you want to add. CMake verifies that the library exists before
-    # completing its build.
-    
     find_library( # Sets the name of the path variable.
             log-lib
     
             # Specifies the name of the NDK library that
             # you want CMake to locate.
             log)
-    
-    #find_library( # Sets the name of the path variable.
-    #        z-lib
-    #
-    #        # Specifies the name of the NDK library that
-    #        # you want CMake to locate.
-    #        z)
   else()
     set(log-lib "")
   endif(ANDROID)

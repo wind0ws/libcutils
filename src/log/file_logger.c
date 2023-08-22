@@ -65,7 +65,7 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	{
 		return NULL;
 	}
-	size_t cur_msg_size = 2048U;
+	const size_t cur_msg_size = 2048U;
 	queue_msg_t* msg = (queue_msg_t*)calloc(1, sizeof(queue_msg_t) + cur_msg_size);
 	if (!msg)
 	{
@@ -139,7 +139,7 @@ void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 	handle->msg_cache_p->obj_len = (int)msg_size;
 	do
 	{
-		if (MSG_Q_CODE_SUCCESS == (status = msg_queue_handler_send(handle->msg_queue, handle->msg_cache_p)))
+		if (MSG_Q_CODE_SUCCESS == (status = msg_queue_handler_push(handle->msg_queue, handle->msg_cache_p)))
 		{
 			break;//send complete
 		}

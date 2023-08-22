@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "file/file_util.h"
 #include "mem/strings.h"
 #include <sys/stat.h>
@@ -29,17 +30,25 @@ static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_c
 
 int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size)
 {
-	if (!folder_path || folder_path_size < 3)
+	if (!folder_path || '\0' == folder_path[0] || folder_path_size < 3)
 	{
 		return -1;
 	}
-	const size_t path_len = strnlen(folder_path, folder_path_size);
-	char slash_char = (NULL != strstr(folder_path, "\\")) ? '\\' : '/';
+	size_t path_len = strnlen(folder_path, folder_path_size);
+	while (path_len > 0 && ' ' == folder_path[path_len - 1])
+	{
+		--path_len;
+	}
+	if (path_len < 1)
+	{
+		return -2;
+	}
+	const char slash_char = (NULL != strstr(folder_path, "\\")) ? '\\' : '/';
 	if (folder_path[path_len - 1] == slash_char)
 	{
 		return 0;
 	}
-	size_t slash_location = (path_len + 1) < folder_path_size ?
+	const size_t slash_location = (path_len + 1) < folder_path_size ?
 		path_len : (path_len - 1);
 	folder_path[slash_location] = slash_char;
 	folder_path[slash_location + 1] = '\0';
@@ -93,7 +102,7 @@ long file_util_get_size_by_path(__in const char* file_path)
 {
 	struct stat buf = { 0 };
 	int stat_ret;
-	if ( 0 != (stat_ret = stat(file_path, &buf))) 
+	if (0 != (stat_ret = stat(file_path, &buf))) 
 	{
 		return (long)stat_ret;
 	}
@@ -144,7 +153,7 @@ static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_c
 	return cur_char_count;
 }
 
-int file_util_read_txt(__in char* file_path,
+int file_util_read_txt(__in const char* file_path,
 	__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
 	__in void* user_data)
 {
@@ -188,3 +197,60 @@ int file_util_read_txt(__in char* file_path,
 	fclose(fp);
 	return ret;
 }
+
+int file_util_read_all(__in const char* file_path, __out char** out_alloced_file_data, __out int* out_file_byte_len)
+{
+	if (!file_path || '\0' == file_path[0] || !out_alloced_file_data || !out_file_byte_len)
+	{
+		if (out_alloced_file_data)
+		{
+			*out_alloced_file_data = NULL;
+		}
+		if (out_file_byte_len)
+		{
+			*out_file_byte_len = -1;
+		}
+		return -1;
+	}
+	*out_alloced_file_data = NULL;
+	*out_file_byte_len = -1;
+
+	int ret = -1;
+	FILE* fp = fopen(file_path, "rb");
+	if (!fp)
+	{
+		//LOGE("failed on fopen \"%s\"", file_path);
+		return -2;
+	}
+	fseek(fp, 0, SEEK_END);
+	const long file_size = ftell(fp);
+	*out_file_byte_len = (int)file_size;
+	do
+	{
+		if (file_size < 1)
+		{
+			ret = -3;
+			break;
+		}
+		fseek(fp, 0, SEEK_SET);
+		char* mem = malloc((size_t)file_size + 1);
+		if (!mem)
+		{
+			ret = -4;
+			break;
+		}
+		mem[file_size] = '\0'; // place '\0' for string file
+		if (file_size != fread(mem, 1, file_size, fp))
+		{
+			free(mem);
+			ret = -5;
+			break;
+		}
+		*out_alloced_file_data = mem;
+		ret = 0;
+	} while (0);
+
+	fclose(fp);
+	return ret;
+}
+

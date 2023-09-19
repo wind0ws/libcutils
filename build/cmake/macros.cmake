@@ -49,7 +49,7 @@ MACRO(scan_header_dirs scan_dir return_list)
     SET(${return_list} ${dir_list})
 ENDMACRO(scan_header_dirs)
 
-#这里src_files是外部变量名，而不是其引用值，foreach会进行二次解引用
+#这里 src_files 是外部变量名，而不是其引用值，foreach会进行二次解引用
 MACRO(copy_file_on_post_build target src_files)
 	FOREACH (file_path ${${src_files}})
 		#message(STATUS "current copy_file_on_post_build file_path => ${file_path}")
@@ -61,7 +61,7 @@ MACRO(copy_file_on_post_build target src_files)
 	ENDFOREACH(file_path)
 ENDMACRO()
 
-#注意这里调用这个macro时，src_files这里传入的应该是list的变量名，而不是其引用值，因为接下来在另一个macro foreach list会对其二次解引用。
+#注意这里调用这个macro时，src_files 这里传入的应该是list的变量名，而不是其引用值，因为接下来在另一个macro foreach list会对其二次解引用。
 MACRO(copy_file_on_post_build_to_all_targets src_files)
     get_property(_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 	#FOREACH (file_path ${${src_files}})

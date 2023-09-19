@@ -73,7 +73,7 @@ static int ini_reader_test()
 static int ini_parser_test()
 {
 	char buffer[128] = {0};
-	ini_parser_ptr parser = ini_parser_parse_str(test_ini_str);
+	ini_parser_handle parser = ini_parser_parse_str(test_ini_str);
 	if (!parser)
 	{
 		LOGE("failed parse ini string");

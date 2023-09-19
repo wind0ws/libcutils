@@ -42,7 +42,7 @@
     
     > 简要示例:
     
-    |平台         | 一键部署编译                              | 手动编译                                         |
+    |平台         | 一键部署编译                             | 手动编译                                         |
     | --------    | :-----                                   | :----                                            |
     | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
@@ -52,16 +52,17 @@
     1. #### 首先，在 **build/cmake/** 文件夹下写cmake交叉编译规则文件:
       > 定义 c/cxx 编译器位置和平台编译参数.
       
-      > 示例: 在 **build/cmake/** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
+      > 示例: 在 **build/cmake/toolchains** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
 	        然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
 	  # Tell the cmake script what the platform name is, must setup this for cross compile
-      SET(CMAKE_SYSTEM_NAME Hisi) # this one is important
+      SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
+	  SET(PLATFORM Hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
-      message(STATUS "Current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
+      message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
 
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
@@ -81,11 +82,16 @@
     2. #### 执行 cmake 命令编译:
       > 生成makefile并编译
       
-      > 示例:
+      > 示例: 进入 ***build***  文件夹里，执行命令:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/hisi.toolchain.cmake 
+      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
+	  若平台(编译链)仅支持编译静态库，可以这么来编译:
+	  ```shell
+	  cmake -H. -B./build_abcd -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DPLATFORM=abcd -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+      cmake --build ./build_abcd --config Release --target lcu_static
+	  ```
 
 ## 使用
   >  拷贝头文件和库（动态或静态）文件到你的项目中，并链接他们，或者直接拷贝源码到你的项目中。

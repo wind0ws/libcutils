@@ -1,34 +1,34 @@
 #pragma once
-#ifndef LIBCUTILS_H
-#define LIBCUTILS_H
+#ifndef _LCU_H
+#define _LCU_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif	
 
 	/**
-	 * get version of libcutils
+	 * get version of lcu
 	 * note: do not free returned string 
 	 */
-	char* libcutils_get_version();
+	char* lcu_get_version();
 
 	/**
-	 * global init libcutils
+	 * global init lcu
 	 * 
 	 * call at the beginning of your app.
 	 */
-	int libcutils_init();
+	int lcu_init();
 
 	/**
-	 * global deinit libcutils
+	 * global deinit lcu
 	 * 
 	 * call at ending of your app, 
 	 * otherwise maybe some resource not released
 	 */
-	int libcutils_deinit();
+	int lcu_deinit();
 	
 #ifdef __cplusplus	
 }
 #endif
 
-#endif // !LIBCUTILS_H
+#endif // !_LCU_H

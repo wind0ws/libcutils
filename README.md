@@ -52,16 +52,17 @@
     1. #### first, write cmake cross-compilation toolchain file on **build/cmake/** folder:
       > for define c/cxx compiler location and flags.
       
-      example: create **hisi.toolchain.cmake** file on **build/cmake/** folder, 
+      example: create **hisi.toolchain.cmake** file on **build/cmake/toolchains** folder, 
 	           and write some config like this:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
 	  # Tell the cmake script what the platform name is, must setup this for cross compile
-      SET(CMAKE_SYSTEM_NAME Hisi) # this one is important
+      SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
+	  SET(PLATFORM Hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
-      message(STATUS "Current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
+      message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
 
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
@@ -81,11 +82,16 @@
     2. #### then execute cmake build script:
       > for generate makefile and compile it
       
-      example:
+      > example: go to ***build***  folder, execute command:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/hisi.toolchain.cmake 
+      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
+	  if target platform(toolchain) only support compile static library, follow these steps:
+	  ```shell
+	  cmake -H. -B./build_abcd -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DPLATFORM=abcd -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+      cmake --build ./build_abcd --config Release --target lcu_static
+	  ```
 
 ## How to use
   >  copy header and lib(static or shared) to your project, and link it,

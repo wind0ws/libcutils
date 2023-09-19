@@ -7,7 +7,7 @@
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
 #include "log/file_logger.h"
-#include "libcutils.h"       /* for libcutils_get_version */
+#include "lcu.h"             /* for lcu_get_version */
 #include <locale.h>          /* for setlocale */
 #ifdef _WIN32
 #include <conio.h>           /* for kbhit */
@@ -106,9 +106,9 @@ int main(int argc, char* argv[])
 {
 	int ret = 0;
 	MEM_CHECK_INIT();
-	libcutils_init();
+	lcu_init();
 	setup_console();
-	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
+	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
 	bool is_press_kb = true; // default status true for unix
 #if _WIN32
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
 	LOGI("...bye bye...  %d\n", ret);
 
 	LOG_DEINIT(NULL);
-	libcutils_deinit();
+	lcu_deinit();
 	MEM_CHECK_DEINIT();
 	return ret;
 }

@@ -163,12 +163,12 @@ int file_util_read_txt(__in const char* file_path,
 	char* p, buf[1024];
 
 	fp = fopen(file_path, "r");
-	if (fp == NULL)
+	if (NULL == fp)
 	{
 		return -1;
 	}
-
-	for (line_num = 0; fgets(buf, sizeof(buf), fp) != NULL; ++line_num) 
+	// if fgets returned not null, it make sure buf end with '\0'
+	for (line_num = 0; NULL != fgets(buf, sizeof(buf), fp); ++line_num) 
 	{
 		if (NULL == (p = strchr(buf, '\n'))) 
 		{
@@ -179,7 +179,7 @@ int file_util_read_txt(__in const char* file_path,
 			--p;
 		}
 		*p = '\0';
-		for (p = buf; *p != '\0' && isspace((int)*p); ++p) 
+		for (p = buf; *p != '\0' && isspace((int)(*p)); ++p) 
 		{
 			;
 		}

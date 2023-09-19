@@ -19,7 +19,8 @@ if [ $BUILD_ABI == "m32" ]; then
     echo "your BUILD_ABI=$BUILD_ABI"
 	COMPILER_FLAGS=" -m32"
 elif [ $BUILD_ABI == "m64" ]; then
-    echo "your BUILD_ABI=$BUILD_ABI"	
+    echo "your BUILD_ABI=$BUILD_ABI"
+    COMPILER_FLAGS=" -m64"	
 else
     echo "unknown BUILD_ABI=$BUILD_ABI, only support m32/m64"
 	exit 2

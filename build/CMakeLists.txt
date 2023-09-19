@@ -4,9 +4,9 @@ project(lcu VERSION 1.5.5 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-# 使用utility.cmake
-include(utility)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains)
+# 使用 macros.cmake
+include(macros)
 include(CheckSymbolExists)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -14,8 +14,8 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
@@ -29,7 +29,7 @@ IF(WIN32)
 ENDIF(WIN32)
 
 message(STATUS "\nCurrent CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
-#get lcu root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
+#get prj root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
 get_filename_component(PRJ_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
 message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n PRJ_ROOT_DIR => ${PRJ_ROOT_DIR}\n")
 
@@ -54,45 +54,57 @@ if(WIN32)
 	message(STATUS "PRJ_WIN_PTHREAD_MODE => ${PRJ_WIN_PTHREAD_MODE}")
 endif(WIN32)  
 
-set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/deploy")
-if(PRJ_OUTPUT_DIR_RELATIVE)
-    message(STATUS "detect PRJ_OUTPUT_DIR_RELATIVE = ${PRJ_OUTPUT_DIR_RELATIVE}")
-	if(NOT ("${PRJ_OUTPUT_DIR_RELATIVE}" STREQUAL ""))
-	    get_filename_component(PRJ_OUTPUT_DIR ${PRJ_OUTPUT_DIR_RELATIVE} ABSOLUTE)
-	endif()
-endif(PRJ_OUTPUT_DIR_RELATIVE)
+IF(NOT DEFINED PRJ_OUTPUT_DIR)
+  set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/deploy")
+ENDIF()
+IF(DEFINED PRJ_OUTPUT_DIR_RELATIVE)
+    message(STATUS "detect PRJ_OUTPUT_DIR_RELATIVE => ${PRJ_OUTPUT_DIR_RELATIVE}")
+    if(NOT ("${PRJ_OUTPUT_DIR_RELATIVE}" STREQUAL ""))
+      get_filename_component(PRJ_OUTPUT_DIR ${PRJ_OUTPUT_DIR_RELATIVE} ABSOLUTE)
+    endif()
+ENDIF(PRJ_OUTPUT_DIR_RELATIVE)
 message(STATUS "current PRJ_OUTPUT_DIR => ${PRJ_OUTPUT_DIR}")
 #===========================detect external params END===========================
 
-# Standard cross-compiling stuff.
-#set(CMAKE_SYSTEM_NAME R328)
-IF (NOT DEFINED CMAKE_SYSTEM_NAME OR ("${CMAKE_SYSTEM_NAME}" STREQUAL ""))
-  MESSAGE(FATAL_ERROR "CMAKE_SYSTEM_NAME can not be empty!")
+#=============================setup output dir START=============================
+IF (NOT DEFINED PLATFORM OR ("${PLATFORM}" STREQUAL ""))
+  if (NOT ("${CMAKE_SYSTEM_NAME}" STREQUAL "Generic"))
+    MESSAGE(STATUS "warning: not defined PLATFORM, use CMAKE_SYSTEM_NAME as PLATFORM")
+	SET(PLATFORM ${CMAKE_SYSTEM_NAME})
+  else()
+    MESSAGE(FATAL_ERROR "PLATFORM can not be empty!")
+  endif()
+ELSE()
+  MESSAGE(STATUS "your platform is ${PLATFORM}")
 ENDIF()
-#detect current TARGET_ABI
-IF(DEFINED TARGET_ABI)
-  message(STATUS "TARGET_ABI(${TARGET_ABI}) is already defined.")
+#detect current PLATFORM_ABI
+IF(DEFINED PLATFORM_ABI)
+  message(STATUS "PLATFORM_ABI(${PLATFORM_ABI}) is already defined.")
 ELSEIF(ANDROID)
-  set(TARGET_ABI ${ANDROID_ABI})
+  set(PLATFORM_ABI ${ANDROID_ABI})
 ELSE()
   IF(CMAKE_CL_64)
     if(CMAKE_C_FLAGS MATCHES "m32")
-	  set(TARGET_ABI x86)
-	else()
-      set(TARGET_ABI x64)
-	endif()
+	  message(STATUS "CL64 detect m32 in flags")
+	  set(PLATFORM_ABI x86)
+    else()
+	  message(STATUS "normal x64")
+          set(PLATFORM_ABI x64)
+    endif()
   ELSE(CMAKE_CL_64)
     if(CMAKE_C_FLAGS MATCHES "m64")
-	  set(TARGET_ABI x64)
-	else()
-      set(TARGET_ABI x86)
-	endif()
+	  message(STATUS "CL32 detect m64 in flags")
+	  set(PLATFORM_ABI x64)
+    else()
+	  message(STATUS "normal x86")
+          set(PLATFORM_ABI x86)
+    endif()
   ENDIF(CMAKE_CL_64)
-ENDIF(DEFINED TARGET_ABI)
-string(TOLOWER "${CMAKE_SYSTEM_NAME}" CMAKE_SYSTEM_NAME_TOLOWER)
+ENDIF(DEFINED PLATFORM_ABI)
+string(TOLOWER "${PLATFORM}" PLATFORM_TOLOWER)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_TOLOWER)
 IF (NOT DEFINED DEPLOY_DIR)
-  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE_TOLOWER}/${CMAKE_SYSTEM_NAME_TOLOWER}_${TARGET_ABI}")
+  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE_TOLOWER}/${PLATFORM_TOLOWER}_${PLATFORM_ABI}")
 ENDIF()
 message(STATUS  "DEPLOY_DIR => ${DEPLOY_DIR}")
 
@@ -111,17 +123,17 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${DEPLOY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${DEPLOY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${DEPLOY_DIR})
 
-
+#=============================setup output dir END=============================
 
 set(PRJ_HEADER_ROOT_DIR ${PRJ_ROOT_DIR}/inc)
 configure_file(
-  ${PRJ_HEADER_ROOT_DIR}/config/lcu_version.h.in
-  ${CMAKE_BINARY_DIR}/generate/config/lcu_version.h
+  ${PRJ_HEADER_ROOT_DIR}/config/${CMAKE_PROJECT_NAME}_version.h.in
+  ${CMAKE_BINARY_DIR}/generate/config/${CMAKE_PROJECT_NAME}_version.h
   @ONLY)
 
 configure_file(
-  ${PRJ_HEADER_ROOT_DIR}/config/lcu_build_config.h.in
-  ${CMAKE_BINARY_DIR}/generate/config/lcu_build_config.h
+  ${PRJ_HEADER_ROOT_DIR}/config/${CMAKE_PROJECT_NAME}_build_config.h.in
+  ${CMAKE_BINARY_DIR}/generate/config/${CMAKE_PROJECT_NAME}_build_config.h
   @ONLY)
 
 #collect header(*.h) directories
@@ -348,11 +360,11 @@ ELSEIF(WIN32)
 	 message(STATUS "use pthread_win_lib")
 	 #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
-	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.lib")
+	 set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.lib")
 	 
-	 #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
-	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
-	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${TARGET_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
+	 #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
+	 set(dll_files "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
 	 message(STATUS "dll_files => ${dll_files}")
 	 #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
 	 copy_file_on_post_build_to_all_targets(dll_files)

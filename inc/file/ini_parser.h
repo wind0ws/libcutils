@@ -16,19 +16,26 @@ extern "C" {
 		/* invalid param : maybe null handle */
 		INI_PARSER_CODE_INVALID_PARAM,
 		/* alloc memory failed */
-		INI_PARSER_CODE_NOT_ENOUGH_MEMORY,
+		INI_PARSER_CODE_NO_ENOUGH_MEMORY,
 		/* section / key not found */
 		INI_PARSER_CODE_NOT_FOUND_SECTION_KEY
 	} INI_PARSER_CODE;
 
-	typedef struct _ini_parser ini_parser_t, * ini_parser_ptr;
+	typedef struct _ini_parser *ini_parser_handle;
+
+	/**
+	 * check if the provided string is a file path
+	 *
+	 * @return true for file_path, otherwise not
+	 */
+	bool ini_parser_is_file_path(__in const char* str);
 
 	/**
 	 * create empty ini config. equals ini_parser_parse_str(NULL)
 	 *
 	 * @return ini_parser inst pointer
 	 */
-	ini_parser_ptr ini_parser_create();
+	ini_parser_handle ini_parser_create();
 
 	/**
 	 * parse ini string config.
@@ -36,7 +43,7 @@ extern "C" {
 	 * @param ini_content: string pointer, can be NULL
 	 * @return ini_parser inst pointer
 	 */
-	ini_parser_ptr ini_parser_parse_str(const char* ini_content);
+	ini_parser_handle ini_parser_parse_str(const char* ini_content);
 
 	/**
 	 * parse ini file config.
@@ -45,7 +52,7 @@ extern "C" {
 	 * @return ini_parser inst pointer.
 			   returned NULL if file not exists or parse failed.
 	 */
-	ini_parser_ptr ini_parser_parse_file(const char* ini_file);
+	ini_parser_handle ini_parser_parse_file(const char* ini_file);
 
 	/**
 	 * add or update the section key value.
@@ -56,13 +63,13 @@ extern "C" {
 	 * @param value: ini value of key
 	 * @return see INI_PARSER_CODE
 	 */
-	INI_PARSER_CODE ini_parser_put_string(ini_parser_ptr parser_p,
+	INI_PARSER_CODE ini_parser_put_string(ini_parser_handle parser_p,
 		const char* section, const char* key, const char* value);
 
 	/**
 	 * get value string of specified section-key from ini
 	 */
-	INI_PARSER_CODE ini_parser_get_string(ini_parser_ptr parser_p, const char* section,
+	INI_PARSER_CODE ini_parser_get_string(ini_parser_handle parser_p, const char* section,
 		const char* key, char* value, const size_t value_size);
 
 	/**
@@ -71,7 +78,7 @@ extern "C" {
 	 * this operation won't take effect on your ini file, just on memory.
 	 * you could call ini_parser_dump and write to ini file if you want.
 	 */
-	INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_ptr parser_p,
+	INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_handle parser_p,
 		const char* section, const char* key);
 
 	/**
@@ -80,37 +87,37 @@ extern "C" {
 	 * this operation won't take effect on your ini file.
 	 * you could call ini_parser_dump to get it string and save to file.
 	 */
-	INI_PARSER_CODE ini_parser_delete_section(ini_parser_ptr parser_p, const char* section);
+	INI_PARSER_CODE ini_parser_delete_section(ini_parser_handle parser_p, const char* section);
 
 	/**
 	 * dump all ini config to string.
 	 *
-	 * the return string pointer should FREE after use by yourself!!!
+	 * The returned pointer should be freed after use!
 	 * return NULL means error occurred.
 	 */
-	char* ini_parser_dump(ini_parser_ptr parser_p);
+	char* ini_parser_dump(ini_parser_handle parser_p);
 
 	/**
 	 * save all ini config to file. 
 	 * the target file will be override.
 	 */
-	INI_PARSER_CODE ini_parser_save(ini_parser_ptr parser_p, const char* file_path);
+	INI_PARSER_CODE ini_parser_save(ini_parser_handle parser_p, const char* file_path);
 
-	INI_PARSER_CODE ini_parser_have_section_key(ini_parser_ptr parser_p, const char* section, const char* key);
+	INI_PARSER_CODE ini_parser_have_section_key(ini_parser_handle parser_p, const char* section, const char* key);
 
-	INI_PARSER_CODE ini_parser_have_section(ini_parser_ptr parser_p, const char* section);
+	INI_PARSER_CODE ini_parser_have_section(ini_parser_handle parser_p, const char* section);
 
-	INI_PARSER_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section, const char* key, bool* value);
+	INI_PARSER_CODE ini_parser_get_bool(ini_parser_handle parser_p, const char* section, const char* key, bool* value);
 
-	INI_PARSER_CODE ini_parser_get_double(ini_parser_ptr parser_p, const char* section, const char* key, double* value);
+	INI_PARSER_CODE ini_parser_get_double(ini_parser_handle parser_p, const char* section, const char* key, double* value);
 
-	INI_PARSER_CODE ini_parser_get_float(ini_parser_ptr parser_p, const char* section, const char* key, float* value);
+	INI_PARSER_CODE ini_parser_get_float(ini_parser_handle parser_p, const char* section, const char* key, float* value);
 
-	INI_PARSER_CODE ini_parser_get_int(ini_parser_ptr parser_p, const char* section, const char* key, int* value);
+	INI_PARSER_CODE ini_parser_get_int(ini_parser_handle parser_p, const char* section, const char* key, int* value);
 
-	INI_PARSER_CODE ini_parser_get_long(ini_parser_ptr parser_p, const char* section, const char* key, long* value);
+	INI_PARSER_CODE ini_parser_get_long(ini_parser_handle parser_p, const char* section, const char* key, long* value);
 
-	INI_PARSER_CODE ini_parser_get_long_long(ini_parser_ptr parser_p, const char* section, const char* key, long long* value);
+	INI_PARSER_CODE ini_parser_get_long_long(ini_parser_handle parser_p, const char* section, const char* key, long long* value);
 
 	/**
 	 * destroy ini_parser
@@ -118,7 +125,7 @@ extern "C" {
 	 * @param parser_pp: the pointer of ini_parser_ptr
 	 * @return see INI_PARSER_CODE
 	 */
-	INI_PARSER_CODE ini_parser_destroy(ini_parser_ptr* parser_pp);
+	INI_PARSER_CODE ini_parser_destroy(ini_parser_handle* parser_pp);
 
 #ifdef __cplusplus
 };

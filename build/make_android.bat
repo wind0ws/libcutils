@@ -22,14 +22,17 @@ if "%BUILD_ABI%" EQU "x86_64" goto label_main
 
 :label_main
 @echo Your BUILD_ABI=%BUILD_ABI%
-set BUILD_DIR=build_android_%BUILD_ABI%
+set BUILD_DIR=./build_android_%BUILD_ABI%
 TITLE=%BUILD_DIR%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%
+@echo Your ANDROID_STL=%ANDROID_STL%
+@echo Your ANDROID_PLATFORM=%ANDROID_PLATFORM%
 ::set OUTPUT_DIR=.\\output\\android\\armeabi-v7a
-rmdir /S /Q %BUILD_DIR:"=% 2>nul
-mkdir %BUILD_DIR:"=%
-%CMAKE_BIN% -H.\ -B.\%BUILD_DIR:"=%                         ^
+rmdir /S /Q "%BUILD_DIR:"=%" 2>nul
+mkdir "%BUILD_DIR:"=%"
+
+%CMAKE_BIN% -H.\ -B%BUILD_DIR:"=%                           ^
 			"-GNinja"                                       ^
 			-DANDROID_ABI=%BUILD_ABI%                       ^
 			-DANDROID_NDK=%ANDROID_NDK%                     ^
@@ -37,10 +40,10 @@ mkdir %BUILD_DIR:"=%
 			-DANDROID_TOOLCHAIN=clang                       ^
 			-DCMAKE_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE% ^
 			-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
-			-DANDROID_PLATFORM=android-19                   ^
-			-DANDROID_STL=c++_static                        ^
+			-DANDROID_PLATFORM=%ANDROID_PLATFORM%           ^
+			-DANDROID_STL=%ANDROID_STL%                     ^
 			-DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
-::			-DARG_PRJ_OUTPUT_DIR=%OUTPUT_DIR% 
+::			-DPRJ_OUTPUT_DIR_RELATIVE=%OUTPUT_DIR% 
 
 set ERR_CODE=%ERRORLEVEL%
 IF %ERR_CODE% NEQ 0 (
@@ -48,7 +51,7 @@ IF %ERR_CODE% NEQ 0 (
    @exit /b %ERR_CODE%
 )
 
-%NINJA_BIN% -C .\%BUILD_DIR:"=%
+%NINJA_BIN% -C %BUILD_DIR:"=% -j 8
 set ERR_CODE=%ERRORLEVEL%
 ::mkdir %OUTPUT_DIR%
 ::copy /Y .\build_android_v7a\libcutils_test %OUTPUT_DIR%\\
@@ -58,5 +61,5 @@ set ERR_CODE=%ERRORLEVEL%
 @echo.
 @echo "compile finished. bye bye..."
 ::@pause>nul
-color 0F
+::color 0F
 @exit /b %ERR_CODE%

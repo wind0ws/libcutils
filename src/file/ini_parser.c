@@ -3,7 +3,6 @@
 #include "file/ini_reader.h"
 #include "data/list.h"
 #include "common_macro.h"
-//#include "mem/mplite.h"
 #include "mem/strings.h" /* for strcmp */
 #include "mem/stringbuilder.h"
 #include <stdio.h>       /* for fopen */
@@ -14,10 +13,12 @@
 
 typedef enum
 {
+	INI_VALUE_TYPE_BOOL,
+	INI_VALUE_TYPE_DOUBLE,
+	INI_VALUE_TYPE_FLOAT,
 	INI_VALUE_TYPE_INT,
 	INI_VALUE_TYPE_LONG,
-	INI_VALUE_TYPE_DOUBLE,
-	INI_VALUE_TYPE_BOOL
+	INI_VALUE_TYPE_LONG_LONG,
 } INI_VALUE_TYPE;
 
 typedef struct
@@ -42,10 +43,10 @@ struct _ini_parser
 {
 	/* hold all sections, and each section(list_t *) hold key_value_t */
 	list_t* plist_sections;
-	/* prediction ini string size */
+	/* prediction all ini config string size, for dump ini string */
 	size_t prediction_str_size;
 	/* last used section  */
-	section_info_t *p_last_used_section;
+	section_info_t* p_last_used_section;
 };
 
 static inline void* allocator_my_malloc(size_t size)
@@ -68,11 +69,11 @@ static inline void allocator_my_free(void* ptr)
 	if (ptr) free(ptr);
 }
 
-static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
+static INI_PARSER_CODE ini_parser_get_value(ini_parser_handle parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type);
 
-//ini reader callback, return true for continue, return false for abort
-static bool ini_handler_cb(void* user,
+//ini reader callback, return non-zero for error
+static int ini_handler_cb(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
 	, int lineno
@@ -81,46 +82,72 @@ static bool ini_handler_cb(void* user,
 {
 	if (NULL == section || NULL == key)
 	{
-		return true;// just continue to parse file
+		return 0;// just continue to parse file
 	}
-	ini_parser_ptr parser_p = (ini_parser_ptr)user;
-	return ini_parser_put_string(parser_p, section, key, value) == INI_PARSER_ERR_SUCCEED;
+	ini_parser_handle parser_p = (ini_parser_handle)user;
+	return INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser_p, section, key, value);
 }
 
-ini_parser_ptr ini_parser_parse_str(const char* ini_content)
+bool ini_parser_is_file_path(const char* str)
 {
-	list_t *plist_sections = list_new(allocator_my_free);
+	if (NULL == str || '\0' == str[0])
+	{
+		return false;
+	}
+	bool is_file_path = (NULL == strstr(str, "\n")); // check have new line
+	if (is_file_path) // check for this situation: [section] a = b
+	{
+		size_t str_len = strlen(str);
+		for (size_t i = 0; i < str_len; ++i)
+		{
+			if (isspace((int)str[i]))
+			{
+				continue;
+			}
+			if ('#' == str[i] || '[' == str[i])
+			{
+				is_file_path = false;
+			}
+			break;
+		}
+	}
+	return is_file_path;
+}
+
+ini_parser_handle ini_parser_parse_str(const char* ini_content)
+{
+	list_t* plist_sections = list_new(allocator_my_free);
 	if (!plist_sections)
 	{
 		return NULL;
 	}
-	ini_parser_ptr parser_p = (ini_parser_ptr)calloc(1, sizeof(struct _ini_parser));
+	ini_parser_handle parser_p = (ini_parser_handle)calloc(1, sizeof(struct _ini_parser));
 	if (!parser_p)
 	{
 		list_free(plist_sections);
 		return NULL;
 	}
 	parser_p->plist_sections = plist_sections;
-	if (ini_content && ini_parse_string(ini_content, ini_handler_cb, parser_p) != 0)
+	if (ini_content && 0 != ini_reader_parse_string(ini_content, ini_handler_cb, parser_p))
 	{
-		ini_parser_destory(&parser_p);
+		ini_parser_destroy(&parser_p);
 		return NULL;
 	}
 	return parser_p;
 }
 
-ini_parser_ptr ini_parser_create()
+ini_parser_handle ini_parser_create()
 {
 	return ini_parser_parse_str(NULL);
 }
 
-ini_parser_ptr ini_parser_parse_file(const char* ini_file)
+ini_parser_handle ini_parser_parse_file(const char* ini_file)
 {
 	if (!ini_file || strlen(ini_file) < 1)
 	{
 		return NULL;
 	}
-	ini_parser_ptr parser = NULL;
+	ini_parser_handle parser = NULL;
 	char* ini_content = NULL;
 	FILE* fp = fopen(ini_file, "rb");
 	do
@@ -129,18 +156,19 @@ ini_parser_ptr ini_parser_parse_file(const char* ini_file)
 		{
 			break;
 		}
-		fseek(fp, 0, SEEK_END);
+		fseek(fp, 0L, SEEK_END);
 		long file_size = ftell(fp);
 		if (file_size < 6)
 		{
 			break;
 		}
-		fseek(fp, 0, SEEK_SET);
-		ini_content = (char*)malloc((size_t)file_size);
+		fseek(fp, 0L, SEEK_SET);
+		ini_content = (char*)malloc((size_t)file_size + 1U);
 		if (!ini_content)
 		{
 			break;
 		}
+		ini_content[file_size] = '\0';
 		if (fread(ini_content, 1, (size_t)file_size, fp) != (size_t)file_size)
 		{
 			break;
@@ -162,167 +190,185 @@ ini_parser_ptr ini_parser_parse_file(const char* ini_file)
 // so if you find your data, just return false
 static bool iter_for_search_target_section(void* data, void* context)
 {
-	char* section_name = (char *)context;
+	char* section_name = (char*)context;
 	section_info_t* p_section_info = (section_info_t*)data;
 	return strcasecmp(section_name, p_section_info->section_name) != 0;
 }
 
-static section_info_t* search_target_section(ini_parser_ptr parser_p, bool auto_create,
+static section_info_t* search_target_section(ini_parser_handle parser_p, bool auto_create,
 	const char* section, const size_t section_len)
 {
 	if (!section || section_len == 0) return NULL;
 	if (parser_p->p_last_used_section &&
-		strcasecmp(section, parser_p->p_last_used_section->section_name) == 0)
+		0 == strcasecmp(section, parser_p->p_last_used_section->section_name))
 	{
 		return parser_p->p_last_used_section; //hit cache, no need search on root list.
 	}
-	if (!auto_create && list_length(parser_p->plist_sections) == 0) return NULL;
-	list_node_t *target_section_node = list_foreach((const list_t *)parser_p->plist_sections, 
-										iter_for_search_target_section, (void *)section);
+	if (!auto_create && 0 == list_length(parser_p->plist_sections)) return NULL;
+	list_node_t* target_section_node = list_foreach((const list_t*)parser_p->plist_sections,
+		iter_for_search_target_section, (void*)section);
 	section_info_t* target_section = target_section_node ? (section_info_t*)list_node(target_section_node) : NULL;
 	if (auto_create && !target_section)
 	{
-		target_section = (section_info_t *)allocator_my_calloc(1, sizeof(section_info_t));
+		target_section = (section_info_t*)allocator_my_calloc(1, sizeof(section_info_t));
 		if (!target_section)
 		{
 			return NULL;
 		}
 		target_section->plist_section = list_new(allocator_my_free);
-		if (target_section->plist_section == NULL)
+		if (NULL == target_section->plist_section)
 		{
 			allocator_my_free(target_section);
 			return NULL;
 		}
 		strlcpy(target_section->section_name, section, sizeof(target_section->section_name));
-		list_append(parser_p->plist_sections, target_section);
-		parser_p->prediction_str_size += (section_len + 6U); /* 2 for square brackets, and 4 for 2 \r\n */
+		if (false == list_append(parser_p->plist_sections, target_section))
+		{
+			allocator_my_free(target_section);
+			return NULL;
+		}
+		parser_p->prediction_str_size += (section_len + 6U); /* 2 for square brackets, and 4 for two \r\n */
 		parser_p->p_last_used_section = target_section;
 	}
 	return target_section;
 }
 
 // return true for continue iter, false for break iter. 
-// so if you find your data, just return false
+// so if you find your data, just return false.
 static bool iter_for_search_key_value(void* data, void* context)
 {
 	key_value_t* p_kv = (key_value_t*)data;
 	char* key = (char*)context;
-	return strcasecmp(key, p_kv->key) != 0;
+	return 0 != strcasecmp(key, p_kv->key);
 }
 
 static key_value_t* search_target_kv(list_t* section, const char* key)
 {
-	if (list_length(section) == 0) return NULL;
-	list_node_t* target_node = list_foreach(section, iter_for_search_key_value, (void *)key);
+	if (0 == list_length(section)) return NULL;
+	list_node_t* target_node = list_foreach(section, iter_for_search_key_value, (void*)key);
 	return target_node ? (key_value_t*)list_node(target_node) : NULL;
 }
 
-INI_PARSER_CODE ini_parser_put_string(ini_parser_ptr parser_p,
+INI_PARSER_CODE ini_parser_put_string(ini_parser_handle parser_p,
 	const char* section, const char* key, const char* value)
 {
-	if (!parser_p || !key || key[0] == '\0')
+	if (!parser_p || !key || '\0' == key[0])
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	const size_t section_len = strlen(section);
 	const size_t key_len = strlen(key);
 	if (section_len < 1 || key_len < 1)
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	section_info_t* target_section = search_target_section(parser_p, true, section, section_len);
 	if (!target_section)
 	{
-		return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+		return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
 	}
 	key_value_t* p_kv = search_target_kv(target_section->plist_section, key);
-	bool is_update = (p_kv != NULL);
+	bool is_update = (NULL != p_kv);
 	if (!is_update)
 	{
-		p_kv = (key_value_t *)allocator_my_calloc(1, sizeof(key_value_t));
+		p_kv = (key_value_t*)allocator_my_calloc(1, sizeof(key_value_t));
 		if (!p_kv)
 		{
-			return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+			return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
 		}
 		strlcpy(p_kv->key, key, sizeof(p_kv->key));
 	}
 	strlcpy(p_kv->value, (value ? value : ""), sizeof(p_kv->value));
-	if (is_update) return INI_PARSER_ERR_SUCCEED;
-	return list_append(target_section->plist_section, p_kv) == true ?
-					INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+	if (is_update) return INI_PARSER_CODE_SUCCEED;
+	if (true == list_append(target_section->plist_section, p_kv))
+	{
+		return INI_PARSER_CODE_SUCCEED;
+	}
+	else
+	{
+		allocator_my_free(p_kv);
+		return INI_PARSER_CODE_FAILED;
+	}
 }
 
-INI_PARSER_CODE ini_parser_get_string(ini_parser_ptr parser_p,
+INI_PARSER_CODE ini_parser_get_string(ini_parser_handle parser_p,
 	const char* section, const char* key, char* value, const size_t value_size)
 {
-	if (!parser_p || !section || !key)
+	if (!parser_p || !section)
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	const size_t section_len = strlen(section);
-	const size_t key_len = strlen(key);
-	if (!section_len || !key_len)
+	if (0 == section_len)
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 
 	section_info_t* target_section = search_target_section(parser_p, false, section, section_len);
 	if (!target_section)
 	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+		return INI_PARSER_CODE_NOT_FOUND_SECTION_KEY;
+	}
+	if (!key && !value && 0 == value_size)
+	{
+		return INI_PARSER_CODE_SUCCEED; //user want to detect section exists
+	}
+	if (!key || '\0' == key[0])
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	key_value_t* p_kv = search_target_kv(target_section->plist_section, key);
 	if (!p_kv)
 	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+		return INI_PARSER_CODE_NOT_FOUND_SECTION_KEY;
 	}
 	if (value && value_size)
 	{
 		size_t the_value_len = strlen(p_kv->value);
 		if (value_size <= the_value_len)
 		{
-			return INI_PARSER_ERR_NOT_ENOUGH_MEMORY;
+			return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
 		}
 		memcpy(value, p_kv->value, the_value_len + 1);
 	}
-	return INI_PARSER_ERR_SUCCEED;
+	return INI_PARSER_CODE_SUCCEED;
 }
 
 // delete target section key
-INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_ptr parser_p,
+INI_PARSER_CODE ini_parser_delete_by_section_key(ini_parser_handle parser_p,
 	const char* section, const char* key)
 {
 	if (!parser_p || !section || !key)
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
-	}
-	section_info_t * p_section = search_target_section(parser_p, false, section, strlen(section));
-	if (!p_section)
-	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
-	}
-	key_value_t *p_kv = search_target_kv(p_section->plist_section, key);
-	if (!p_kv)
-	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
-	}
-	return list_remove(p_section->plist_section, p_kv) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
-}
-
-// delete target section, all key-value in this section will deleted.
-INI_PARSER_CODE ini_parser_delete_section(ini_parser_ptr parser_p, const char* section)
-{
-	if (!parser_p || !section)
-	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	section_info_t* p_section = search_target_section(parser_p, false, section, strlen(section));
 	if (!p_section)
 	{
-		return INI_PARSER_ERR_SECTION_KEY_NOT_FOUND;
+		return INI_PARSER_CODE_NOT_FOUND_SECTION_KEY;
+	}
+	key_value_t* p_kv = search_target_kv(p_section->plist_section, key);
+	if (!p_kv)
+	{
+		return INI_PARSER_CODE_NOT_FOUND_SECTION_KEY;
+	}
+	return list_remove(p_section->plist_section, p_kv) ? INI_PARSER_CODE_SUCCEED : INI_PARSER_CODE_FAILED;
+}
+
+// delete target section, all key-value in this section will deleted.
+INI_PARSER_CODE ini_parser_delete_section(ini_parser_handle parser_p, const char* section)
+{
+	if (!parser_p || !section)
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
+	}
+	section_info_t* p_section = search_target_section(parser_p, false, section, strlen(section));
+	if (!p_section)
+	{
+		return INI_PARSER_CODE_NOT_FOUND_SECTION_KEY;
 	}
 	list_free(p_section->plist_section);
-	return list_remove(parser_p->plist_sections, p_section) ? INI_PARSER_ERR_SUCCEED : INI_PARSER_ERR_FAILED;
+	return list_remove(parser_p->plist_sections, p_section) ? INI_PARSER_CODE_SUCCEED : INI_PARSER_CODE_FAILED;
 }
 
 static bool iter_key_value_for_dump(void* data, void* context)
@@ -331,7 +377,7 @@ static bool iter_key_value_for_dump(void* data, void* context)
 	{
 		return true; // just continue
 	}
-	key_value_t* p_kv = (key_value_t *)data;
+	key_value_t* p_kv = (key_value_t*)data;
 	dump_ini_context* dup_ctx = (dump_ini_context*)context;
 	if ((dup_ctx->ret_code = stringbuilder_appendf(dup_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)) != 0)
 	{
@@ -351,7 +397,7 @@ static bool iter_section_for_dump(void* data, void* context)
 	{
 		return true;
 	}
-	section_info_t* p_section = (section_info_t *)data;
+	section_info_t* p_section = (section_info_t*)data;
 	dump_ini_context* dup_ctx = (dump_ini_context*)context;
 	if (dup_ctx->ret_code)
 	{
@@ -363,7 +409,7 @@ static bool iter_section_for_dump(void* data, void* context)
 	return true;
 }
 
-char* ini_parser_dump(ini_parser_ptr parser_p)
+char* ini_parser_dump(ini_parser_handle parser_p)
 {
 	if (!parser_p)
 	{
@@ -386,29 +432,71 @@ char* ini_parser_dump(ini_parser_ptr parser_p)
 	return ret_str;
 }
 
-INI_PARSER_CODE ini_parser_has_key(ini_parser_ptr parser_p, const char* section, const char* key)
+INI_PARSER_CODE ini_parser_save(ini_parser_handle parser_p, const char* file_path)
+{
+	if (!parser_p || !file_path || '\0' == file_path[0])
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
+	}
+	FILE* fp = fopen(file_path, "wb");
+	if (!fp)
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
+	}
+	char* ini_str = ini_parser_dump(parser_p);
+	if (!ini_str)
+	{
+		fclose(fp);
+		return INI_PARSER_CODE_FAILED;
+	}
+	size_t ini_str_len = strlen(ini_str);
+	if (ini_str_len > 0)
+	{
+		fwrite(ini_str, 1, ini_str_len, fp);
+	}
+	free(ini_str);
+	fclose(fp);
+	return INI_PARSER_CODE_SUCCEED;
+}
+
+INI_PARSER_CODE ini_parser_have_section_key(ini_parser_handle parser_p, const char* section, const char* key)
 {
 	return ini_parser_get_string(parser_p, section, key, NULL, 0);
 }
 
-INI_PARSER_CODE ini_parser_get_int(ini_parser_ptr parser_p, const char* section, const char* key, int* value)
+INI_PARSER_CODE ini_parser_have_section(ini_parser_handle parser_p, const char* section)
 {
-	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_INT);
+	return ini_parser_have_section_key(parser_p, section, NULL);
 }
 
-INI_PARSER_CODE ini_parser_get_long(ini_parser_ptr parser_p, const char* section, const char* key, long* value)
+INI_PARSER_CODE ini_parser_get_bool(ini_parser_handle parser_p, const char* section, const char* key, bool* value)
 {
-	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_LONG);
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_BOOL);
 }
 
-INI_PARSER_CODE ini_parser_get_double(ini_parser_ptr parser_p, const char* section, const char* key, double* value)
+INI_PARSER_CODE ini_parser_get_double(ini_parser_handle parser_p, const char* section, const char* key, double* value)
 {
 	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_DOUBLE);
 }
 
-INI_PARSER_CODE ini_parser_get_bool(ini_parser_ptr parser_p, const char* section, const char* key, bool* value)
+INI_PARSER_CODE ini_parser_get_float(ini_parser_handle parser_p, const char* section, const char* key, float* value)
 {
-	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_BOOL);
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_FLOAT);
+}
+
+INI_PARSER_CODE ini_parser_get_int(ini_parser_handle parser_p, const char* section, const char* key, int* value)
+{
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_INT);
+}
+
+INI_PARSER_CODE ini_parser_get_long(ini_parser_handle parser_p, const char* section, const char* key, long* value)
+{
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_LONG);
+}
+
+INI_PARSER_CODE ini_parser_get_long_long(ini_parser_handle parser_p, const char* section, const char* key, long long* value)
+{
+	return ini_parser_get_value(parser_p, section, key, value, INI_VALUE_TYPE_LONG_LONG);
 }
 
 static bool iter_for_delete_all_section(void* data, void* context)
@@ -417,18 +505,18 @@ static bool iter_for_delete_all_section(void* data, void* context)
 	{
 		return true;
 	}
-	section_info_t* p_sec_info = (section_info_t *)data;
+	section_info_t* p_sec_info = (section_info_t*)data;
 	list_free(p_sec_info->plist_section);
 	return true;
 }
 
-INI_PARSER_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
+INI_PARSER_CODE ini_parser_destroy(ini_parser_handle* parser_pp)
 {
 	if (NULL == parser_pp || NULL == *parser_pp)
 	{
-		return INI_PARSER_ERR_INVALID_PARAM;
+		return INI_PARSER_CODE_INVALID_PARAM;
 	}
-	ini_parser_ptr parser_p = *parser_pp;
+	ini_parser_handle parser_p = *parser_pp;
 	if (parser_p->plist_sections)
 	{
 		//delete all section
@@ -438,75 +526,83 @@ INI_PARSER_CODE ini_parser_destory(ini_parser_ptr* parser_pp)
 	}
 	free(parser_p);
 	*parser_pp = NULL;
-	return INI_PARSER_ERR_SUCCEED;
+	return INI_PARSER_CODE_SUCCEED;
 }
 
-static long parse_str2long(INI_PARSER_CODE* p_err, char* str_value)
+static long long parse_str2longlong(INI_PARSER_CODE* p_err, char* str_value)
 {
 	char* end_ptr = NULL;
-	long result = strtol(str_value, &end_ptr, 10);
-	*p_err = (!end_ptr || *end_ptr != '\0') ? INI_PARSER_ERR_FAILED : INI_PARSER_ERR_SUCCEED;
+	long long result = strtoll(str_value, &end_ptr, 10);
+	*p_err = (!end_ptr || *end_ptr != '\0') ? INI_PARSER_CODE_FAILED : INI_PARSER_CODE_SUCCEED;
 	return result;
 }
 
-static INI_PARSER_CODE ini_parser_get_value(ini_parser_ptr parser_p,
+static INI_PARSER_CODE ini_parser_get_value(ini_parser_handle parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type)
 {
 	char str_value[INI_VALUE_STACK_SIZE] = { 0 };
 	INI_PARSER_CODE ret = ini_parser_get_string(parser_p, section, key, str_value, INI_VALUE_STACK_SIZE);
-	if (ret != INI_PARSER_ERR_SUCCEED)
+	if (INI_PARSER_CODE_SUCCEED != ret)
 	{
 		return ret;
 	}
-	if (str_value[0] == '\0')
+	if ('\0' == str_value[0])
 	{
-		return INI_PARSER_ERR_FAILED;
+		return INI_PARSER_CODE_FAILED;
 	}
+
 	char* end_ptr = NULL;
+
+#define STR2NUM_TYPE(type, trans_func) type result = trans_func(str_value, &end_ptr); \
+if (!end_ptr || *end_ptr != '\0') { ret = INI_PARSER_CODE_FAILED; break; }\
+*((type*)value) = result;
+
 	switch (value_type)
 	{
-	case INI_VALUE_TYPE_INT:
-		*((int*)value) = (int)parse_str2long(&ret, str_value);
-		break;
-	case INI_VALUE_TYPE_LONG:
-		*((long*)value) = parse_str2long(&ret, str_value);
-		break;
-	case INI_VALUE_TYPE_DOUBLE:
-	{
-		double result = strtod(str_value, &end_ptr);
-		if (!end_ptr || *end_ptr != '\0')
-		{
-			ret = INI_PARSER_ERR_FAILED;
-			break;
-		}
-		*((double*)value) = result;
-	}
-	break;
 	case INI_VALUE_TYPE_BOOL:
 	{
-		bool result = strncasecmp(str_value, "true", 4) == 0;
+		bool result = (0 == strncasecmp(str_value, "true", 4));
 		do
 		{
 			if (result)
 			{
 				break;
 			}
-			if (strncasecmp(str_value, "false", 5) == 0)
+			if (0 == strncasecmp(str_value, "false", 5))
 			{
 				result = false;
 				break;
 			}
-			long num = parse_str2long(&ret, str_value);
-			if (ret == INI_PARSER_ERR_SUCCEED)
+			int num = (int)parse_str2longlong(&ret, str_value);
+			if (INI_PARSER_CODE_SUCCEED == ret)
 			{
-				result = (bool)num;
+				result = (0 == num ? false : true);
 			}
 		} while (0);
 		*((bool*)value) = result;
 	}
 	break;
+	case INI_VALUE_TYPE_DOUBLE:
+	{
+		STR2NUM_TYPE(double, strtod)
+	}
+	break;
+	case INI_VALUE_TYPE_FLOAT:
+	{
+		STR2NUM_TYPE(float, strtof)
+	}
+	break;
+	case INI_VALUE_TYPE_INT:
+		*((int*)value) = (int)parse_str2longlong(&ret, str_value);
+		break;
+	case INI_VALUE_TYPE_LONG:
+		*((long*)value) = (long)parse_str2longlong(&ret, str_value);
+		break;
+	case INI_VALUE_TYPE_LONG_LONG:
+		*((long long*)value) = parse_str2longlong(&ret, str_value);
+		break;
 	default:
-		ret = INI_PARSER_ERR_FAILED;
+		ret = INI_PARSER_CODE_FAILED;
 		break;
 	}
 	return ret;

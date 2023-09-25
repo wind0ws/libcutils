@@ -15,7 +15,9 @@ EXPORTS
 	__xlog_internal_print @15
 	__xlog_internal_hex_print @16
 	
-	libcutils_get_version @18
+	lcu_get_version @18
+	lcu_init @19
+	lcu_deinit @20
 	
 	
 	

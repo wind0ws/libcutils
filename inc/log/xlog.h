@@ -5,7 +5,12 @@
 #include "log/logger_data.h" /* for common data */
 #include <stddef.h>          /* for size_t      */
 
-//user log callback prototype. log_msg string not end with '\n' automatically. msg_size contains NUL terminator
+/**
+ * user log callback prototype.
+ * 
+ *  log_msg string not end with '\n' automatically.
+ *  msg_size contains NUL terminator.
+ */
 typedef void (*xlog_user_callback_fn)(LogLevel level, void* log_msg, size_t msg_size, void* user_data);
 
 typedef enum
@@ -34,20 +39,35 @@ typedef enum
 	LOG_FLUSH_MODE_EVERY
 } LogFlushMode;
 
+typedef struct 
+{
+	void* arg; /**< Argument to be passed to acquire and release function pointers */
+	int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
+	int (*release)(void* arg); /**< Function pointer to release a lock */
+} xlog_lock_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
+	/**
+	 * use a lock to ensure consistent printing order.
+	 * e.g., concurrent printing on logcat/console/file
+	 * 
+	 * if you not provide lock, printing order can't be ensured. 
+	 */
+	void xlog_set_lock(xlog_lock_t *lock);
+
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 	/**
 	 * redirect stdout from console to file.
-	 * note: NOT THREAD-SAFE. call it on begin of your program.
+	 * note: NOT THREAD-SAFE. call it at beginning of your program.
 	 */
 	void xlog_stdout2file(char* file_path);
 
 	/**
 	 * bring stdout print on console if current print to file.
-	 * note: NOT THREAD-SAFE. call it on end of your program.
+	 * note: NOT THREAD-SAFE. call it at ending of your program.
 	 */
 	void xlog_back2stdout();
 #endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
@@ -73,13 +93,6 @@ extern "C" {
 	void xlog_set_timezone(int timezone_hour);
 
 	/**
-	 * set user callback. when log performed, callback will called.
-	 * you can do your own log logic on callback.
-	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
-	 */
-	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
-
-	/**
 	* set the min log level. 
 	* only output log if current level greater or equal to this min_level
 	*/
@@ -92,12 +105,25 @@ extern "C" {
 	LogLevel xlog_get_min_level();
 
 	/**
-	 * set log target which you want to output.
-	 * default: on Android target is LOG_TARGET_ANDROID, other platform target is LOG_TARGET_CONSOLE
-	 * multiple can be combined. 
-	 * example: (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) or (LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK)
+	 * set user callback. when log performed, callback will called.
+	 * you can do your own log logic on callback.
+	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
 	 */
-	void xlog_set_target(int target);
+	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
+
+	/**
+	 * @brief set log target which you want to output.
+	 * @note  if you output on multi target and not provide lock, printing order can't be ensured.
+	 * 
+	 * @param[in]	target : default on Android is LOG_TARGET_ANDROID, other platform is LOG_TARGET_CONSOLE.
+	 *                       multiple target can be combined. 
+	 *                       e.g., (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) 
+	 *                       or (LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK)
+	 * 
+	 * @param[in]	lock : use a lock to ensure consistent printing order. if you don't need it, just pass NULL.
+	 *                     e.g., concurrent printing on android(logcat)/console/file(user_cb)
+	 */
+	void xlog_set_target(int target, xlog_lock_t* lock);
 
 	/**
 	 * get current target
@@ -139,7 +165,7 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX_HEX or TLOGX_HEX macro instead.
 	 */
-	void __xlog_internal_hex_print(LogLevel level, const char* tag, char* chars, size_t chars_count);
+	void __xlog_internal_hex_print(LogLevel level, const char* tag, const char* chars, size_t chars_count);
 
 #ifdef __cplusplus
 }
@@ -202,17 +228,23 @@ extern "C" {
 #define LOG_BACK2STD()                do {} while (0)
 #endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
 
+// better 'define LOG_TAG "xxx"' before include "xlog.h"
+// if not, we use default TAG which you called on xlog_set_default_tag
+#ifndef LOG_TAG
+#define LOG_TAG  NULL
+#endif // !LOG_TAG
+
 #define TLOGV(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGD(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGI(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_INFO, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGW(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__)
 
-#define LOGV(fmt, ...) TLOGV(NULL, fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...) TLOGD(NULL, fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...) TLOGI(NULL, fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...) TLOGW(NULL, fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...) TLOGE(NULL, fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...) TLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...) TLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) TLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) TLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) TLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGD_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
@@ -220,11 +252,11 @@ extern "C" {
 #define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define LOGV_TRACE(fmt, ...) TLOGV_TRACE(NULL, fmt, ##__VA_ARGS__)
-#define LOGD_TRACE(fmt, ...) TLOGD_TRACE(NULL, fmt, ##__VA_ARGS__)
-#define LOGI_TRACE(fmt, ...) TLOGI_TRACE(NULL, fmt, ##__VA_ARGS__)
-#define LOGW_TRACE(fmt, ...) TLOGW_TRACE(NULL, fmt, ##__VA_ARGS__)
-#define LOGE_TRACE(fmt, ...) TLOGE_TRACE(NULL, fmt, ##__VA_ARGS__)
+#define LOGV_TRACE(fmt, ...) TLOGV_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...) TLOGD_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...) TLOGI_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...) TLOGW_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...) TLOGE_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define TLOGV_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_VERBOSE, tag, chars, chars_count)
 #define TLOGD_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_DEBUG, tag, chars, chars_count)
@@ -232,11 +264,11 @@ extern "C" {
 #define TLOGW_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_WARN, tag, chars, chars_count)
 #define TLOGE_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_ERROR, tag, chars, chars_count)
 
-#define LOGV_HEX(chars, chars_count) TLOGV_HEX(NULL, chars, chars_count)
-#define LOGD_HEX(chars, chars_count) TLOGD_HEX(NULL, chars, chars_count)
-#define LOGI_HEX(chars, chars_count) TLOGI_HEX(NULL, chars, chars_count)
-#define LOGW_HEX(chars, chars_count) TLOGW_HEX(NULL, chars, chars_count)
-#define LOGE_HEX(chars, chars_count) TLOGE_HEX(NULL, chars, chars_count)
+#define LOGV_HEX(chars, chars_count) TLOGV_HEX(LOG_TAG, chars, chars_count)
+#define LOGD_HEX(chars, chars_count) TLOGD_HEX(LOG_TAG, chars, chars_count)
+#define LOGI_HEX(chars, chars_count) TLOGI_HEX(LOG_TAG, chars, chars_count)
+#define LOGW_HEX(chars, chars_count) TLOGW_HEX(LOG_TAG, chars, chars_count)
+#define LOGE_HEX(chars, chars_count) TLOGE_HEX(LOG_TAG, chars, chars_count)
 
 #endif // LCU_XLOG_OFF
 

@@ -11,10 +11,10 @@
 #ifndef LCU_MEM_DEBUG_H
 #define LCU_MEM_DEBUG_H
 
-// define this macro(_ENABLE_LCU_MEM_CHECK_FEATURE) will enable memory check feature
+// define this macro(_LCU_MEM_CHECK_FEATURE_ENABLE) will enable memory check feature
 // suggest user add it to compiler on build if you really want to debug memory.
 // don't forget add this file(mem_debug.h) on your source file first line.
-//#define _ENABLE_LCU_MEM_CHECK_FEATURE
+//#define _LCU_MEM_CHECK_FEATURE_ENABLE
 
 #ifdef _WIN32
 #ifndef __func__
@@ -24,7 +24,7 @@
 #define __PRETTY_FUNCTION__ __FUNCSIG__ 
 #endif // !__PRETTY_FUNCTION__
 
-#if(defined(_DEBUG) && !defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
+#if(defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE))
  // must keep next 3 line on your top source file,
  // otherwise it won't tell you leak memory on which file with line number.
 #define _CRTDBG_MAP_ALLOC
@@ -40,7 +40,7 @@
 // only need call once on your main function first line!
 // create log file, do not close it at end of main, because crt will write log to it.
 // dump is in warn level. let warn log to file, debug console and window .
-#define INIT_MEM_CHECK() {\
+#define MEM_CHECK_INIT() {\
     void *_hDbgLogFile = CreateFile(TEXT("./memleak.log"), GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,\
 	                             NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); \
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG /*| _CRTDBG_MODE_WNDW*/); \
@@ -48,8 +48,8 @@
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF); \
 }
 // nothing need to do on deinit
-#define DEINIT_MEM_CHECK()  do { } while (0)
-#endif // _DEBUG && !_ENABLE_LCU_MEM_CHECK_FEATURE
+#define MEM_CHECK_DEINIT()  do { } while (0)
+#endif // _DEBUG && !_LCU_MEM_CHECK_FEATURE_ENABLE
 #endif // _WIN32
 
 // common header
@@ -68,7 +68,7 @@
 #endif // __cplusplus
 #include <malloc.h>
 
-#if(!defined(_CRTDBG_MAP_ALLOC) && defined(_ENABLE_LCU_MEM_CHECK_FEATURE))
+#if(!defined(_CRTDBG_MAP_ALLOC) && defined(_LCU_MEM_CHECK_FEATURE_ENABLE) && _LCU_MEM_CHECK_FEATURE_ENABLE)
 // to mark we really use lcu memory check feature
 #define _USE_LCU_MEM_CHECK
 #include "mem/allocator.h"
@@ -82,7 +82,7 @@ void  operator delete[](void* ptr) noexcept;
 
 void* operator new(size_t size, const char* fileName, const char* funcName, int line)
 {
-	// here we are not deal with new(0), but it is ok,
+	// here we are not deal with new(0), but it is acceptable,
 	// because if user change return pointer's memory, it will trigger memory corruption on delete it.
 	return lcu_malloc_trace(size, fileName, funcName, line);
 }
@@ -113,8 +113,8 @@ void operator delete[](void* ptr) noexcept
 #define new new(__FILE__, __func__, __LINE__)
 #endif // __cplusplus
 
-#define INIT_MEM_CHECK()   allocation_tracker_init()
-#define DEINIT_MEM_CHECK() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
+#define MEM_CHECK_INIT()   allocation_tracker_init()
+#define MEM_CHECK_DEINIT() do{ allocation_tracker_expect_no_allocations(NULL, NULL); allocation_tracker_uninit(); }while (0)
 
 #if(defined(free) || defined(malloc) || defined(calloc) || defined(realloc) || defined(strdup) || defined(strndup))
 #error "free/malloc/calloc/realloc/strdup/strndup is defined. you should put \"mem_debug.h\" on your source file first line."
@@ -126,11 +126,11 @@ void operator delete[](void* ptr) noexcept
 #define strdup(p)          lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
 #define strndup(p, s)      lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
 
-#endif // !_CRTDBG_MAP_ALLOC && _ENABLE_LCU_MEM_CHECK_FEATURE
+#endif // !_CRTDBG_MAP_ALLOC && _LCU_MEM_CHECK_FEATURE_ENABLE
 
-#ifndef INIT_MEM_CHECK 
-#define INIT_MEM_CHECK()   do { } while (0)
-#define DEINIT_MEM_CHECK() do { } while (0)
-#endif // !INIT_MEM_CHECK 
+#ifndef MEM_CHECK_INIT 
+#define MEM_CHECK_INIT()   do { } while (0)
+#define MEM_CHECK_DEINIT() do { } while (0)
+#endif // !MEM_CHECK_INIT 
 
 #endif // !LCU_MEM_DEBUG_H

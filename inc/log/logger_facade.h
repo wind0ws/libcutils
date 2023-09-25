@@ -4,7 +4,7 @@
 
 /* DO NOT include this header directly, 
  * this is a facade of logger, 
- * a logger should implement definition of _LOG_XXX_IMPL,
+ * a logger should implement definition of _LOG_XXX_IMPL
  */
 
 #if(!defined(_LCU_LOGGER_DISABLE) || 0 != _LCU_LOGGER_DISABLE)

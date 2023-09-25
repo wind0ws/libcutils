@@ -1,6 +1,7 @@
-#include <malloc.h>
+#include "mem/mem_debug.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/ringbuffer.h"
+#include <malloc.h>
 
 struct _fixed_msg_queue_s 
 {
@@ -15,7 +16,7 @@ fixed_msg_queue fixed_msg_queue_create(__in uint32_t one_msg_byte_size,
     {
         return NULL;
     }
-    size_t expect_mem_size = sizeof(struct _fixed_msg_queue_s) + one_msg_byte_size * max_msg_capacity;
+    const size_t expect_mem_size = sizeof(struct _fixed_msg_queue_s) + one_msg_byte_size * max_msg_capacity;
     char *raw_mem = (char *)malloc(expect_mem_size);
     if (!raw_mem)
     {
@@ -60,13 +61,13 @@ extern inline void fixed_msg_queue_clear(__in fixed_msg_queue msg_queue)
     RingBuffer_clear(msg_queue->ring_buf_p);
 }
 
-extern inline uint32_t fixed_msg_queue_available_pop_msg_amount(__in fixed_msg_queue msg_queue) 
+extern inline uint32_t fixed_msg_queue_available_pop_amount(__in fixed_msg_queue msg_queue) 
 {
     return RingBuffer_available_read(msg_queue->ring_buf_p) /
            msg_queue->one_msg_byte_size;
 }
 
-extern inline uint32_t fixed_msg_queue_available_push_msg_amount(__in fixed_msg_queue msg_queue) 
+extern inline uint32_t fixed_msg_queue_available_push_amount(__in fixed_msg_queue msg_queue) 
 {
     return RingBuffer_available_write(msg_queue->ring_buf_p) /
            msg_queue->one_msg_byte_size;
@@ -74,12 +75,12 @@ extern inline uint32_t fixed_msg_queue_available_push_msg_amount(__in fixed_msg_
 
 extern inline bool fixed_msg_queue_is_empty(__in fixed_msg_queue msg_queue) 
 {
-    return fixed_msg_queue_available_pop_msg_amount(msg_queue) == 0;
+    return 0 == fixed_msg_queue_available_pop_amount(msg_queue);
 }
 
 extern inline bool fixed_msg_queue_is_full(__in fixed_msg_queue msg_queue) 
 {
-    return fixed_msg_queue_available_push_msg_amount(msg_queue) == 0;
+    return 0 == fixed_msg_queue_available_push_amount(msg_queue);
 }
 
 void fixed_msg_queue_destroy(__inout fixed_msg_queue *msg_queue_p) 
@@ -89,7 +90,7 @@ void fixed_msg_queue_destroy(__inout fixed_msg_queue *msg_queue_p)
         return;
     }
     fixed_msg_queue msg_queue = *msg_queue_p;
-    RingBuffer_destroy(&msg_queue->ring_buf_p);
+    RingBuffer_destroy(&(msg_queue->ring_buf_p));
     free(msg_queue);
     *msg_queue_p = NULL;
 }

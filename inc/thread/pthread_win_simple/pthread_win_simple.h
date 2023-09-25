@@ -4,7 +4,7 @@
 
 #include "config/lcu_build_config.h"
 
-//do not include this header directly, you should include "thread_wrapper.h" instead!
+//do not include this header directly, you should include "posix_thread.h" instead!
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 
 #include <windows.h>
@@ -22,7 +22,7 @@ typedef struct pthread_s
 	void* (*mStart)(void*);
 	void* mArgs;
 	void* mExitCode;
-	volatile bool  mDetached;
+	volatile bool mDetached;
 } *pthread_t;
 typedef int pthread_attr_t;
 
@@ -59,34 +59,33 @@ typedef struct
 /*
  * ====================
  * ====================
- * Object initialisers
+ * Object initializers
  * ====================
  * ====================
  */
-#define PTHREAD_MUTEX_INITIALIZER ((pthread_mutex_t)(size_t) -1)
-#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER ((pthread_mutex_t)(size_t) -2)
+#define PTHREAD_MUTEX_INITIALIZER            ((pthread_mutex_t)(size_t) -1)
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER  ((pthread_mutex_t)(size_t) -2)
 #define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER ((pthread_mutex_t)(size_t) -3)
 
  /*
   * Compatibility with LinuxThreads
   */
-#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP PTHREAD_RECURSIVE_MUTEX_INITIALIZER
-#define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP   PTHREAD_RECURSIVE_MUTEX_INITIALIZER
+#define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP  PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
 
-#define PTHREAD_COND_INITIALIZER ((pthread_cond_t)(size_t) -1)
+#define PTHREAD_COND_INITIALIZER     ((pthread_cond_t)(size_t) -1)
 
-#define PTHREAD_RWLOCK_INITIALIZER ((pthread_rwlock_t)(size_t) -1)
+#define PTHREAD_RWLOCK_INITIALIZER   ((pthread_rwlock_t)(size_t) -1)
 
 #define PTHREAD_SPINLOCK_INITIALIZER ((pthread_spinlock_t)(size_t) -1)
 
 
 //=================== pthread functions	 ===========================
-// not implemented, this will return NULL on windows
+// not implemented, this will return NULL.
 pthread_t pthread_self();
 int pthread_create(pthread_t* tid_p, const pthread_attr_t* attr, void* (*start)(void*), void* arg);
 int pthread_join(pthread_t tid, void** value_ptr);
 int pthread_detach(pthread_t tid);
-
 
 /*
  * Mutex Functions

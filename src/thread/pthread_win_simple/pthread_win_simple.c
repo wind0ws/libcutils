@@ -22,8 +22,8 @@ int pthread_create(pthread_t* tid_p, const pthread_attr_t* attr, void* (*start)(
     memset(pth, 0, sizeof(struct pthread_s));
 	pth->mStart = start;
     pth->mArgs = arg;
-    pth->mThreadHandle =
-        CreateThread(NULL, 0, pri_win_thread_start_routine, (LPVOID)pth, CREATE_SUSPENDED, (LPDWORD) &pth->mThreadID);
+    pth->mThreadHandle = CreateThread(NULL, 0, pri_win_thread_start_routine, 
+		(LPVOID)pth, CREATE_SUSPENDED, (LPDWORD) &pth->mThreadID);
     if (NULL == pth->mThreadHandle) 
 	{
         free(pth);
@@ -181,7 +181,6 @@ int pthread_cond_destroy(pthread_cond_t* cond)
 
 int pthread_cond_wait(pthread_cond_t* cond, pthread_mutex_t* mutex)
 {
-	DWORD ret;
 	size_t wake = 0;
 	size_t generation;
 	pthread_mutex_lock(&cond->mLock);
@@ -190,7 +189,7 @@ int pthread_cond_wait(pthread_cond_t* cond, pthread_mutex_t* mutex)
 	pthread_mutex_unlock(&cond->mLock);
 	pthread_mutex_unlock(mutex);
 	do {
-		ret = WaitForSingleObject(cond->mSemaphore, INFINITE);
+		(void)WaitForSingleObject(cond->mSemaphore, INFINITE);
 		pthread_mutex_lock(&cond->mLock);
 		if (cond->mWake)
 		{

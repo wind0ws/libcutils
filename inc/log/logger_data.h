@@ -10,10 +10,11 @@
 #define _PRINTF_FUNC printf
 #endif // !_PRINTF_FUNC
 
-#ifndef _SUFFIX_LOG
-#define _SUFFIX_LOG "\n"
-#endif // !_SUFFIX_LOG
+#ifndef _LOG_SUFFIX
+#define _LOG_SUFFIX "\n"
+#endif // !_LOG_SUFFIX
 
+#ifndef _STDOUT_NODE 
 #ifdef _WIN32
 #define _STDOUT_NODE ("CON")
 #ifndef __func__
@@ -25,8 +26,9 @@
 #else
 #define _STDOUT_NODE ("/dev/tty")
 #endif // _WIN32
+#endif // !_STDOUT_NODE
 
-#define LOG_STAR_LINE "****************************************************************"
+#define LOG_STAR_LINE "**************************************************************"
 
 #if(defined(_MSC_VER) && defined(__cplusplus))
 #pragma warning(disable:26812) //for disable enum class warning in c++

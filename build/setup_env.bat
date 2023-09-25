@@ -3,15 +3,20 @@
 set CMAKE_BIN=D:\env\cmake\bin\cmake.exe
 
 ::set ANDROID_SDK=D:\Android\android-sdk
-::set ANDROID_NDK=D:\Android\android-sdk\ndk\21.3.6528147
+::set ANDROID_NDK=%ANDROID_SDK%\ndk\21.3.6528147
 set ANDROID_NDK=D:\Android\ndk-multiversion\android-ndk-r16b
 set ANDROID_TOOLCHAIN_FILE=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
+set ANDROID_PLATFORM=android-19 
+set ANDROID_STL=c++_static
+::set ANDROID_STL=gnustl_static
+
 ::for /f %%a in ('dir /a:d /b %ANDROID_SDK%\cmake\') do set cmake_version=%%a
 ::echo "find cmake version %cmake_version%"
 ::set cmake_version=3.10.2.4988404
 ::set CMAKE_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
 ::set NINJA_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set NINJA_BIN=D:\env\cmake\bin\ninja.exe
+
 
 @echo ===================Your Environment===================
 @echo.
@@ -47,6 +52,8 @@ set BUILD_TYPE=%2
 if "%BUILD_TYPE%" EQU "" set BUILD_TYPE=Release
 if "%BUILD_TYPE%" EQU "Release" goto label_run_next_bat
 if "%BUILD_TYPE%" EQU "Debug" goto label_run_next_bat
+if "%BUILD_TYPE%" EQU "MinSizeRel" goto label_run_next_bat
+if "%BUILD_TYPE%" EQU "RelWithDebInfo" goto label_run_next_bat
 @echo unknown BUILD_TYPE=%BUILD_TYPE%, available "Debug" / "Release"
 @exit /b 2
 

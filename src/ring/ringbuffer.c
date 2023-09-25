@@ -18,6 +18,7 @@
 #endif // TAKE_MIN
 
 //config try read/write if no enough data or space
+// if enable, maybe you are not full read/write data, be aware of this.
 #define RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH (1)
 
 /*
@@ -54,6 +55,9 @@ struct __ring_buffer_t
 	uint32_t size;         /* ring buffer size    */
 	char* buf;             /* ring buffer pointer, buf size must be power of 2 */
 };
+
+#define _RING_AVAILABLE_READ(ring_handle)  (ring_handle->in - ring_handle->out)
+#define _RING_AVAILABLE_WRITE(ring_handle) (ring_handle->size - (_RING_AVAILABLE_READ(ring_handle)))
 
 ring_buffer_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
 {
@@ -136,12 +140,12 @@ void RingBuffer_destroy(__inout ring_buffer_handle* ring_handle_p)
 
 extern inline bool RingBuffer_is_empty(__in ring_buffer_handle ring_handle)
 {
-	return RingBuffer_available_read(ring_handle) == 0;
+	return 0 == _RING_AVAILABLE_READ(ring_handle); // RingBuffer_available_read(ring_handle) == 0;
 }
 
 extern inline bool RingBuffer_is_full(__in ring_buffer_handle ring_handle)
 {
-	return RingBuffer_available_write(ring_handle) == 0;
+	return 0 == _RING_AVAILABLE_WRITE(ring_handle); // RingBuffer_available_write(ring_handle) == 0;
 }
 
 extern inline void RingBuffer_clear(__in ring_buffer_handle ring_handle)
@@ -171,17 +175,17 @@ uint32_t RingBuffer_real_capacity(__in ring_buffer_handle ring_handle)
 
 extern inline uint32_t RingBuffer_available_read(__in ring_buffer_handle ring_handle)
 {
-	return ring_handle->in - ring_handle->out;
+	return _RING_AVAILABLE_READ(ring_handle); // ring_handle->in - ring_handle->out;
 }
 
 extern inline uint32_t RingBuffer_available_write(__in ring_buffer_handle ring_handle)
 {
-	return ring_handle->size - RingBuffer_available_read(ring_handle);
+	return _RING_AVAILABLE_WRITE(ring_handle); // ring_handle->size - RingBuffer_available_read(ring_handle);
 }
 
 uint32_t RingBuffer_write(__in ring_buffer_handle ring_handle, __in const void* source, __in uint32_t size)
 {
-	if (ring_handle == NULL || source == NULL || size == 0)
+	if (NULL == ring_handle || NULL == source || 0 == size)
 	{
 		return 0;
 	}
@@ -189,8 +193,8 @@ uint32_t RingBuffer_write(__in ring_buffer_handle ring_handle, __in const void* 
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
-	uint32_t available_space = RingBuffer_available_write(ring_handle);
-	if (available_space == 0)
+	const uint32_t available_space = _RING_AVAILABLE_WRITE(ring_handle); //RingBuffer_available_write(ring_handle);
+	if (0 == available_space)
 	{
 		return 0;
 	}
@@ -228,12 +232,12 @@ static uint32_t RingBuffer_read_internal(ring_buffer_handle ring_handle, void* t
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	uint32_t origin_size = size;
 #endif // !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
-	uint32_t available_data = RingBuffer_available_read(ring_handle);
-	if (available_data == 0)
+	const uint32_t available_read_size = _RING_AVAILABLE_READ(ring_handle); //RingBuffer_available_read(ring_handle);
+	if (0 == available_read_size)
 	{
 		return 0;
 	}
-	size = TAKE_MIN(size, available_data);
+	size = TAKE_MIN(size, available_read_size);
 #if !RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH
 	if (origin_size != size)
 	{

@@ -7,7 +7,7 @@
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
 #include "log/file_logger.h"
-#include "libcutils.h"       /* for libcutils_get_version */
+#include "lcu.h"             /* for lcu_get_version */
 #include <locale.h>          /* for setlocale */
 #ifdef _WIN32
 #include <conio.h>           /* for kbhit */
@@ -15,20 +15,20 @@
 
 #define KB_TIMEOUT      (5)   // seconds
 
-typedef int (*test_case_func_t)();
+typedef int (*func_prototype_test_case_t)();
 #define DECLARE_TEST_FUNC(func_name) extern int func_name()
 
-#define RUN_TEST(func_name) do                                                         \
-{                                                                                      \
-   LOGD("\n%s\nNow run --> %s()", LOG_STAR_LINE, #func_name);                          \
-   int ret_##func_name = func_name();                                                  \
-   LOGD("\n<-- %s() run result=%d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
-   ASSERT_ABORT(0 == ret_##func_name);                                                 \
+#define RUN_TEST(func_name) do                                                            \
+{                                                                                         \
+   LOGD("\n%s\n--> %s() executing...\n", LOG_STAR_LINE, #func_name);                      \
+   int ret_##func_name = func_name();                                                     \
+   LOGD("\n<-- %s() finished with %d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
+   ASSERT_ABORT(0 == ret_##func_name);                                                    \
 } while (0)
 
 typedef struct
 {
-	test_case_func_t p_func;
+	func_prototype_test_case_t p_func;
 	const char* str_description;
 } test_case_t;
 
@@ -64,6 +64,8 @@ DECLARE_TEST_FUNC(msg_queue_handler_test);
 DECLARE_TEST_FUNC(integer_test);
 DECLARE_TEST_FUNC(list_test);
 
+EXTERN_C_END
+
 static test_case_t g_all_test_cases[] =
 {
 	{ ini_test, "test ini" },
@@ -83,11 +85,10 @@ static test_case_t g_all_test_cases[] =
 	{ list_test, "test list" },
 };
 
-EXTERN_C_END
 
 #define SAVE_LOG    (0)
 
-#if( SAVE_LOG && 0 == TEST_FILE_LOGGER)
+#if( SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
 #define LOG_PATH ("d:/mylog.log")
 #else
@@ -104,12 +105,12 @@ EXTERN_C
 int main(int argc, char* argv[])
 {
 	int ret = 0;
+	MEM_CHECK_INIT();
+	lcu_init();
 	setup_console();
-	INIT_MEM_CHECK();
-	libcutils_init();
-	LOGI("hello world: LCU_VER:%s\n", libcutils_get_version());
+	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
-	bool is_press_kb = true; // default status true for unix
+	bool is_press_kb = true; // default status is true for unix
 #if _WIN32
 	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();
@@ -171,8 +172,8 @@ int main(int argc, char* argv[])
 	LOGI("...bye bye...  %d\n", ret);
 
 	LOG_DEINIT(NULL);
-	libcutils_deinit();
-	DEINIT_MEM_CHECK();
+	lcu_deinit();
+	MEM_CHECK_DEINIT();
 	return ret;
 }
 

@@ -23,9 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "common_macro.h"
-#include "log/xlog.h"
-
 #define LOG_TAG "lcu_array"
+#include "log/xlog.h"
 
 struct array_t 
 {
@@ -36,8 +35,8 @@ struct array_t
     uint8_t internal_storage[];
 };
 
+#define  DEFAULT_INIT_ELEMENTS_CAPACITY  16
 static bool grow(array_t* array);
-static const size_t DEFAULT_INIT_ELEMENTS_CAPACITY = 16;
 
 array_t* array_new(size_t element_size) 
 {
@@ -50,7 +49,7 @@ array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 	{
         init_capacity = 4;
 	}
-	array_t* array = calloc(1, sizeof(array_t) + element_size * init_capacity);
+	array_t* array = (array_t*)calloc(1, sizeof(array_t) + element_size * init_capacity);
     if (array == NULL)
     {
         return NULL;

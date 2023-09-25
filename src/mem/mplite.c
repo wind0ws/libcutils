@@ -103,7 +103,7 @@ MPLITE_API int mplite_init(mplite_t* handle, const void* buf,
 	}
 
 	iOffset = 0;
-	for (ii = MPLITE_LOGMAX; ii >= 0; ii--)
+	for (ii = MPLITE_LOGMAX; ii >= 0; --ii)
 	{
 		int nAlloc = (1 << ii);
 		if ((iOffset + nAlloc) <= handle->nBlock)

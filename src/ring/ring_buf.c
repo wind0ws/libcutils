@@ -6,13 +6,13 @@
 
 #define RING_BUF_TAKE_MIN(a, b) ((a) > (b) ? (b) : (a))
 
-#define __RING_LOG_TAG        "R_BUF"
+#define _RING_LOG_TAG        "R_BUF"
 
-#define RING_LOGV(fmt,...)    SLOGV(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGD(fmt,...)    SLOGD(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGI(fmt,...)    SLOGI(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGW(fmt,...)    SLOGW(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)    SLOGE(__RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGV(fmt,...)    SLOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGD(fmt,...)    SLOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGI(fmt,...)    SLOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGW(fmt,...)    SLOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 
 struct __ring_buf_t 
 {
@@ -22,6 +22,9 @@ struct __ring_buf_t
 	size_t offset_read;
 	size_t offset_write;
 };
+
+#define _RING_AVAILABLE_READ(handle)  ((handle->size + handle->offset_write - handle->offset_read) % (handle->size))
+#define _RING_AVAILABLE_WRITE(handle) (handle->size - _RING_AVAILABLE_READ(handle) - 1)
 
 ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 {
@@ -70,31 +73,31 @@ ring_handle ring_buf_create(const size_t size)
 
 extern inline size_t ring_buf_available_read(ring_handle handle) 
 {
-	return (handle->size + handle->offset_write - handle->offset_read) % (handle->size);
+	return _RING_AVAILABLE_READ(handle); //(handle->size + handle->offset_write - handle->offset_read) % (handle->size);
 }
 
 extern inline size_t ring_buf_available_write(ring_handle handle) 
 {
-	return handle->size - ring_buf_available_read(handle) - 1;
+	return _RING_AVAILABLE_WRITE(handle); //handle->size - ring_buf_available_read(handle) - 1;
 }
 
 static size_t internal_ring_buf_read(ring_handle handle, bool is_peek, void* target, size_t len) 
 {
-	if (len == 0 || len > ring_buf_available_read(handle)) 
+	if (len == 0 || len > _RING_AVAILABLE_READ(handle) /*ring_buf_available_read(handle)*/) 
 	{
 		return 0;
 	}
 
 	//first part: from read offset to end.
-	size_t first_part_max_len = handle->size - handle->offset_read;
-	size_t first_part_len = RING_BUF_TAKE_MIN(len, first_part_max_len);
+	const size_t first_part_max_len = handle->size - handle->offset_read;
+	const size_t first_part_len = RING_BUF_TAKE_MIN(len, first_part_max_len);
 	if (target)
 	{
 		memcpy(target, handle->pbuf + handle->offset_read, first_part_len);
 	}
 
 	//second part: from begin
-	size_t second_part_len = len - first_part_len;
+	const size_t second_part_len = len - first_part_len;
 	if (second_part_len) 
 	{
 		if (target)
@@ -138,7 +141,7 @@ size_t ring_buf_discard(ring_handle handle, size_t len)
 
 size_t ring_buf_write(ring_handle handle, void* source, size_t len) 
 {
-	if (len == 0 || len > ring_buf_available_write(handle))
+	if (0 == len || len > _RING_AVAILABLE_WRITE(handle) /*ring_buf_available_write(handle)*/)
 	{
 		return 0;
 	}

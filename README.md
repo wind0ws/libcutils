@@ -1,4 +1,4 @@
-# Brief
+# Introduction [中文版](https://github.com/wind0ws/libcutils/blob/master/README_zh-CN.md)
   What's this: This is a common c utils library (works for unix(android)/windows).
   > note: api may change frequently at this stage. see commits log for more details
 
@@ -16,7 +16,7 @@
   also works on unix(linux/android).
 
 * **data**
-  > data structure : include ***array***, ***hashmap***, ***list***, ***base64*** ...
+  > common data structure and operation: include ***array***, ***hashmap***, ***list***, ***base64*** ...
 
 * **file**
   > file util: include **file_util_read/write**, **ini_reader/parser** ...
@@ -26,8 +26,8 @@
    *  **allocator** : can trace heap memory, help you find memory leak or memory corruption.
    *  **mplite** : a zero-malloc memory pool based on [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
-* **ring**
-  > ringbuffer: include ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
+* **ring_buffer**
+  > queue of ring: include ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
 
 * **time**
   > time_util: include ***current_milliseconds***, ***fast_second2date*** ...
@@ -35,8 +35,10 @@
 ----
 ## How to build
   
-  * ### common platforms
-    > go to ***build***  folder, and edit build script first(**to make sure cmake/ninja/NDK(for Android) location**), then execute script to build it, it will copy the compiled result to the specified location
+  * ### common platforms (windows/linux/android)
+    > go to ***build***  folder, and edit setup env script first(**setup_env.bat/setup_env.sh**)
+	(**for make sure cmake/ninja/ndk(for Android) location**), 
+	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
     
@@ -46,21 +48,22 @@
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
   
-  * ### other platforms
-    1. #### first, write cmake cross toolchain file on **build/cmake/** folder:
+  * ### other platforms (cross-compilation)
+    1. #### first, write cmake cross-compilation toolchain file on **build/cmake/** folder:
       > for define c/cxx compiler location and flags.
       
-      example: create *hisi.toolchain.cmake* file on *build/cmake/* folder:
-      ```
+      example: create **hisi.toolchain.cmake** file on **build/cmake/toolchains** folder, 
+	           and write some config like this:
+      ```cmake
       SET(UNIX TRUE CACHE BOOL "")
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
+	  SET(PLATFORM Hisi)           # important: tell script the platform name
       
-      set(CROSS_TOOLCHAIN_PATH_PREFIX "/mnt/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
-      message(STATUS "Current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
-      if(("${CROSS_TOOLCHAIN_PATH_PREFIX}" STREQUAL  ""))
-        message(FATAL_ERROR  "you should set CROSS_TOOLCHAIN_PATH_PREFIX first")
-      endif()
+      SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
+      message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
+
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
       SET(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}g++")
@@ -69,31 +72,44 @@
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
       
-      string(APPEND CMAKE_C_FLAGS          " -fPIC")
-      string(APPEND CMAKE_CXX_FLAGS        " -fPIC")
-      string(APPEND CMAKE_EXE_LINKER_FLAGS " -fPIC -fPIE")
+	  SET(PLATFORM_COMMON_FLAGS " -fPIC")
+      string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
+      string(APPEND CMAKE_CXX_FLAGS        "${PLATFORM_COMMON_FLAGS}")
+      string(APPEND CMAKE_EXE_LINKER_FLAGS "${PLATFORM_COMMON_FLAGS} -fPIE")
       add_definitions(-D_LCU_NOT_SUPPORT_PTHREAD_SETNAME) # custom compile definitions
       ```
   
     2. #### then execute cmake build script:
       > for generate makefile and compile it
       
-      example:
+      > example: go to ***build***  folder, execute command:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/hisi.toolchain.cmake 
+      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
+	  if target platform(toolchain) only support compile static library, follow these steps:
+	  ```shell
+	  cmake -H. -B./build_abcd -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DPLATFORM=abcd -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+      cmake --build ./build_abcd --config Release --target lcu_static
+	  ```
 
 ## How to use
   >  copy header and lib(static or shared) to your project, and link it,
   or just copy source and header file to your project.
 
 ## Want demo
-  > see test folder, it demonstrate to you simple use case.
+  > see `src_demo` folder, it demonstrate to you simple use case.
 
 ----
 ## Release Log
 
+* **1.5.6**
+  > 1. fix：when time_util hit cache, fmt_len over calculated.
+  > 2. update: inih code, rename "ini_" to "ini_reader_", for prevent conflict with other projects
+  > 3. add：cmake script support define PLATFORM and PLATFORM_ABI, format output dir structure
+  > 4. feat: xlog support lock to enusure printing order on multi target
+  > 5. add: README_zh-CN.md
+  
 * **1.5.5**
   > 1. add more simple win32 pthread function(build with PRJ_WIN_PTHREAD_MODE=1)
   > 2. fix xlog macro wrong call
@@ -115,6 +131,6 @@
   > 3. extract msg_queue_errno to header.
 
 * **1.0.0 ~ 1.4.0**
-  > Release log not write here, see commit log for more details. btw: suggest use latest code
+  > Release log not record on here, see commit log for more details. btw: suggest use the latest code
   >    for example, ver 1.4.0 commit log url is https://github.com/wind0ws/libcutils/commits/1.4.0
   

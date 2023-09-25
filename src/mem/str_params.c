@@ -9,9 +9,9 @@
 #include <stdint.h>
 #include "mem/strings.h"
 #include "data/hashmap.h"
+#define LOG_TAG "str_params"
 #include "log/xlog.h"
 
-#define LOG_TAG "str_params"
 
 /* When an object is allocated but not freed in a function,
  * because its ownership is released to other object like a hashmap,

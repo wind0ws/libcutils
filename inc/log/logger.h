@@ -4,12 +4,11 @@
 
 //don't forget to '#define LOG_TAG "xxx" ' before include this header
 #ifndef LOG_TAG
-#pragma message( "you forgot to define LOG_TAG before include this header!!!" )
+#error you forgot to 'define LOG_TAG' before include "logger.h"!
 #endif // !LOG_TAG
 
-#define _LCU_LOGGER_TYPE_XLOG   (0)
-#define _LCU_LOGGER_TYPE_SLOG   (1)
-
+#define  _LCU_LOGGER_TYPE_XLOG  (0)
+#define  _LCU_LOGGER_TYPE_SLOG  (1)
 
 #ifndef LCU_LOGGER_SELECTOR
 #define LCU_LOGGER_SELECTOR  _LCU_LOGGER_TYPE_XLOG
@@ -26,7 +25,7 @@
 
 #else
 
-#error "unsupport this LCU_LOGGER_SELECTOR type"
+#error unsupport this LCU_LOGGER_SELECTOR type
 
 #endif // LCU_LOGGER_SELECTOR
 

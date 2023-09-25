@@ -11,7 +11,7 @@
 #define USE_TIME_CACHE            (1)
 #define USE_SNPRINTF_MILLISECONDS (0)
 
-#define TIME_STAMP_FORMAT ("%m-%d %H:%M:%S")
+#define TIME_STAMP_FORMAT               ("%m-%d %H:%M:%S")
 #define TIME_STAMP_FORMAT_FOR_FILE_NAME ("%m%d%H%M%S")
 
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
@@ -136,10 +136,15 @@ int time_util_global_deinit()
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 	// destroy it(free it's memory), and reset the pointer
-	pthread_rwlock_destroy(&(g_time_caches[0].rw_lock));
-	pthread_rwlock_destroy(&(g_time_caches[1].rw_lock));
-	g_time_caches[0].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
-	g_time_caches[1].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
+	{
+		if (PTHREAD_RWLOCK_INITIALIZER == g_time_caches[i].rw_lock)
+		{
+			continue;
+		}
+		pthread_rwlock_destroy(&(g_time_caches[i].rw_lock));
+		g_time_caches[i].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+	}
 #endif // USE_TIME_CACHE  
 #endif // _WIN32
 	return 0;
@@ -202,7 +207,7 @@ static inline int format_time(char str[TIME_STR_SIZE], time_t* cur_time_p,
 }
 
 // simple snprintf .%03d : snprintf(buf, BUF_SIZE, ".%03d", num);
-static inline int print_millisec(char* buffer, unsigned int num)
+static inline void print_millisec(char* buffer, unsigned int num)
 {
 #if(defined(USE_SNPRINTF_MILLISECONDS) && USE_SNPRINTF_MILLISECONDS)
 	snprintf(buffer, 5, ".%03d", num);
@@ -216,7 +221,7 @@ static inline int print_millisec(char* buffer, unsigned int num)
 	}
 	buffer[3] = '\0';
 #endif // USE_SNPRINTF_MILLISECONDS
-	return 4;
+	//return 4;
 }
 
 static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
@@ -237,9 +242,8 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
 			if (update_millis)
 			{
-				ftime_len -= 4;
-				//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
-				ftime_len += print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+				// snprintf(str + (ftime_len - 4), TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
+				print_millisec(str + (ftime_len - 4), (unsigned int)(tval_p->tv_usec / 1000));
 			}
 		}
 		else // not hit sec cache
@@ -249,7 +253,8 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 
 			ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
 			//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
-			ftime_len += print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+			print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+			ftime_len += 4;
 
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 			pthread_rwlock_wrlock(&cache_p->rw_lock); // lock wrlock
@@ -258,8 +263,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 				//printf("now write time cache: %s\n", str);
 				strlcpy(cache_p->format_cache, str, TIME_STR_SIZE);
 				cache_p->timezone_hour = timezone_hour;
-				cache_p->tval.tv_sec = tval_p->tv_sec;
-				cache_p->tval.tv_usec = tval_p->tv_usec;
+				cache_p->tval = *tval_p;
 			}
 			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock wrlock
 		}
@@ -268,7 +272,8 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 	{
 		ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
 		//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
-		ftime_len += print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+		print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
+		ftime_len += 4;
 	}
 #endif // USE_TIME_CACHE
 

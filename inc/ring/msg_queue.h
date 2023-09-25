@@ -2,8 +2,8 @@
 #ifndef LCU_MSG_QUEUE_H
 #define LCU_MSG_QUEUE_H
 
-#include <stdint.h>
 #include "ring/msg_queue_errno.h"
+#include <stdint.h>               /* for uint32_t */
 
 #ifndef __in
 #define __in

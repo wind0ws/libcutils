@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BUILD_SCRIPT=./make_linux.sh
+dos2unix $BUILD_SCRIPT
 chmod +x $BUILD_SCRIPT
 
 #param 1 for arch

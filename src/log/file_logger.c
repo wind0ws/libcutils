@@ -5,7 +5,7 @@
 #include "data/integer.h"          /* for integer_roundup_pow_of_two */
 #include "common_macro.h"
 #include "file/file_util.h"        /* for mkdir */
-#include "thread/posix_thread.h"   /* for sleep */ 
+#include "thread/posix_thread.h"   /* for usleep */ 
 #include "time/time_util.h"        /* for timestamp file name */
 
 #define TRACE_FILE_LOGGER          1
@@ -26,15 +26,15 @@
 #define MY_LOGE(fmt, ...)
 #endif // TRACE_FILE_LOGGER
 
-#define MAX_FULL_PATH_BUFFER (256)
+#define MAX_FULL_PATH_SIZE (256)
 
 typedef struct file_logger
 {
+	int timezone_hour;
 	file_logger_cfg cfg;
 	msg_queue_handler msg_queue;
 	size_t cur_log_file_size_counter;
 	FILE* cur_fp;
-	int timezone_hour;
 	queue_msg_t* msg_cache_p;
 	size_t cur_msg_obj_capacity;
 } file_logger_t;
@@ -101,8 +101,7 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	if (cfg_p->one_piece_file_max_len && cfg_p->one_piece_file_max_len < 8U) // piece too small
 	{
 		MY_LOGE("too small one_piece_file_max_len=%zu, reset it to 0, which no cut piece", cfg_p->one_piece_file_max_len);
-		//0 that means won't auto create new log file.
-		cfg_p->one_piece_file_max_len = 0U;
+		cfg_p->one_piece_file_max_len = 0U;// 0 that means won't auto create new log file.
 	}
 	if (cfg_p->log_queue_size < 2U)
 	{
@@ -114,71 +113,70 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	return handle;
 }
 
-void file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
+int file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 {
 #define MAX_RETRY_LOG_TIMES_IF_FAIL (2)
-	MSG_Q_CODE status = 0;
+	MSG_Q_CODE status = MSG_Q_CODE_BUF_NOT_ENOUGH;
 	int retry_counter = 0;
 	
 	FILE_LOGGER_LOCK(handle);
-	if (msg_size > handle->cur_msg_obj_capacity)
-	{
-		uint32_t new_msg_max_size = integer_roundup_pow_of_two((uint32_t)msg_size);
-		size_t new_mem_size = sizeof(queue_msg_t) + new_msg_max_size;
-		void* new_mem = realloc(handle->msg_cache_p, new_mem_size);
-		if (NULL == new_mem)
-		{
-			MY_LOGE("err on realloc new_mem(%zu) at %s:%d", new_mem_size, __func__, __LINE__);
-			goto LOG_EXIT;
-		}
-		handle->msg_cache_p = (queue_msg_t*)new_mem;
-		handle->cur_msg_obj_capacity = (size_t)new_msg_max_size;
-	}
-		
-	memcpy(handle->msg_cache_p->obj, log_msg, msg_size);
-	handle->msg_cache_p->obj_len = (int)msg_size;
 	do
 	{
+		if (msg_size > handle->cur_msg_obj_capacity)
+		{
+			uint32_t new_msg_max_size = integer_roundup_pow_of_two((uint32_t)msg_size);
+			size_t new_mem_size = sizeof(queue_msg_t) + new_msg_max_size;
+			void* new_mem = realloc(handle->msg_cache_p, new_mem_size);
+			if (NULL == new_mem)
+			{
+				MY_LOGE("err on realloc new_mem(%zu) at %s:%d", new_mem_size, __func__, __LINE__);
+				break;
+			}
+			handle->msg_cache_p = (queue_msg_t*)new_mem;
+			handle->cur_msg_obj_capacity = (size_t)new_msg_max_size;
+		}
+
+		memcpy(handle->msg_cache_p->obj, log_msg, msg_size);
+		handle->msg_cache_p->obj_len = (int)msg_size;
 		if (MSG_Q_CODE_SUCCESS == (status = msg_queue_handler_push(handle->msg_queue, handle->msg_cache_p)))
 		{
 			break;//send complete
 		}
-		MY_LOGE("failed(%d) on send log to queue. queue full?", status);
+		//MY_LOGE("failed(%d) on send log to queue this time. queue full?", status);
 		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break;
 		}
-		MY_LOGE("try put it again later...");
-		++retry_counter;
+		//MY_LOGE("try put it again later...");
 		usleep(1500);//1.5ms
-	} while (MSG_Q_CODE_SUCCESS != status && retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL 
+	} while (MSG_Q_CODE_SUCCESS != status && ++retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL 
 		&& handle->cfg.is_try_my_best_to_keep_log);
+
 	//final safety
 	if (MSG_Q_CODE_SUCCESS != status && handle->cfg.is_try_my_best_to_keep_log)
 	{
-		char cur_time[TIME_STR_SIZE];
-		time_util_get_time_str_for_file_name_current(cur_time, handle->timezone_hour);
-		char path_buffer[MAX_FULL_PATH_BUFFER];
-		path_buffer[MAX_FULL_PATH_BUFFER - 1] = '\0';
-		snprintf(path_buffer, sizeof(path_buffer) - 1, "%slost_%s_%s.log",
-			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
-		FILE* f_lost = fopen(path_buffer, "wb");
+		char path_buffer[MAX_FULL_PATH_SIZE];
+		path_buffer[MAX_FULL_PATH_SIZE - 1] = '\0';
+		snprintf(path_buffer, sizeof(path_buffer) - 1, "%s%s_lost.log",
+			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix);
+		MY_LOGE(" warning: lost log, you can see it on lost.log");
+		FILE* f_lost = fopen(path_buffer, "a");
 		if (f_lost)
 		{
-			fprintf(f_lost, "%.*s\n", (int)msg_size, (char*)log_msg);
+			fprintf(f_lost, "%.*s\n\n", (int)msg_size, (char*)log_msg);
 			fclose(f_lost);
 		}
 	}
 
-	LOG_EXIT:
 	FILE_LOGGER_UNLOCK(handle);
+	return (int)status;
 }
 
-void file_logger_deinit(file_logger_handle* handle_p)
+int file_logger_deinit(file_logger_handle* handle_p)
 {
 	if (NULL == handle_p || NULL == *handle_p)
 	{
-		return;
+		return -1;
 	}
 	file_logger_handle handle = *handle_p;
 	if (handle->msg_queue)
@@ -198,6 +196,7 @@ void file_logger_deinit(file_logger_handle* handle_p)
 	}
 	free(handle);
 	*handle_p = NULL;
+	return 0;
 }
 
 static int handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
@@ -212,9 +211,9 @@ static int handle_log_queue_msg(queue_msg_t* msg_p, void* user_data)
 		file_util_mkdirs(handle->cfg.log_folder_path);
 		char cur_time[TIME_STR_SIZE];
 		time_util_get_time_str_for_file_name_current(cur_time, handle->timezone_hour);
-		char path_buffer[MAX_FULL_PATH_BUFFER];
-		path_buffer[MAX_FULL_PATH_BUFFER - 1] = '\0';
-		snprintf(path_buffer, MAX_FULL_PATH_BUFFER - 1, "%s%s_%s.log", 
+		char path_buffer[MAX_FULL_PATH_SIZE];
+		path_buffer[MAX_FULL_PATH_SIZE - 1] = '\0';
+		snprintf(path_buffer, MAX_FULL_PATH_SIZE - 1, "%s%s%s.log", 
 			handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix, cur_time);
 		handle->cur_fp = fopen(path_buffer, "wb");
 		handle->cur_log_file_size_counter = 0U;

@@ -23,7 +23,7 @@ uint32_t integer_roundup_pow_of_two(uint32_t i)
 	i |= i >> 8;
 	i |= i >> 16;
 
-	return i + 1;
+	return (i + 1U);
 }
 
 uint32_t integer_rounddown_pow_of_two(uint32_t i)
@@ -37,5 +37,5 @@ uint32_t integer_rounddown_pow_of_two(uint32_t i)
 	{
 		return roundup_integer;
 	}
-	return roundup_integer >> 1;
+	return (roundup_integer >> 1);
 }

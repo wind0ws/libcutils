@@ -5,7 +5,12 @@
 #include "log/logger_data.h" /* for common data */
 #include <stddef.h>          /* for size_t      */
 
-//user log callback prototype. log_msg string not end with '\n' automatically. msg_size contains NUL terminator
+/**
+ * user log callback prototype.
+ * 
+ *  log_msg string not end with '\n' automatically.
+ *  msg_size contains NUL terminator.
+ */
 typedef void (*xlog_user_callback_fn)(LogLevel level, void* log_msg, size_t msg_size, void* user_data);
 
 typedef enum
@@ -34,9 +39,24 @@ typedef enum
 	LOG_FLUSH_MODE_EVERY
 } LogFlushMode;
 
+typedef struct 
+{
+	void* arg; /**< Argument to be passed to acquire and release function pointers */
+	int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
+	int (*release)(void* arg); /**< Function pointer to release a lock */
+} xlog_lock_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+	/**
+	 * use a lock to ensure consistent printing order.
+	 * e.g., concurrent printing on logcat/console/file
+	 * 
+	 * if you not provide lock, printing order can't be ensured. 
+	 */
+	void xlog_set_lock(xlog_lock_t *lock);
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 	/**
@@ -73,13 +93,6 @@ extern "C" {
 	void xlog_set_timezone(int timezone_hour);
 
 	/**
-	 * set user callback. when log performed, callback will called.
-	 * you can do your own log logic on callback.
-	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
-	 */
-	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
-
-	/**
 	* set the min log level. 
 	* only output log if current level greater or equal to this min_level
 	*/
@@ -92,12 +105,25 @@ extern "C" {
 	LogLevel xlog_get_min_level();
 
 	/**
-	 * set log target which you want to output.
-	 * default: on Android target is LOG_TARGET_ANDROID, other platform target is LOG_TARGET_CONSOLE
-	 * multiple can be combined. 
-	 * example: (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) or (LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK)
+	 * set user callback. when log performed, callback will called.
+	 * you can do your own log logic on callback.
+	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
 	 */
-	void xlog_set_target(int target);
+	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
+
+	/**
+	 * @brief set log target which you want to output.
+	 * @note  if you output on multi target and not provide lock, printing order can't be ensured.
+	 * 
+	 * @param[in]	target : default on Android is LOG_TARGET_ANDROID, other platform is LOG_TARGET_CONSOLE.
+	 *                       multiple target can be combined. 
+	 *                       e.g., (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) 
+	 *                       or (LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK)
+	 * 
+	 * @param[in]	lock : use a lock to ensure consistent printing order. if you don't need it, just pass NULL.
+	 *                     e.g., concurrent printing on android(logcat)/console/file(user_cb)
+	 */
+	void xlog_set_target(int target, xlog_lock_t* lock);
 
 	/**
 	 * get current target

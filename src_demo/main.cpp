@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 	setup_console();
 	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
-	bool is_press_kb = true; // default status true for unix
+	bool is_press_kb = true; // default status is true for unix
 #if _WIN32
 	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();

@@ -44,7 +44,7 @@ static void* thread_worker(void *param)
 		time_util_get_time_str_current(time_str, 8);
 		time_util_current_ms(&cur_millis);
 		//printf("[%d] at %s    %llu", tid, time_str, cur_millis);
-		LOGD("[%06d], at %s    %llu", tid, time_str, cur_millis);
+		LOGD("[%06d], %06d at %s    %llu", tid, counter, time_str, cur_millis);
 	}
 	time_util_current_ms(&cur_millis);
 	LOGI_TRACE("tid=%d end! cost %llums", tid, (cur_millis - start_millis));

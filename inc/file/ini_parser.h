@@ -28,7 +28,7 @@ extern "C" {
 	 *
 	 * @return true for file_path, otherwise not
 	 */
-	bool ini_parser_is_file_path(__in const char* str);
+	bool ini_parser_is_file_path(const char* str);
 
 	/**
 	 * create empty ini config. equals ini_parser_parse_str(NULL)

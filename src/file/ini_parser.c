@@ -88,7 +88,7 @@ static int ini_handler_cb(void* user,
 	return INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser_p, section, key, value);
 }
 
-bool ini_parser_is_file_path(__in const char* str)
+bool ini_parser_is_file_path(const char* str)
 {
 	if (NULL == str || '\0' == str[0])
 	{

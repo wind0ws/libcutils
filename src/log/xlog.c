@@ -58,6 +58,8 @@ typedef struct xlog_config
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
+	/* lock for log multi target */
+	xlog_lock_t lock;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */
@@ -68,6 +70,20 @@ typedef struct xlog_config
 	LogFlushMode flush_mode;
 	/* for calculate locale time */
 	int timezone_hour;
+
+	struct 
+	{
+		bool need_lock; /**< if log on multi target */
+		bool log2android;
+		bool log2console;
+		bool log2usercb;
+	} cache_tgt;
+	struct  
+	{
+		bool timestamp;
+		bool tag_level;
+		bool tid;
+	} cache_fmt;
 } xlog_config_t;
 
 #define DEFAULT_TIMEZONE_HOUR (8)
@@ -77,18 +93,43 @@ static xlog_config_t g_xlog_cfg =
 	LOG_LEVEL_OFF,
 	"XLog",
 	{NULL, NULL},
+	{ NULL, NULL, NULL },
 #if defined(__ANDROID__)
-	LOG_TARGET_ANDROID, // NOLINT(hicpp-signed-bitwise)
+	LOG_TARGET_ANDROID,
 #else
 	LOG_TARGET_CONSOLE,
 #endif // __ANDROID__
 	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
 	NULL,
 	LOG_FLUSH_MODE_AUTO,
-	DEFAULT_TIMEZONE_HOUR
+	DEFAULT_TIMEZONE_HOUR,
+	{
+		.need_lock = false,
+#if defined(__ANDROID__)
+		.log2android = true,
+		.log2console = false,
+#else
+		.log2android = false,
+		.log2console = true,
+#endif
+        .log2usercb = false
+	},
+	{
+		.timestamp = true,
+		.tag_level = true,
+		.tid = false,
+	},
 };
 
-#define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & log_target)
+#define XLOG_LOCK(need_lock) 	if (need_lock && g_xlog_cfg.lock.acquire)\
+{\
+	g_xlog_cfg.lock.acquire(g_xlog_cfg.lock.arg);\
+};
+#define XLOG_UNLOCK(need_lock) 	if (need_lock && g_xlog_cfg.lock.release)\
+{\
+	g_xlog_cfg.lock.release(g_xlog_cfg.lock.arg);\
+};
+#define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
 #define XLOG_IS_ANDROID_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
 #define XLOG_IS_USER_CALLBACK_LOGABLE       _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
@@ -176,13 +217,36 @@ void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 	g_xlog_cfg.cb_pack.cb_user_data = user_data;
 }
 
-void xlog_set_target(int target)
+void xlog_set_target(int target, xlog_lock_t* lock)
 {
 	if (target < LOG_TARGET_NONE)
 	{
 		return;
 	}
+	if (lock)
+	{
+		g_xlog_cfg.lock = *lock;
+	}
+	else
+	{
+		memset(&g_xlog_cfg.lock, 0, sizeof(g_xlog_cfg.lock));
+	}
 	g_xlog_cfg.target = target;
+	g_xlog_cfg.cache_tgt.need_lock = false;
+	g_xlog_cfg.cache_tgt.log2android = XLOG_IS_ANDROID_LOGABLE;
+	g_xlog_cfg.cache_tgt.log2console = XLOG_IS_CONSOLE_LOGABLE;
+	g_xlog_cfg.cache_tgt.log2usercb = XLOG_IS_USER_CALLBACK_LOGABLE;
+	if (!g_xlog_cfg.lock.acquire || !g_xlog_cfg.lock.release)
+	{
+		return;
+	}
+	// if you provide lock, we use it on log2usercb,
+	// or if concurrent log to console and android, we use lock too.
+	if (g_xlog_cfg.cache_tgt.log2usercb ||
+		(g_xlog_cfg.cache_tgt.log2console && g_xlog_cfg.cache_tgt.log2android))
+	{
+		g_xlog_cfg.cache_tgt.need_lock = true;
+	}
 }
 
 int xlog_get_target()
@@ -211,6 +275,9 @@ void xlog_set_format(int format)
 		return;
 	}
 	g_xlog_cfg.format = format;
+	g_xlog_cfg.cache_fmt.timestamp = (g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP);
+	g_xlog_cfg.cache_fmt.tag_level = (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL);
+	g_xlog_cfg.cache_fmt.tid = (g_xlog_cfg.format & LOG_FORMAT_WITH_TID);
 }
 
 int xlog_get_format()
@@ -365,8 +432,9 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	size_t buffer_log_size = sizeof(default_buffer);
 	size_t buffer_strlen;
 	size_t header_len = 0;
-	bool is_log2console;
-	bool is_log2usercb;
+	bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
+	bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
+	bool need_lock = g_xlog_cfg.cache_tgt.need_lock;
 	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
@@ -380,15 +448,13 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 		tag = g_xlog_cfg.default_tag;
 	}
 
-	is_log2console = XLOG_IS_CONSOLE_LOGABLE;
-	is_log2usercb = XLOG_IS_USER_CALLBACK_LOGABLE;
 	if (g_xlog_cfg.format && (is_log2console || is_log2usercb))
 	{
-		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP)
+		if (g_xlog_cfg.cache_fmt.timestamp /* g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP */)
 		{
 			header_len += time_util_get_time_str_current(buffer_log, g_xlog_cfg.timezone_hour);
 		}
-		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL)
+		if (g_xlog_cfg.cache_fmt.tag_level /* g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL */)
 		{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
@@ -396,7 +462,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 			header_len += print_level_tag(buffer_log + header_len, level, tag);
 #endif // USE_SNPRINTF_HEADER
 		}
-		if (g_xlog_cfg.format & LOG_FORMAT_WITH_TID)
+		if (g_xlog_cfg.cache_fmt.tid /* g_xlog_cfg.format & LOG_FORMAT_WITH_TID */)
 		{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
@@ -457,9 +523,10 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 		va_end(va);
 		buffer_strlen += ret_vsn;
 	}
-
+	
+	XLOG_LOCK(need_lock);
 #if defined(__ANDROID__)
-	if (XLOG_IS_ANDROID_LOGABLE)
+	if (g_xlog_cfg.cache_tgt.log2android)
 	{   // android platform log_print does not need our header information, just skip it
 		__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
 	}
@@ -478,6 +545,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	{
 		g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
 	}
+	XLOG_UNLOCK(need_lock);
 
 	if (buffer_log != default_buffer)
 	{

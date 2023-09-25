@@ -103,6 +103,13 @@
 ----
 ## Release Log
 
+* **1.5.6**
+  > 1. fix：when time_util hit cache, fmt_len over calculated.
+  > 2. update: inih code, rename "ini_" to "ini_reader_", for prevent conflict with other projects
+  > 3. add：cmake script support define PLATFORM and PLATFORM_ABI, format output dir structure
+  > 4. feat: xlog support lock to enusure printing order on multi target
+  > 5. add: README_zh-CN.md
+  
 * **1.5.5**
   > 1. add more simple win32 pthread function(build with PRJ_WIN_PTHREAD_MODE=1)
   > 2. fix xlog macro wrong call

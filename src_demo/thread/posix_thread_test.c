@@ -185,15 +185,15 @@ static void test_log()
 
 #ifdef LCU_XLOG_H
 	xlog_set_min_level(LOG_LEVEL_ERROR);
-	xlog_set_target(LOG_TARGET_ANDROID);
+	xlog_set_target(LOG_TARGET_ANDROID, NULL);
 	LOGI("this log won't print because of current level is LOG_LEVEL_ERROR");
 	LOGE("this log only print on logcat because of xlog_config_target=LOG_TARGET_ANDROID");
 
-	xlog_set_target(LOG_TARGET_CONSOLE);
+	xlog_set_target(LOG_TARGET_CONSOLE, NULL);
 	LOGE_TRACE("this log only print on console because of xlog_config_target=LOG_TARGET_CONSOLE");
 
 	xlog_set_min_level(LOG_LEVEL_VERBOSE);
-	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
+	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE, NULL);
 	LOGD("already set min_level to VERBOSE, target to 'LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE'");
 
 	int cur_format = xlog_get_format();

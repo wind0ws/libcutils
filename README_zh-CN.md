@@ -102,6 +102,13 @@
 ----
 ## 发布日志
 
+* **1.5.6**
+  > 1. 修复：time_util在命中时间cache时，多算了fmt_len的问题
+  > 2. 更新：inih同步更新，重命名inih方法“ini_”到“ini_reader_”, 防止与其他项目冲突
+  > 3. 新增：cmake脚本支持定义PLATFORM和PLATFORM_ABI, 统一化输出文件夹
+  > 4. 新增: xlog支持锁，在多target打印上保持一致的顺序
+  > 5. 新增: 中文文档
+
 * **1.5.5**
   > 1. 新增：simple win32 pthread添加了更多的支持方法 (编译传参 PRJ_WIN_PTHREAD_MODE=1).
   > 2. 修复：xlog 宏调用接口错误.

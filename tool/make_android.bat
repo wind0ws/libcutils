@@ -22,7 +22,7 @@ if "%BUILD_ABI%" EQU "x86_64" goto label_main
 
 :label_main
 @echo Your BUILD_ABI=%BUILD_ABI%
-set BUILD_DIR=./build_android_%BUILD_ABI%
+set BUILD_DIR=.\build\build_android_%BUILD_ABI%
 TITLE=%BUILD_DIR%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%

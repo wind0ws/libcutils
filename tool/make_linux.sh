@@ -6,7 +6,7 @@ dos2unix setup_env.sh
 chmod +x ./setup_env.sh
 source ./setup_env.sh 
 
-BUILD_DIR=./build_linux_$BUILD_ABI
+BUILD_DIR=./build/build_linux_$BUILD_ABI
 if [ ! -d "$BUILD_DIR" ];then
 	echo "mkdir $BUILD_DIR ..."
 	mkdir -p $BUILD_DIR

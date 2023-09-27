@@ -36,7 +36,7 @@
 ## How to build
   
   * ### common platforms (windows/linux/android)
-    > go to ***build***  folder, and edit setup env script first(**setup_env.bat/setup_env.sh**)
+    > go to ***tool***  folder, and edit setup env script first(**setup_env.bat/setup_env.sh**)
 	(**for make sure cmake/ninja/ndk(for Android) location**), 
 	then execute script to build it, it will copy the compiled product to the specified location
     
@@ -49,10 +49,10 @@
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
   
   * ### other platforms (cross-compilation)
-    1. #### first, write cmake cross-compilation toolchain file on **build/cmake/** folder:
+    1. #### first, write cmake cross-compilation toolchain file on **tool/cmake/toolchains** folder:
       > for define c/cxx compiler location and flags.
       
-      example: create **hisi.toolchain.cmake** file on **build/cmake/toolchains** folder, 
+      example: create **hisi.toolchain.cmake** file on **tool/cmake/toolchains** folder, 
 	           and write some config like this:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
@@ -82,14 +82,14 @@
     2. #### then execute cmake build script:
       > for generate makefile and compile it
       
-      > example: go to ***build***  folder, execute command:
+      > example: go to ***tool*** folder, execute command:
       ```shell
       cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
 	  if target platform(toolchain) only support compile static library, follow these steps:
 	  ```shell
-	  cmake -H. -B./build_abcd -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DPLATFORM=abcd -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+	  cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
       cmake --build ./build_abcd --config Release --target lcu_static
 	  ```
 

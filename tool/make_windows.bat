@@ -88,7 +88,7 @@ if "%BUILD_ABI%" EQU "Win64" set NEW_VS_ARCH="" & goto label_main
 :label_main
 @echo Your BUILD_ABI=%BUILD_ABI%, NEW_VS_ARCH=%NEW_VS_ARCH:"=%
 title=%BUILD_ABI%
-set BUILD_DIR=build_%BUILD_ABI%
+set BUILD_DIR=.\build\build_%BUILD_ABI%
 @echo Your BUILD_DIR=%BUILD_DIR%
 @echo Your BUILD_TYPE=%BUILD_TYPE%
 @echo Your VS_VER=%VS_VER%

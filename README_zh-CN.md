@@ -36,7 +36,7 @@
 ## 编译
   
   * ### 常见平台 (windows/linux/android)
-    > 进入 ***build***  文件夹, 编辑环境路径脚本（**setup_env.bat/setup_env.sh**）
+    > 进入 ***tool***  文件夹, 编辑环境路径脚本（**setup_env.bat/setup_env.sh**）
 	(**为了确定 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
 	然后执行脚本来编译, 编译完后会将产物拷贝到指定的位置
     
@@ -49,10 +49,10 @@
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
   
   * ### 其他平台 (交叉编译)
-    1. #### 首先，在 **build/cmake/** 文件夹下写cmake交叉编译规则文件:
+    1. #### 首先，在 **tool/cmake/toolchains** 文件夹下写cmake交叉编译规则文件:
       > 定义 c/cxx 编译器位置和平台编译参数.
       
-      > 示例: 在 **build/cmake/toolchains** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
+      > 示例: 在 **tool/cmake/toolchains** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
 	        然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
@@ -82,14 +82,14 @@
     2. #### 执行 cmake 命令编译:
       > 生成makefile并编译
       
-      > 示例: 进入 ***build***  文件夹里，执行命令:
+      > 示例: 进入 ***tool*** 文件夹里，执行命令:
       ```shell
       cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
 	  若平台(编译链)仅支持编译静态库，可以这么来编译:
 	  ```shell
-	  cmake -H. -B./build_abcd -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DPLATFORM=abcd -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+	  cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
       cmake --build ./build_abcd --config Release --target lcu_static
 	  ```
 

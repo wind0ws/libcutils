@@ -1,6 +1,6 @@
-# Introduction [中文版](https://github.com/wind0ws/libcutils/blob/master/README_zh-CN.md)
+# Introduction [中文介绍](https://github.com/wind0ws/libcutils/blob/master/README_zh-CN.md)
   What's this: This is a common c utils library (works for unix(android)/windows).
-  > note: api may change frequently at this stage. see commits log for more details
+  > note: api may change frequently at this stage. see commits log for more details, see latest code on develop branch.
 
 ----
 ## Components
@@ -97,8 +97,11 @@
   >  copy header and lib(static or shared) to your project, and link it,
   or just copy source and header file to your project.
 
-## Want demo
+## Demo
   > see `src_demo` folder, it demonstrate to you simple use case.
+
+## License
+  > This library is free software; you can redistribute it and or modify it under the terms of the MIT license. See [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE) for details.
 
 ----
 ## Release Log

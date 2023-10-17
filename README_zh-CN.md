@@ -1,6 +1,6 @@
 # 简介
   这是一个通用C工具库，支持 unix(android)/windows 等平台
-  > PS: 当前api接口可能经常改动，详情请见commit提交日志
+  > 当前api接口可能经常改动，详情请见commit提交日志, 最新代码请看develop分支
 
 ----
 ## 组件
@@ -37,7 +37,7 @@
   
   * ### 常见平台 (windows/linux/android)
     > 进入 ***tool***  文件夹, 编辑环境路径脚本（**setup_env.bat/setup_env.sh**）
-	(**为了确定 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
+	(**为了设置 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
 	然后执行脚本来编译, 编译完后会将产物拷贝到指定的位置
     
     > 简要示例:
@@ -94,13 +94,16 @@
 	  ```
 
 ## 使用
-  >  拷贝头文件和库（动态或静态）文件到你的项目中，并链接他们，或者直接拷贝源码到你的项目中。
+  > 拷贝头文件和库（动态或静态）文件到你的项目中，并链接他们，或者直接拷贝源码到你的项目中。
 
 ## 示例
   > 请看 **src_demo** 目录，每个模块有对应的测试用例.
 
+## 许可证
+  > 本库是免费软件; 你可以根据MIT许可证的条款重新分发或修改它. 详情请见 [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE).
+
 ----
-## 发布日志
+## 更新日志
 
 * **1.5.6**
   > 1. 修复：time_util在命中时间cache时，多算了fmt_len的问题

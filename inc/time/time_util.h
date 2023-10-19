@@ -6,8 +6,11 @@
 #include <stdint.h>
 
 #ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <winsock.h>  /* for take struct timeval */
 #include <sys/timeb.h>
+#pragma warning(pop)
 #else
 #include <sys/time.h>
 #endif // _WIN32
@@ -16,8 +19,16 @@
 extern "C" {
 #endif // __cplusplus
 
+	/**
+	 * global init
+	 */
 	int time_util_global_init();
 
+	/**
+	 * global deinit
+	 * 
+	 * for cleanup resource.
+	 */
 	int time_util_global_deinit();
 
 #ifdef _WIN32

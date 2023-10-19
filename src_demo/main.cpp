@@ -86,9 +86,9 @@ static test_case_t g_all_test_cases[] =
 };
 
 
-#define SAVE_LOG    (0)
+#define TEST_SAVE_LOG    (0)
 
-#if( SAVE_LOG && 0 == TEST_FILE_LOGGER )
+#if( TEST_SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
 #define LOG_PATH ("d:/mylog.log")
 #else
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 
 	bool is_press_kb = true; // default status is true for unix
 #if _WIN32
-	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
+	LOGI("after %d seconds, it will run automatically. if you want to choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();
 	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
@@ -142,9 +142,9 @@ int main(int argc, char* argv[])
 			break;
 		}
 		
-#if SAVE_LOG
+#if TEST_SAVE_LOG
 		fprintf(stderr, "\n  ====auto run test case====  \n");
-#endif // SAVE_LOG
+#endif // TEST_SAVE_LOG
 		LOGI("  ====auto run test case====  ");
 		//RUN_TEST(memleak_test);//this will report mem leak.
 		//RUN_TEST(file_util_test);
@@ -199,7 +199,7 @@ static void setup_console()
 	//fclose(f);
 	//LOGD("你好");
 
-	//_CrtSetBreakAlloc(81);
+	//_CrtSetBreakAlloc(99);
 #endif // _WIN32
 	LOG_INIT(NULL);
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);

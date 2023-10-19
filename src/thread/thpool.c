@@ -12,13 +12,13 @@
 //#define _POSIX_C_SOURCE 200809L
 //#define __USE_MISC /* for see usleep in unistd.h */
 //#include <unistd.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-//#include <pthread.h>
 #include "thread/posix_thread.h"
+#include <signal.h>
+#include <stdio.h> /* for snprintf */
+//#include <pthread.h>
 #include <errno.h>
 #include <time.h>
+#include <malloc.h>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
@@ -529,7 +529,7 @@ static void jobqueue_destroy(jobqueue* jobqueue_p){
 static void bsem_init(bsem *bsem_p, int value) {
 	if (value < 0 || value > 1) {
 		err("bsem_init(): Binary semaphore can take only values 1 or 0");
-		exit(1);
+		//exit(1);
 	}
 	pthread_mutex_init(&(bsem_p->mutex), NULL);
 	pthread_cond_init(&(bsem_p->cond), NULL);

@@ -133,7 +133,7 @@ int time_util_global_init()
 
 int time_util_global_deinit()
 {
-#if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
+#if(defined(_WIN32) /*&& _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE*/)
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 	// destroy it(free it's memory), and reset the pointer
 	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
@@ -252,7 +252,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 #endif // USE_TIME_CACHE
 
 			ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
-			//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
+			//snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
 			print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
 			ftime_len += 4;
 
@@ -271,7 +271,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 	else // not use cache
 	{
 		ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
-		//ftime_len += snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
+		//snprintf(str + ftime_len, TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
 		print_millisec(str + ftime_len, (unsigned int)(tval_p->tv_usec / 1000));
 		ftime_len += 4;
 	}

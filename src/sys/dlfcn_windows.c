@@ -25,10 +25,13 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
-#endif
+#endif // _DEBUG
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+#pragma warning(pop)
 
  /* Older versions do not have this type */
 #if _WIN32_WINNT < 0x0500

@@ -5,7 +5,7 @@ call setup_env.bat %*
 :lable_check_thread_mode
 set WIN_PTHREAD_MODE=%3
 if "%WIN_PTHREAD_MODE%" EQU "" (
-  @echo Now you should choose win pthread mode.
+  @echo now you should choose win pthread mode.
   goto label_choose_win_pthread
 ) else (
   @echo your pthread_mode is %WIN_PTHREAD_MODE%
@@ -13,9 +13,10 @@ if "%WIN_PTHREAD_MODE%" EQU "" (
 )
 
 :label_choose_win_pthread
-@echo "LCU support 2 win pthread mode:"
-@echo "  0: use pthreads-win32 lib."
-@echo "  1: use windows native implemention."
+@echo "LCU support 3 type win pthread mode:"
+@echo "  0: use windows native implemention."
+@echo "  1: use pthreads-win32 lib."
+@echo "  2: use pthreads-win32 dll."
 @echo .
 set /p WIN_PTHREAD_MODE="please choose LCU pthread mode:"
 

@@ -1,11 +1,12 @@
 #include "thread/posix_thread.h"
-#if defined(__linux__)
-#include <sys/prctl.h> /* for prctl */
-#endif // __linux__
 
 #ifdef _WIN32
 //reference: https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
+#pragma warning(pop)
+
 static const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO
@@ -57,7 +58,7 @@ int pthread_setname_np(pthread_t thr, const char* name)
 }
 #endif // _WIN32
 
-int pthread_set_name(pthread_t thr, const char* name)
+int posix_thread_set_name(pthread_t thr, const char* name)
 {
 	int ret = -1;
 	if (NULL == name || '\0' == name[0])
@@ -66,26 +67,13 @@ int pthread_set_name(pthread_t thr, const char* name)
 	}
 #if(defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP)
 	ret = pthread_setname_np(thr, name);
-#elif defined(__linux__)
+#elif(defined(__linux__))
 	/* Use prctl (<sys/prctl.h>) instead to prevent using _GNU_SOURCE flag and implicit declaration */
 	ret = prctl(PR_SET_NAME, name);
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif(defined(__APPLE__) && defined(__MACH__))
 	ret = pthread_setname_np(name);
 #else
-#pragma message("pthread_set_name(): pthread_setname_np is not supported on this system")
+    #pragma message("posix_thread_set_name(): pthread_setname_np is not supported on this system")
 #endif // HAVE_PTHREAD_SETNAME_NP
 	return ret;
 }
-
-#ifndef __ANDROID__ // Android just pick up bionic's copy.
-pid_t gettid() 
-{
-	#if defined(__APPLE__)
-		return syscall(SYS_thread_selfid);
-	#elif defined(__linux__)
-		return syscall(__NR_gettid);
-	#elif defined(_WIN32)
-		return GetCurrentThreadId();
-	#endif
-}
-#endif  // !__ANDROID__

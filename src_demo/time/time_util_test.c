@@ -30,7 +30,7 @@ static void test_rfc_1123_2822()
 static void* thread_worker(void *param) 
 {
 	printf("\n\n\n");
-	const pid_t tid = gettid();
+	const int tid = (int)GETTID();
 	LOGI("mytid=%d", tid);
 	char time_str[TIME_STR_SIZE];
 	int counter = 0;

@@ -10,8 +10,8 @@ static void* thread_test_func(void* args)
 		goto EXIT;
 	}
 	int code;
-	pthread_set_name(pthread_self(), "thr_func");
-	LOGI("Hello pthread. id:%d, now sem_wait...", gettid());
+	PTHREAD_SETNAME(pthread_self(), "thr_func");
+	LOGI("Hello pthread. id:%d, now sem_wait...", GETTID());
 	sem_t* psem = (sem_t*)args;
 	if (0 != (code = sem_wait(psem)))
 	{
@@ -208,7 +208,7 @@ static void test_log()
 
 int posix_thread_test()
 {
-	LOGD("Hello World, thread id: %d", gettid());
+	LOGD("Hello World, thread id: %d", (int)GETTID());
 	test_log();
 
 	sem_test();

@@ -1,19 +1,18 @@
 # 简介
   这是一个通用C工具库，支持 unix(android)/windows 等平台
-  > 当前api接口可能经常改动，详情请见commit提交日志, 最新代码请看develop分支
+  > 当前api比较稳定，不会经常改动。详情请见commit提交日志, 最新代码请看develop分支
 
 ----
 ## 组件
 * **log**
   > 支持同时打印日志到 file/console/logcat(Android), 也支持配置日志输出格式、等级.
   
-  *  **logger** : logger门面. xlog and slog 实现它定义的宏
+  *  **logger** : logger门面. xlog 和 slog 实现它定义的宏
   *  **xlog** : 支持打印 level/tag/tid/time 这些log头和日志信息
   *  **slog** : 简易log实现，实际上是对printf的二次包装, 只支持打印level/TAG和日志信息
 
 * **thread**
   > 支持Windows上使用posix风格的线程/信号量（thread/semaphore）接口(感谢 [pthread-win32](https://sourceforge.net/projects/pthreads4w/)). 
-    unix(linux/android)本身就是posix风格。
 
 * **data**
   > 常用数据结构和操作接口: 包括 ***array***, ***hashmap***, ***list***, ***base64*** ...
@@ -23,7 +22,7 @@
 
 * **memory**
    *  **string** : 包括 ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
-   *  **allocator** : 可根据heap内存，帮助你提早发现内存泄露和内存破坏等问题.
+   *  **allocator** : 检测heap内存，帮助你提早发现内存泄露和内存破坏等问题.
    *  **mplite** : 内存池实现 [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
 * **ring_buffer**
@@ -35,10 +34,10 @@
 ----
 ## 编译
   
-  * ### 常见平台 (windows/linux/android)
+  * ### 常用平台 (windows/linux/android)
     > 进入 ***tool***  文件夹, 编辑环境路径脚本（**setup_env.bat/setup_env.sh**）
-	(**为了设置 cmake/ninja/ndk(for Android) 等工具的路径位置**), 
-	然后执行脚本来编译, 编译完后会将产物拷贝到指定的位置
+    > (**为了设置 cmake/ninja/ndk(for Android) 等工具的路径位置**),
+    > 然后执行脚本来编译, 编译完后会将产物拷贝到指定的位置
     
     > 简要示例:
     
@@ -48,6 +47,11 @@
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
   
+    > windows 平台 posix pthread 实现方式有三种：
+    >  * 0: 使用 windows api 模拟 pthread 接口
+    >  * 1: 使用 pthread-win32 静态库。如果你使用lcu静态库，记得还需要依赖这个pthread静态库
+    >  * 2: 使用 pthread-win32 动态库。在你使用lcu库的工程里记得放pthread的dll
+  
   * ### 其他平台 (交叉编译)
     1. #### 首先，在 **tool/cmake/toolchains** 文件夹下写cmake交叉编译规则文件:
       > 定义 c/cxx 编译器位置和平台编译参数.
@@ -56,10 +60,10 @@
 	        然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
-	  SET(PLATFORM Hisi)           # important: tell script the platform name
+      SET(PLATFORM Hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
       message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
@@ -72,7 +76,7 @@
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
       
-	  SET(PLATFORM_COMMON_FLAGS " -fPIC")
+      SET(PLATFORM_COMMON_FLAGS " -fPIC")
       string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
       string(APPEND CMAKE_CXX_FLAGS        "${PLATFORM_COMMON_FLAGS}")
       string(APPEND CMAKE_EXE_LINKER_FLAGS "${PLATFORM_COMMON_FLAGS} -fPIE")
@@ -87,11 +91,11 @@
       cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
-	  若平台(编译链)仅支持编译静态库，可以这么来编译:
-	  ```shell
-	  cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
-      cmake --build ./build_abcd --config Release --target lcu_static
-	  ```
+     > 若平台(编译链)仅支持编译静态库，可以这么来编译:
+     ```shell
+     cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+     cmake --build ./build_abcd --config Release --target lcu_static
+     ```
 
 ## 使用
   > 拷贝头文件和库（动态或静态）文件到你的项目中，并链接他们，或者直接拷贝源码到你的项目中。

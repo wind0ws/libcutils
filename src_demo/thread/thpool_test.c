@@ -9,12 +9,12 @@
 //===============================TEST POOL==========================================BEGIN
 static void task1(void* param) 
 {
-	LOGD("Thread#%u working on task1", (unsigned int)gettid());
+	LOGD("Thread#%u working on task1", (unsigned int)GETTID());
 }
 
 static void task2(void* param) 
 {
-	LOGD("Thread#%u working on task2", (unsigned int)gettid());
+	LOGD("Thread#%u working on task2", (unsigned int)GETTID());
 }
 
 static int thpool_test_basic()
@@ -43,9 +43,9 @@ static int thpool_test_basic()
 //===============================TEST WAIT==========================================BEGIN
 static void worker_sleep_1(int* secs)
 {
-	LOGD("%d in", gettid());
+	LOGD("%d in", (int)GETTID());
 	sleep(*secs);
-	LOGD("%d out", gettid());
+	LOGD("%d out", (int)GETTID());
 }
 
 static int thpool_test_wait()

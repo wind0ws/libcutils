@@ -37,11 +37,13 @@
 
 #include "config/lcu_build_config.h"
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
-
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <errno.h> /* Adding definition of EINVAL, ETIMEDOUT, ..., etc. */
 #include <fcntl.h> /* Adding O_CREAT definition. */
 #include <stdio.h>
 #include <winsock.h>
+#pragma warning(pop)
 
 #ifndef PTHREAD_PROCESS_SHARED
 #define PTHREAD_PROCESS_PRIVATE	0

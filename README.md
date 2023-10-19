@@ -1,6 +1,6 @@
 # Introduction [中文介绍](https://github.com/wind0ws/libcutils/blob/master/README_zh-CN.md)
-  What's this: This is a common c utils library (works for unix(android)/windows).
-  > note: api may change frequently at this stage. see commits log for more details, see latest code on develop branch.
+  What's this: This is a `C` tool library (works for unix(android)/windows).
+  > note: the interface is relatively stable and will not be changed frequently at this stage. see commits log for more details, see latest code on develop branch.
 
 ----
 ## Components
@@ -13,7 +13,6 @@
 
 * **thread**
   > posix style thread/semaphore api on windows(thanks for [pthread-win32](https://sourceforge.net/projects/pthreads4w/)). 
-  also works on unix(linux/android).
 
 * **data**
   > common data structure and operation: include ***array***, ***hashmap***, ***list***, ***base64*** ...
@@ -41,25 +40,29 @@
 	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
-    
     |platform     | onekey deploy build                      | manual build                                     |
     | --------    | :-----                                   | :----                                            |
     | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
     | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
+	
+    > there 3 way to integration pthread on windows：
+    > * 0: implementing the pthread interface using the windows api
+    > * 1: use pthread-win32 static library. if you use static library, don't forget dependency pthread lib
+    > * 2: use pthread-win32 dynamic library. you should place pthread dll on your project
   
   * ### other platforms (cross-compilation)
     1. #### first, write cmake cross-compilation toolchain file on **tool/cmake/toolchains** folder:
       > for define c/cxx compiler location and flags.
       
-      example: create **hisi.toolchain.cmake** file on **tool/cmake/toolchains** folder, 
-	           and write some config like this:
+      example: create **hisi.toolchain.cmake** file on **tool/cmake/toolchains** folder,
+               and write some config like this:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
-	  SET(PLATFORM Hisi)           # important: tell script the platform name
+      SET(PLATFORM Hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
       message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
@@ -72,7 +75,7 @@
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
       
-	  SET(PLATFORM_COMMON_FLAGS " -fPIC")
+      SET(PLATFORM_COMMON_FLAGS " -fPIC")
       string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
       string(APPEND CMAKE_CXX_FLAGS        "${PLATFORM_COMMON_FLAGS}")
       string(APPEND CMAKE_EXE_LINKER_FLAGS "${PLATFORM_COMMON_FLAGS} -fPIE")
@@ -87,11 +90,11 @@
       cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
       cmake --build ./build_hisi --config Release
       ```
-	  if target platform(toolchain) only support compile static library, follow these steps:
-	  ```shell
-	  cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
+      > if target platform(toolchain) only support compile static library, follow these steps:
+      ```shell
+      cmake -H. -B./build_abcd -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_DEMO=OFF -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/abcd.toolchain.cmake
       cmake --build ./build_abcd --config Release --target lcu_static
-	  ```
+      ```
 
 ## How to use
   >  copy header and lib(static or shared) to your project, and link it,

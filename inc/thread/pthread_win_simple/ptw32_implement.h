@@ -47,7 +47,10 @@
 #endif
 
 #include "thread/pthread_win_simple/ptw32_mcs_lock.h"
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
+#pragma warning(pop)
 
 /*
  * In case windows.h doesn't define it (e.g. WinCE perhaps)

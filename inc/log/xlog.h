@@ -30,13 +30,13 @@ typedef enum
 	/* output log message with tag and level */
 	LOG_FORMAT_WITH_TAG_LEVEL = (0x1 << 2),
 	/* output log message with thread id */
-	LOG_FORMAT_WITH_TID = (0x1 << 3)
+	LOG_FORMAT_WITH_TID = (0x1 << 3),
 } LogFormat;
 
 typedef enum
 {
 	LOG_FLUSH_MODE_AUTO = 0,
-	LOG_FLUSH_MODE_EVERY
+	LOG_FLUSH_MODE_EVERY,
 } LogFlushMode;
 
 typedef struct 
@@ -159,7 +159,9 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX or TLOGX macro instead.
 	 */
-	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...);
+	PRINTF_FMT_CHK_GNUC(5, 6)
+	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, 
+		PRINTF_FMT_CHK_MSC const char* fmt, ...);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)

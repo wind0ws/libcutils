@@ -11,7 +11,7 @@ static void* thread_test_func(void* args)
 	}
 	int code;
 	PTHREAD_SETNAME(pthread_self(), "thr_func");
-	LOGI("Hello pthread. id:%d, now sem_wait...", GETTID());
+	LOGI("Hello pthread. id:%ld, now sem_wait...", (long)GETTID());
 	sem_t* psem = (sem_t*)args;
 	if (0 != (code = sem_wait(psem)))
 	{

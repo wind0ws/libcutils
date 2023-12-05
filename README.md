@@ -64,9 +64,10 @@
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
       SET(PLATFORM Hisi)           # important: tell script the platform name
       
-      SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
+      SET(CROSS_TOOLCHAIN_DIR "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux")
+      SET(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-himix100-linux-")
       message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
-
+      
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
       SET(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}g++")
@@ -74,6 +75,15 @@
       SET(CMAKE_LINKER "${CROSS_TOOLCHAIN_PATH_PREFIX}ld")
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
+      
+      SET(CMAKE_FIND_ROOT_PATH  ${CROSS_TOOLCHAIN_DIR})
+      # Sysroot.
+      set(CMAKE_SYSROOT "${CROSS_TOOLCHAIN_DIR}/sysroot")
+      # search for programs in the build host directories
+      SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+      # for libraries and headers in the target directories
+      SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+      SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
       
       SET(PLATFORM_COMMON_FLAGS " -fPIC")
       string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
@@ -108,6 +118,11 @@
 
 ----
 ## Release Log
+
+* **1.6.0**
+  > 1. update: add pthread-win32 static library and dynamic library, Windows compilation supports 3 types of pthread dependency (0/1/2) 
+  > 2. fix: in Windows, include <windows.h> reports C5105 warning
+  > 3. update: rename build folder to tool, automatically configure the file line ending type in gitattributes
 
 * **1.5.6**
   > 1. fix：when time_util hit cache, fmt_len over calculated.

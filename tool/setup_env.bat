@@ -33,7 +33,6 @@ if not exist %CMAKE_BIN% (
 	@exit /b 2
 )
 
-
 set BUILD_ABI=%1
 if "%BUILD_ABI%" EQU "" (
   @echo Now you should input build abi.

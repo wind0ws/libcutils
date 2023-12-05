@@ -1,7 +1,7 @@
 #include "common_macro.h"
-#include "time/time_util.h"
 #include "mem/strings.h"
 #include "thread/posix_thread.h"
+#include "time/time_util.h"
 #include <stdio.h>
 
 #if(TIME_STR_SIZE < 24)
@@ -131,9 +131,9 @@ int time_util_global_init()
 	return 0;
 }
 
-int time_util_global_deinit()
+int time_util_global_cleanup()
 {
-#if(defined(_WIN32) /*&& _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE*/)
+#if(defined(_MSC_VER) /*&& _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE*/)
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 	// destroy it(free it's memory), and reset the pointer
 	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
@@ -146,7 +146,7 @@ int time_util_global_deinit()
 		g_time_caches[i].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
 	}
 #endif // USE_TIME_CACHE  
-#endif // _WIN32
+#endif // _MSC_VER
 	return 0;
 }
 
@@ -155,7 +155,7 @@ int time_util_zone_offset_seconds_to_utc()
 	time_t rawtime = time(NULL);
 	struct tm buf;
 
-#if defined(WIN32)
+#if defined(_MSC_VER)
 	gmtime_s(&buf, &rawtime);
 #else
 	gmtime_r(&rawtime, &buf);

@@ -33,7 +33,7 @@ int file_util_test()
 		if (fs)
 		{
 			long file_size = file_util_get_size_by_fs(fs);
-			LOGD_TRACE(" \"%s\" file size=%d", TEST_FILE, file_size);
+			LOGD_TRACE(" \"%s\" file size=%ld", TEST_FILE, file_size);
 			fclose(fs);
 		}
 	}
@@ -51,7 +51,7 @@ static int pri_handle_file_info(file_info_t* p_info, void* user_data)
 	}
 	else if (FILE_ITERATOR_TYPE_FILE == p_info->type)
 	{
-		LOGD("it is file => %s/%s, size=%d", p_info->dir, p_info->name, p_info->p_stat->st_size);
+		LOGD("it is file => %s/%s, size=%ld", p_info->dir, p_info->name, (long)(p_info->p_stat->st_size));
 	}
 	return 0;
 }

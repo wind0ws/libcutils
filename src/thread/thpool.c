@@ -6,7 +6,7 @@
  *
  *//** @file thpool.h *//*
  *
- * reference https://github.com/Pithikos/C-Thread-Pool/blob/master/thpool.c   20200709
+ * reference https://github.com/Pithikos/C-Thread-Pool/blob/master/thpool.c   20231020
  ********************************/
 
 //#define _POSIX_C_SOURCE 200809L
@@ -25,21 +25,16 @@
 
 #include "thread/thpool.h"
 
-#ifndef SIGUSR1
-#define SIGUSR1 10
+#ifdef THPOOL_DEBUG
+#define THPOOL_DEBUG 1
+#else
+#define THPOOL_DEBUG 0
 #endif
 
-#define THPOOL_DEBUG 0
-#ifdef NDEBUG
-#undef THPOOL_DEBUG
-#endif // NDEBUG
-
-#if (!defined(DISABLE_PRINT) && defined(THPOOL_DEBUG) && THPOOL_DEBUG)
-#define err(str) fprintf(stderr, str)
-#define debug(...) printf(__VA_ARGS__)
+#if !defined(DISABLE_PRINT) || defined(THPOOL_DEBUG)
+#define err(str, ...) fprintf(stderr, str "\n", ##__VA_ARGS__)
 #else
-#define err(str)
-#define debug(...)
+#define err(str, ...)
 #endif
 
 //static volatile int threads_keepalive;
@@ -170,7 +165,9 @@ struct thpool_* thpool_init(int num_threads){
 	int n;
 	for (n=0; n<num_threads; n++){
 		thread_init(thpool_p, &thpool_p->threads[n], n);
-		debug("THPOOL_DEBUG: Created thread %d in pool \n", n);
+#if THPOOL_DEBUG
+			printf("THPOOL_DEBUG: Created thread %d in pool \n", n);
+#endif
 	}
 
 	/* Wait for threads to initialize */
@@ -246,7 +243,7 @@ void thpool_destroy(thpool_* thpool_p){
 
 	/* Job queue cleanup */
 	jobqueue_destroy(&thpool_p->jobqueue);
-	/* Deallocates */
+	/* Deallocs */
 	int n;
 	for (n=0; n < threads_total; n++){
 		thread_destroy(thpool_p->threads[n]);
@@ -262,10 +259,10 @@ static void thread_hold(int sig_id) {
 	(void)sig_id;
 	threads_on_hold = 1;
 	while (threads_on_hold) {
-		debug("thread_hold(): thread(%d) on sleep(1)...\n", gettid());
+		err("thread_hold(): thread(%d) on sleep(1)...\n", gettid());
 		sleep(1);
 	}
-	debug("thread_hold(): thread(%d) now awake from sleep...\n", gettid());
+	err("thread_hold(): thread(%d) now awake from sleep...\n", gettid());
 }
 
 /* Pause all threads in threadpool */
@@ -318,7 +315,7 @@ static int thread_init (thpool_* thpool_p, struct thread** thread_p, int id){
 	(*thread_p)->thpool_p = thpool_p;
 	(*thread_p)->id       = id;
 
-	pthread_create(&(*thread_p)->pthread, NULL, (void *)thread_do, (*thread_p));
+	pthread_create(&(*thread_p)->pthread, NULL, (void * (*)(void *)) thread_do, (*thread_p));
 	pthread_detach((*thread_p)->pthread);
 	return 0;
 }
@@ -338,8 +335,8 @@ static int thread_init (thpool_* thpool_p, struct thread** thread_p, int id){
 static void* thread_do(struct thread* thread_p){
 
 	/* Set thread name for profiling and debugging */
-	char thread_name[128] = {0};
-	snprintf(thread_name, 128, "thread-pool-%d", thread_p->id);
+	char thread_name[16] = {0};
+	snprintf(thread_name, 16, "thpool-%d", thread_p->id);
 
 #if defined(__linux__)
 	/* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */

@@ -1,8 +1,8 @@
 //#ifdef _MSC_VER
 //#define _CRT_SECURE_NO_WARNINGS
 //#endif // _MSC_VER 
-#include "mem/mem_debug.h"
 #include "common_macro.h"
+#include "mem/mem_debug.h"
 #define LOG_TAG "FILE_ITOR"
 #include "log/logger.h"
 

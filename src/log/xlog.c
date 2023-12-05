@@ -1,10 +1,10 @@
 #include "log/xlog.h"
 #include "mem/strings.h"     /* for strlcpy  */
 #include "time/time_util.h"  /* for get time */
-#include <stdio.h>
+#include <malloc.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <malloc.h>
+#include <stdio.h>
 
 // header for gettid.
 #if(defined(__APPLE__))
@@ -425,7 +425,9 @@ static inline int print_func_line(char* buffer, const char* func, int line_num)
 
 #endif // !USE_SNPRINTF_HEADER
 
-void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...)
+PRINTF_FMT_CHK_GNUC(5, 6)
+void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line,
+	PRINTF_FMT_CHK_MSC const char* fmt, ...)
 {
 	va_list va;
 	//no need init buffer.

@@ -44,10 +44,10 @@ static void* thread_worker(void *param)
 		time_util_get_time_str_current(time_str, 8);
 		time_util_current_ms(&cur_millis);
 		//printf("[%d] at %s    %llu", tid, time_str, cur_millis);
-		LOGD("[%06d], %06d at %s    %llu", tid, counter, time_str, cur_millis);
+		LOGD("[%06d], %06d at %s    %lu", tid, counter, time_str, (unsigned long)cur_millis);
 	}
 	time_util_current_ms(&cur_millis);
-	LOGI_TRACE("tid=%d end! cost %llums", tid, (cur_millis - start_millis));
+	LOGI_TRACE("tid=%d end! cost %lums", tid, (unsigned long)(cur_millis - start_millis));
 	printf("\n\n\n");
 	return NULL;
 }
@@ -69,7 +69,7 @@ int time_util_test()
 
 	uint64_t cur_milliseconds;
 	time_util_current_ms(&cur_milliseconds);
-	LOGD("current milliseconds: %lld", cur_milliseconds);
+	LOGD("current milliseconds: %lu", (unsigned long)cur_milliseconds);
 
 	uint64_t begin, end;
 	time_util_query_performance_ms(&begin);
@@ -81,7 +81,7 @@ int time_util_test()
 	pthread_join(th2, NULL);
 	LOGI("join thread complete");
 	time_util_query_performance_ms(&end);
-	LOGD("time_cost: %llums", (end - begin));
+	LOGD("time_cost: %lums", (unsigned long)(end - begin));
 
 	return 0;
 }

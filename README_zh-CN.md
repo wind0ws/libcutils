@@ -22,7 +22,7 @@
 
 * **memory**
    *  **string** : 包括 ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
-   *  **allocator** : 检测heap内存，帮助你提早发现内存泄露和内存破坏等问题.
+   *  **allocator** : 跟踪和检测heap内存，帮助你提早发现内存泄露和内存破坏等问题.
    *  **mplite** : 内存池实现 [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
 * **ring_buffer**
@@ -57,7 +57,7 @@
       > 定义 c/cxx 编译器位置和平台编译参数.
       
       > 示例: 在 **tool/cmake/toolchains** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
-	        然后写一些类似下面的交叉编译配置信息:
+            然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
       # Tell the cmake script what the platform name is, must setup this for cross compile
@@ -65,9 +65,10 @@
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
       SET(PLATFORM Hisi)           # important: tell script the platform name
       
-      SET(CROSS_TOOLCHAIN_PATH_PREFIX "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux/bin/arm-himix100-linux-")
+      SET(CROSS_TOOLCHAIN_DIR "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux")
+      SET(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-himix100-linux-")
       message(STATUS "current CROSS_TOOLCHAIN_PATH_PREFIX is => ${CROSS_TOOLCHAIN_PATH_PREFIX}")
-
+      
       #set compiler location
       SET(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
       SET(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}g++")
@@ -75,6 +76,15 @@
       SET(CMAKE_LINKER "${CROSS_TOOLCHAIN_PATH_PREFIX}ld")
       SET(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
       SET(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
+      
+      SET(CMAKE_FIND_ROOT_PATH  ${CROSS_TOOLCHAIN_DIR})
+      # Sysroot.
+      set(CMAKE_SYSROOT "${CROSS_TOOLCHAIN_DIR}/sysroot")
+      # search for programs in the build host directories
+      SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+      # for libraries and headers in the target directories
+      SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+      SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
       
       SET(PLATFORM_COMMON_FLAGS " -fPIC")
       string(APPEND CMAKE_C_FLAGS          "${PLATFORM_COMMON_FLAGS}")
@@ -108,6 +118,11 @@
 
 ----
 ## 更新日志
+
+* **1.6.0**
+  > 1. 更新：添加 pthread-win32 静态库和动态库，Windows编译支持3种pthread依赖方式（0/1/2）
+  > 2. 修复：在Windows下 include <windows.h> 报 C5105 警告
+  > 3. 更新：build文件夹重命名为tool，gitattributes自动配置文件换行符类型
 
 * **1.5.6**
   > 1. 修复：time_util在命中时间cache时，多算了fmt_len的问题

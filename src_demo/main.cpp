@@ -1,8 +1,7 @@
 #include "mem/mem_debug.h"
 #include "common_macro.h"
-#include "thread/posix_thread.h"
-#include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
@@ -86,7 +85,7 @@ static test_case_t g_all_test_cases[] =
 };
 
 
-#define TEST_SAVE_LOG    (0)
+#define TEST_SAVE_LOG    (1)
 
 #if( TEST_SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
@@ -106,7 +105,7 @@ int main(int argc, char* argv[])
 {
 	int ret = 0;
 	MEM_CHECK_INIT();
-	lcu_init();
+	lcu_global_init();
 	setup_console();
 	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
@@ -154,8 +153,8 @@ int main(int argc, char* argv[])
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
-		//RUN_TEST(time_util_test);
-		RUN_TEST(posix_thread_test);
+		RUN_TEST(time_util_test);
+		//RUN_TEST(posix_thread_test);
 		//RUN_TEST(url_encoder_decoder_test);
 		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
@@ -172,7 +171,7 @@ int main(int argc, char* argv[])
 	LOGI("...bye bye...  %d\n", ret);
 
 	LOG_DEINIT(NULL);
-	lcu_deinit();
+	lcu_global_cleanup();
 	MEM_CHECK_DEINIT();
 	return ret;
 }

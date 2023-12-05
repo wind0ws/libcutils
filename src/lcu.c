@@ -9,7 +9,7 @@ char* lcu_get_version()
 	return LCU_VERSION;
 }
 
-int lcu_init()
+int lcu_global_init()
 {
 	if (g_init_times++ > 0)
 	{
@@ -19,12 +19,12 @@ int lcu_init()
 	return ret;
 }
 
-int lcu_deinit()
+int lcu_global_cleanup()
 {
 	if (0 == g_init_times || --g_init_times > 0)
 	{
 		return 0;
 	}
-	int ret = time_util_global_deinit();
+	int ret = time_util_global_cleanup();
 	return ret;
 }

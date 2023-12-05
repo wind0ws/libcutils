@@ -17,15 +17,15 @@ extern "C" {
 	 * 
 	 * call at the beginning of your app.
 	 */
-	int lcu_init();
+	int lcu_global_init();
 
 	/**
-	 * global deinit lcu
+	 * global cleanup lcu
 	 * 
 	 * call at ending of your app, 
 	 * otherwise maybe some resource not released
 	 */
-	int lcu_deinit();
+	int lcu_global_cleanup();
 	
 #ifdef __cplusplus	
 }

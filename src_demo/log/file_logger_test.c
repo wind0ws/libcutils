@@ -8,7 +8,6 @@ static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_siz
 typedef struct
 {
 	file_logger_cfg logger_cfg;
-	pthread_mutex_t log_mutex;
 	file_logger_handle logger_hdl;
 } logger_context_t;
 
@@ -31,23 +30,15 @@ int file_logger_test_begin()
 	strcpy(g_logger_ctx.logger_cfg.log_folder_path, FILE_LOGGER_PATH);
 	strcpy(g_logger_ctx.logger_cfg.log_file_name_prefix, "lcu_");
 
-	pthread_mutex_init(&g_logger_ctx.log_mutex, NULL);
 	// here we are not provide lock for file_logger, 
-	// because we provide lock for xlog, it will ensure printing order.
+	// because xlog will ensure printing order.
 	g_logger_ctx.logger_hdl = file_logger_init(&g_logger_ctx.logger_cfg);
 	if (NULL == g_logger_ctx.logger_hdl)
 	{
-		pthread_mutex_destroy(&g_logger_ctx.log_mutex);
 		return 1;
 	}
 	xlog_set_user_callback(my_xlog_custom_user_cb, (void*)g_logger_ctx.logger_hdl);
-	xlog_lock_t xlock = 
-	{
-	  .acquire = (int (*)(void *))pthread_mutex_lock,
-	  .release = (int (*)(void *))pthread_mutex_unlock,
-	  .arg = &g_logger_ctx.log_mutex,
-	};
-	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK, &xlock);
+	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK);
 	LOGD("Now call xlog_stdout2file");
 	LOG_STD2FILE(STDOUT_FILE_PATH);
 
@@ -60,17 +51,14 @@ int file_logger_test_end()
 	LOGI("Now back to stdout");
 	//remove xlog user callback
 	xlog_set_user_callback(NULL, NULL);
-	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE, NULL);
+	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	//optional: give some time to finish log on file
 	usleep(10000);
 	file_logger_deinit(&g_logger_ctx.logger_hdl);
-
-	pthread_mutex_destroy(&g_logger_ctx.log_mutex);
 	
 	LOGI("\"%s\" main log content should as same as \"%s\"", STDOUT_FILE_PATH, FILE_LOGGER_PATH);
 	return 0;
 }
-
 
 static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_size, void* user_data)
 {
@@ -79,5 +67,6 @@ static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_siz
 	{
 		return;
 	}
+	// let file_logger to write it
 	file_logger_log(f_logger_hdl, log_msg, msg_size);
 }

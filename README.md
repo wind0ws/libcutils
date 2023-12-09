@@ -116,6 +116,9 @@
 ## License
   > This library is free software; you can redistribute it and or modify it under the terms of the MIT license. See [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE) for details.
 
+## Contact me
+  > email: <hsjfox@foxmail.com>
+
 ----
 ## Release Log
 
@@ -123,6 +126,7 @@
   > 1. update: add pthread-win32 static library and dynamic library, Windows compilation supports 3 types of pthread dependency (0/1/2) 
   > 2. fix: in Windows, include <windows.h> reports C5105 warning
   > 3. update: rename build folder to tool, automatically configure the file line ending type in gitattributes
+  > 4. fix: lock xlog printing to avoid potential timeline issues caused by multi-threaded competition printing
 
 * **1.5.6**
   > 1. fix：when time_util hit cache, fmt_len over calculated.

@@ -295,7 +295,7 @@ if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) 
   
   set(COMMON_C_FLGAS   " /utf-8 /W3 ")
   set(COMMON_CXX_FLAGS "")
-  set(COMMON_EXE_LINKER_FLAGS "/NODEFAULTLIB:libcmt.lib")
+  set(COMMON_EXE_LINKER_FLAGS "")
   set(COMMON_SHARED_LINKER_FLAGS "${COMMON_EXE_LINKER_FLAGS}")
 else()
   set(COMMON_C_FLGAS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-unknown-pragmas -fPIC")

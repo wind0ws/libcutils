@@ -1,6 +1,7 @@
 #include "lcu.h"
 #include "config/lcu_version.h"
 #include "time/time_util.h"
+#include "log/xlog.h"
 
 static volatile unsigned int g_init_times = 0;
 
@@ -16,6 +17,7 @@ int lcu_global_init()
 		return 0;
 	}
 	int ret = time_util_global_init();
+	ret |= xlog_global_init();
 	return ret;
 }
 
@@ -25,6 +27,7 @@ int lcu_global_cleanup()
 	{
 		return 0;
 	}
-	int ret = time_util_global_cleanup();
+	int ret = xlog_global_cleanup();
+	ret |= time_util_global_cleanup();
 	return ret;
 }

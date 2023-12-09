@@ -85,7 +85,7 @@ static test_case_t g_all_test_cases[] =
 };
 
 
-#define TEST_SAVE_LOG    (1)
+#define TEST_SAVE_LOG    (0)
 
 #if( TEST_SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
@@ -153,8 +153,8 @@ int main(int argc, char* argv[])
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
-		RUN_TEST(time_util_test);
-		//RUN_TEST(posix_thread_test);
+		//RUN_TEST(time_util_test);
+		RUN_TEST(posix_thread_test);
 		//RUN_TEST(url_encoder_decoder_test);
 		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
 
 	LOGI("...bye bye...  %d\n", ret);
 
-	LOG_DEINIT(NULL);
+	LOG_GLOBAL_CLEANUP(NULL);
 	lcu_global_cleanup();
 	MEM_CHECK_DEINIT();
 	return ret;
@@ -200,7 +200,7 @@ static void setup_console()
 
 	//_CrtSetBreakAlloc(99);
 #endif // _WIN32
-	LOG_INIT(NULL);
+	LOG_GLOBAL_INIT(NULL);
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
 #if(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
 	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);

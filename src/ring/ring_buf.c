@@ -24,7 +24,8 @@ struct __ring_buf_t
 };
 
 #define _RING_AVAILABLE_READ(handle)  ((handle->size + handle->offset_write - handle->offset_read) % (handle->size))
-#define _RING_AVAILABLE_WRITE(handle) (handle->size - _RING_AVAILABLE_READ(handle) - 1)
+//#define _RING_AVAILABLE_WRITE(handle) (handle->size - _RING_AVAILABLE_READ(handle) - 1)
+#define _RING_AVAILABLE_WRITE(handle) ((handle->size + handle->offset_read - handle->offset_write - 1U) % (handle->size))
 
 ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 {
@@ -33,7 +34,7 @@ ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 		return NULL;
 	}
 	const size_t ring_struct_size = sizeof(struct __ring_buf_t);
-	if (buf_size < ring_struct_size + 3)
+	if (buf_size < ring_struct_size + 3U)
 	{
 		RING_LOGE("buf_size(%zu) is too small", buf_size);
 		return NULL;
@@ -48,7 +49,7 @@ ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size)
 
 ring_handle ring_buf_create(const size_t size) 
 {
-	if (size < 3)
+	if (size < 3U)
 	{
 		RING_LOGE("buf size(%zu) too small", size);
 		return NULL;

@@ -6,8 +6,10 @@
 
 //do not include this header directly, you should include "posix_thread.h" instead!
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
-
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
+#pragma warning(pop)
 
 /* MSVC 7.1 doesn't like complex #if expressions */
 #define INLINE

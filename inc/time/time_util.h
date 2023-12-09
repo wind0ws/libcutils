@@ -2,12 +2,15 @@
 #ifndef LCU_TIME_UTIL_H
 #define LCU_TIME_UTIL_H
 
-#include <time.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <winsock.h>  /* for take struct timeval */
 #include <sys/timeb.h>
+#pragma warning(pop)
 #else
 #include <sys/time.h>
 #endif // _WIN32
@@ -16,9 +19,21 @@
 extern "C" {
 #endif // __cplusplus
 
+	/**
+	 * global init once.
+	 * 
+	 * generally speaking, users do not need to call this method, 
+	 * lcu_global_init will call it at the appropriate time.
+	 */
 	int time_util_global_init();
 
-	int time_util_global_deinit();
+	/**
+	 * global cleanup.for cleanup some resource.
+	 * 
+	 * just like above, lcu_global_cleanup will 
+	 * call it at the appropriate time.
+	 */
+	int time_util_global_cleanup();
 
 #ifdef _WIN32
 

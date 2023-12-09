@@ -3,8 +3,8 @@ cmake-build-debug/
 cmake-build-release/
 .idea/
 .vs/
-build/backup/
-build/output/
-build/out/
-build/deploy/
-build/build_*
+tool/backup/
+tool/output/
+tool/out/
+tool/deploy/
+tool/build/

@@ -5,6 +5,9 @@
 #include "config/lcu_build_config.h"
 
 #ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 5105)
+
 #if _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_LIB         /* use posix-win32 lib          */
 #include "thread/pthread_win_lib/pthread_win_lib.h"
 #include "thread/pthread_win_lib/sched_win_lib.h"
@@ -22,6 +25,8 @@
 #ifndef sleep
 #define sleep(seconds)           Sleep((seconds) * 1000)
 #endif // !sleep
+
+#pragma warning(pop)
 
 #else /* for unix */
 
@@ -45,12 +50,30 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <unistd.h>
-#elif defined(__linux__) && !defined(__ANDROID__)
+#elif(defined(__linux__) || defined(__ANDROID__))
+#include <sys/prctl.h> /* for prctl */
 #include <syscall.h>
 #include <unistd.h>
 #elif defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
+#pragma warning(pop)
 #endif
+
+/* macro for gettid */
+#if defined(__APPLE__)
+#define GETTID()  syscall(SYS_thread_selfid)
+#elif defined(__ANDROID__) // Android just pick up bionic's copy.
+#define GETTID()  gettid()
+#elif defined(__linux__)
+#define GETTID()  syscall(__NR_gettid)
+#elif defined(_WIN32)
+#define GETTID()  GetCurrentThreadId()
+#endif
+
+#define PTHREAD_SETNAME(pthread, name)    pthread_setname_np(pthread, name)
+#define PTHREAD_SETNAME_FOR_CURRENT(name) posix_thread_set_current_name(name)
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,18 +83,8 @@ extern "C" {
 	int pthread_setname_np(pthread_t thr, const char* name);
 #endif // _WIN32
 
-	// set name for pthread. suggest use this method instead of pthread_setname_np
-	int pthread_set_name(pthread_t thr, const char* name);
-
-	// No definition needed for Android because we'll just pick up bionic's copy.
-#ifndef __ANDROID__
-#ifndef __pid_t_defined
-	typedef int __pid_t;
-	typedef __pid_t pid_t;
-#define __pid_t_defined
-#endif // !__pid_t_defined
-	pid_t gettid();
-#endif  // __ANDROID__
+	// set name for current thread. suggest use this method instead of pthread_setname_np
+	int posix_thread_set_current_name(const char* name);
 
 #ifdef __cplusplus
 };

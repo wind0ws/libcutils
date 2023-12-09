@@ -234,11 +234,13 @@ typedef intptr_t ssize_t;
  // commonly cast to opaque pointer containers and back for generic parameter
  // passing in callbacks. These macros should be used sparingly in new code
  // (never in C++ code). Whenever integers need to be passed as a pointer, 
- // use these macros.
+ // use these macros. for compatible with 64bit OS, suggest use PTR_TO_LONG and LONG_TO_PTR
 #define PTR_TO_UINT(p)  ((unsigned int) ((uintptr_t) (p)))
 #define UINT_TO_PTR(u)  ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p)   ((int) ((intptr_t) (p)))
 #define INT_TO_PTR(i)   ((void *) ((intptr_t) (i)))
+#define PTR_TO_LONG(p)  ((long) ((intptr_t) (p)))
+#define LONG_TO_PTR(i)  ((void *) ((intptr_t) (i)))
 #endif // !__cplusplus
 
 #ifdef _WIN32

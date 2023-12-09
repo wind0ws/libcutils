@@ -1,9 +1,9 @@
+#include "log/slog.h"
 #include "mem/mem_debug.h"
-#include <malloc.h>
-#include "thread/posix_thread.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
-#include "log/slog.h"
+#include "thread/posix_thread.h"
+#include <malloc.h>
 
 #define _LOG_TAG          "FIXED_Q_HDL"
 
@@ -80,7 +80,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	{
 		char thr_name[32] = { 0 };
 		snprintf(thr_name, sizeof(thr_name) - 1, "fixedq_hdl_%p", handler);
-		pthread_set_name(handler->thread_handler, thr_name);
+		PTHREAD_SETNAME(handler->thread_handler, thr_name);
 		handler->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
 	}
 	else

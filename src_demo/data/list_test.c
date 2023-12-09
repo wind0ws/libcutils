@@ -21,7 +21,7 @@ static bool my_iter_list_fn(void* data, void* context)
 {
 	ASSERT(data);
 	my_list_iter_context* p_ctx = (my_list_iter_context *)context;
-	LOGD("list[%u] => %d", p_ctx->count, *(int*)data);
+	LOGD("list[%zu] => %d", p_ctx->count, *(int*)data);
 	++p_ctx->count;
 	return true;
 }

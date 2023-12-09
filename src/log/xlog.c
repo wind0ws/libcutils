@@ -1,10 +1,12 @@
+#include "mem/mem_debug.h"
 #include "log/xlog.h"
-#include "mem/strings.h"     /* for strlcpy  */
-#include "time/time_util.h"  /* for get time */
-#include <stdio.h>
+#include "mem/strings.h"         /* for strlcpy  */
+#include "thread/posix_thread.h" /* for pthread_mutex */
+#include "time/time_util.h"      /* for get time */
+#include <malloc.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <malloc.h>
+#include <stdio.h>
 
 // header for gettid.
 #if(defined(__APPLE__))
@@ -18,7 +20,10 @@
 #include <syscall.h>
 #include <unistd.h>
 #elif defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable: 5105)
 #include <windows.h>
+#pragma warning(pop)
 #endif
 
 /* macro for gettid */
@@ -58,8 +63,6 @@ typedef struct xlog_config
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
 	xlog_cb_pack_t cb_pack;
-	/* lock for log multi target */
-	xlog_lock_t lock;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */
@@ -73,7 +76,6 @@ typedef struct xlog_config
 
 	struct 
 	{
-		bool need_lock; /**< if log on multi target */
 		bool log2android;
 		bool log2console;
 		bool log2usercb;
@@ -93,7 +95,6 @@ static xlog_config_t g_xlog_cfg =
 	LOG_LEVEL_OFF,
 	"XLog",
 	{NULL, NULL},
-	{ NULL, NULL, NULL },
 #if defined(__ANDROID__)
 	LOG_TARGET_ANDROID,
 #else
@@ -104,7 +105,6 @@ static xlog_config_t g_xlog_cfg =
 	LOG_FLUSH_MODE_AUTO,
 	DEFAULT_TIMEZONE_HOUR,
 	{
-		.need_lock = false,
 #if defined(__ANDROID__)
 		.log2android = true,
 		.log2console = false,
@@ -121,14 +121,10 @@ static xlog_config_t g_xlog_cfg =
 	},
 };
 
-#define XLOG_LOCK(need_lock) 	if (need_lock && g_xlog_cfg.lock.acquire)\
-{\
-	g_xlog_cfg.lock.acquire(g_xlog_cfg.lock.arg);\
-};
-#define XLOG_UNLOCK(need_lock) 	if (need_lock && g_xlog_cfg.lock.release)\
-{\
-	g_xlog_cfg.lock.release(g_xlog_cfg.lock.arg);\
-};
+static pthread_mutex_t g_xlog_mutex = PTHREAD_MUTEX_INITIALIZER;
+#define XLOG_LOCK() 	pthread_mutex_lock(&g_xlog_mutex)
+#define XLOG_UNLOCK() 	pthread_mutex_unlock(&g_xlog_mutex)
+
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
 #define XLOG_IS_ANDROID_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
@@ -143,6 +139,24 @@ static const int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_
 			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR };
 #endif // __ANDROID__
 
+int xlog_global_init()
+{
+	return 0;
+}
+
+int xlog_global_cleanup()
+{
+#if(defined(_MSC_VER)) 
+	if (PTHREAD_MUTEX_INITIALIZER == g_xlog_mutex)
+	{
+		return 0;
+	}
+	pthread_mutex_destroy(&g_xlog_mutex);
+	g_xlog_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif // _MSC_VER
+	return 0;
+}
+
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #ifdef _WIN32
 #pragma warning(push)
@@ -154,6 +168,7 @@ void xlog_stdout2file(char* file_path)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	if (g_xlog_cfg.fp_out)
 	{
 		fprintf(stderr, "[XLog] (%s:%d) warn: did you forgot to close the redirect stdout file stream!" _LOG_SUFFIX, __func__, __LINE__);
@@ -166,6 +181,7 @@ void xlog_stdout2file(char* file_path)
 	{
 		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen stdout to file(%s)" _LOG_SUFFIX, __func__, __LINE__, file_path);
 	}
+	XLOG_UNLOCK();
 }
 
 void xlog_back2stdout()
@@ -174,6 +190,7 @@ void xlog_back2stdout()
 	{
 		return;
 	}
+	XLOG_LOCK();
 	// must close current stream first, and then reopen it
 	fflush(g_xlog_cfg.fp_out);
 	fclose(g_xlog_cfg.fp_out);
@@ -182,6 +199,7 @@ void xlog_back2stdout()
 	{
 		fprintf(stderr, "[XLog] (%s:%d) err: failed on freopen to stdout" _LOG_SUFFIX, __func__, __LINE__);
 	}
+	XLOG_UNLOCK();
 }
 #ifdef _WIN32
 #pragma warning(pop)
@@ -190,7 +208,9 @@ void xlog_back2stdout()
 
 void xlog_auto_level_up(LogLevel trigger_level)
 {
+	XLOG_LOCK();
 	g_xlog_cfg.trigger_up_level = trigger_level;
+	XLOG_UNLOCK();
 }
 
 void xlog_set_default_tag(char* tag)
@@ -199,7 +219,9 @@ void xlog_set_default_tag(char* tag)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	strlcpy(g_xlog_cfg.default_tag, tag, XLOG_DEFAULT_TAG_MAX_SIZE);
+	XLOG_UNLOCK();
 }
 
 void xlog_set_timezone(int timezone_hour)
@@ -208,45 +230,31 @@ void xlog_set_timezone(int timezone_hour)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	g_xlog_cfg.timezone_hour = timezone_hour;
+	XLOG_UNLOCK();
 }
 
 void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data)
 {
+	XLOG_LOCK();
 	g_xlog_cfg.cb_pack.cb = user_cb;
 	g_xlog_cfg.cb_pack.cb_user_data = user_data;
+	XLOG_UNLOCK();
 }
 
-void xlog_set_target(int target, xlog_lock_t* lock)
+void xlog_set_target(int target)
 {
 	if (target < LOG_TARGET_NONE)
 	{
 		return;
 	}
-	if (lock)
-	{
-		g_xlog_cfg.lock = *lock;
-	}
-	else
-	{
-		memset(&g_xlog_cfg.lock, 0, sizeof(g_xlog_cfg.lock));
-	}
+	XLOG_LOCK();
 	g_xlog_cfg.target = target;
-	g_xlog_cfg.cache_tgt.need_lock = false;
 	g_xlog_cfg.cache_tgt.log2android = XLOG_IS_ANDROID_LOGABLE;
 	g_xlog_cfg.cache_tgt.log2console = XLOG_IS_CONSOLE_LOGABLE;
 	g_xlog_cfg.cache_tgt.log2usercb = XLOG_IS_USER_CALLBACK_LOGABLE;
-	if (!g_xlog_cfg.lock.acquire || !g_xlog_cfg.lock.release)
-	{
-		return;
-	}
-	// if you provide lock, we use it on log2usercb,
-	// or if concurrent log to console and android, we use lock too.
-	if (g_xlog_cfg.cache_tgt.log2usercb ||
-		(g_xlog_cfg.cache_tgt.log2console && g_xlog_cfg.cache_tgt.log2android))
-	{
-		g_xlog_cfg.cache_tgt.need_lock = true;
-	}
+	XLOG_UNLOCK();
 }
 
 int xlog_get_target()
@@ -260,7 +268,9 @@ void xlog_set_min_level(LogLevel min_level)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	g_xlog_cfg.min_level = min_level;
+	XLOG_UNLOCK();
 }
 
 LogLevel xlog_get_min_level()
@@ -274,10 +284,12 @@ void xlog_set_format(int format)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	g_xlog_cfg.format = format;
 	g_xlog_cfg.cache_fmt.timestamp = (g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP);
 	g_xlog_cfg.cache_fmt.tag_level = (g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL);
 	g_xlog_cfg.cache_fmt.tid = (g_xlog_cfg.format & LOG_FORMAT_WITH_TID);
+	XLOG_UNLOCK();
 }
 
 int xlog_get_format()
@@ -291,7 +303,9 @@ void xlog_set_flush_mode(LogFlushMode flush_mode)
 	{
 		return;
 	}
+	XLOG_LOCK();
 	g_xlog_cfg.flush_mode = flush_mode;
+	XLOG_UNLOCK();
 }
 
 LogFlushMode xlog_get_flush_mode()
@@ -422,7 +436,9 @@ static inline int print_func_line(char* buffer, const char* func, int line_num)
 
 #endif // !USE_SNPRINTF_HEADER
 
-void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...)
+PRINTF_FMT_CHK_GNUC(5, 6)
+void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line,
+	PRINTF_FMT_CHK_MSC const char* fmt, ...)
 {
 	va_list va;
 	//no need init buffer.
@@ -432,120 +448,123 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	size_t buffer_log_size = sizeof(default_buffer);
 	size_t buffer_strlen;
 	size_t header_len = 0;
-	bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
-	bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
-	bool need_lock = g_xlog_cfg.cache_tgt.need_lock;
+	
 	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
 	}
-	if (g_xlog_cfg.trigger_up_level && level < g_xlog_cfg.trigger_up_level)
-	{
-		level = g_xlog_cfg.trigger_up_level;
-	}
-	if (NULL == tag)
-	{
-		tag = g_xlog_cfg.default_tag;
-	}
 
-	if (g_xlog_cfg.format && (is_log2console || is_log2usercb))
+	XLOG_LOCK();
+	do 
 	{
-		if (g_xlog_cfg.cache_fmt.timestamp /* g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP */)
+		bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
+		bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
+		if (g_xlog_cfg.trigger_up_level && level < g_xlog_cfg.trigger_up_level)
 		{
-			header_len += time_util_get_time_str_current(buffer_log, g_xlog_cfg.timezone_hour);
+			level = g_xlog_cfg.trigger_up_level;
 		}
-		if (g_xlog_cfg.cache_fmt.tag_level /* g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL */)
+		if (NULL == tag)
+		{
+			tag = g_xlog_cfg.default_tag;
+		}
+		if (g_xlog_cfg.format && (is_log2console || is_log2usercb))
+		{
+			if (g_xlog_cfg.cache_fmt.timestamp /* g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP */)
+			{
+				header_len += time_util_get_time_str_current(buffer_log, g_xlog_cfg.timezone_hour);
+			}
+			if (g_xlog_cfg.cache_fmt.tag_level /* g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL */)
+			{
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
+				header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+#else
+				header_len += print_level_tag(buffer_log + header_len, level, tag);
+#endif // USE_SNPRINTF_HEADER
+		    }
+			if (g_xlog_cfg.cache_fmt.tid /* g_xlog_cfg.format & LOG_FORMAT_WITH_TID */)
+			{
+#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
+				header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
+#else
+				header_len += print_tid(buffer_log + header_len, XLOG_GETTID());
+#endif // USE_SNPRINTF_HEADER
+	        }
+			if (header_len)
+			{
+				buffer_log[header_len++] = ':';
+				buffer_log[header_len++] = ' ';
+				buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
+				//#define XLOG_HEADER_COLON (": ")
+				//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
+				//header_len += (sizeof(XLOG_HEADER_COLON) - 1);
+			}
+        }
+		buffer_strlen = header_len;
+		if (func_name && file_line > 0 &&
+			(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 32U) //we should count func_name and line number, but normally, 32 bytes is enough
 		{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
-			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
+			buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
 #else
-			header_len += print_level_tag(buffer_log + header_len, level, tag);
+			buffer_strlen += print_func_line(buffer_log + buffer_strlen, func_name, file_line);
 #endif // USE_SNPRINTF_HEADER
-		}
-		if (g_xlog_cfg.cache_fmt.tid /* g_xlog_cfg.format & LOG_FORMAT_WITH_TID */)
-		{
-#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
-			header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
-#else
-			header_len += print_tid(buffer_log + header_len, XLOG_GETTID());
-#endif // USE_SNPRINTF_HEADER
-		}
-		if (header_len)
-		{
-			buffer_log[header_len++] = ':';
-			buffer_log[header_len++] = ' ';
-			buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
-//#define XLOG_HEADER_COLON (": ")
-			//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
-			//header_len += (sizeof(XLOG_HEADER_COLON) - 1);
-		}
-	}
-	buffer_strlen = header_len;
-	if (func_name && file_line > 0 && 
-		(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 32U) //we should count func_name and line number, but normally, 32 bytes is enough
-	{
-#if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
-		buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
-#else
-		buffer_strlen += print_func_line(buffer_log + buffer_strlen, func_name, file_line);
-#endif // USE_SNPRINTF_HEADER
-	}
-	
-	default_buffer_remaining_size = buffer_log_size - buffer_strlen;
-	va_start(va, fmt);
-	// we get the formatted string length. ('\0' is not belong of the length)
-	int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
-	va_end(va);
-	if (ret_vsn < 0)
-	{
-		fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length" _LOG_SUFFIX, __func__, __LINE__, ret_vsn);
-		return;
-	}
-	if (ret_vsn < (int)default_buffer_remaining_size)
-	{
-		buffer_strlen += ret_vsn;
-	}
-	else
-	{
-		const size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
-		buffer_log_size = buffer_strlen + need_fmt_str_size;
-		if (!(buffer_log = (char*)malloc(buffer_log_size)))
-		{
-			fprintf(stderr, "[XLOG] (%s:%d) failed malloc(%zu) byte on xlog" _LOG_SUFFIX, __func__, __LINE__, buffer_log_size);
-			return; // oops, out of memory
-		} 
-		// here we only copy header to new buffer
-		strlcpy(buffer_log, default_buffer, buffer_strlen + 1U); 
-		
+	    }
+
+		default_buffer_remaining_size = buffer_log_size - buffer_strlen;
 		va_start(va, fmt);
-		// vsnprintf ensure '\0' at end of string.
-		ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
+		// we get the formatted string length. ('\0' is not belong of the length)
+		int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
 		va_end(va);
-		buffer_strlen += ret_vsn;
-	}
-	
-	XLOG_LOCK(need_lock);
+		if (ret_vsn < 0)
+		{
+			fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length" _LOG_SUFFIX, __func__, __LINE__, ret_vsn);
+			break;
+		}
+		if (ret_vsn < (int)default_buffer_remaining_size)
+		{
+			buffer_strlen += ret_vsn;
+		}
+		else
+		{
+			const size_t need_fmt_str_size = (size_t)ret_vsn + 1U;
+			buffer_log_size = buffer_strlen + need_fmt_str_size;
+			if (!(buffer_log = (char*)malloc(buffer_log_size)))
+			{
+				fprintf(stderr, "[XLOG] (%s:%d) failed malloc(%zu) byte on xlog" _LOG_SUFFIX, __func__, __LINE__, buffer_log_size);
+				break; // oops, out of memory
+			}
+			// here we only copy header to new buffer
+			strlcpy(buffer_log, default_buffer, buffer_strlen + 1U);
+
+			va_start(va, fmt);
+			// vsnprintf ensure '\0' at end of string.
+			ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
+			va_end(va);
+			buffer_strlen += ret_vsn;
+		}
+
 #if defined(__ANDROID__)
-	if (g_xlog_cfg.cache_tgt.log2android)
-	{   // android platform log_print does not need our header information, just skip it
-		__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
-	}
+		if (g_xlog_cfg.cache_tgt.log2android)
+		{   // android platform log_print does not need our header information, just skip it
+			__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
+	    }
 #endif // __ANDROID__
 
-	if (is_log2console)
-	{
-		_PRINTF_FUNC("%s" _LOG_SUFFIX, buffer_log);
-		if (g_xlog_cfg.flush_mode)
+		if (is_log2console)
 		{
-			fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);
+			_PRINTF_FUNC("%s" _LOG_SUFFIX, buffer_log);
+			if (g_xlog_cfg.flush_mode)
+			{
+				fflush(g_xlog_cfg.fp_out ? g_xlog_cfg.fp_out : stdout);
+			}
 		}
-	}
 
-	if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
-	{
-		g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
-	}
-	XLOG_UNLOCK(need_lock);
+		if (is_log2usercb && g_xlog_cfg.cb_pack.cb)
+		{
+			g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
+		}
+	} while (0);
+	XLOG_UNLOCK();
 
 	if (buffer_log != default_buffer)
 	{

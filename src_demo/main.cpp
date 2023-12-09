@@ -1,8 +1,7 @@
 #include "mem/mem_debug.h"
 #include "common_macro.h"
-#include "thread/posix_thread.h"
-#include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
@@ -86,9 +85,9 @@ static test_case_t g_all_test_cases[] =
 };
 
 
-#define SAVE_LOG    (0)
+#define TEST_SAVE_LOG    (0)
 
-#if( SAVE_LOG && 0 == TEST_FILE_LOGGER )
+#if( TEST_SAVE_LOG && 0 == TEST_FILE_LOGGER )
 #ifdef _WIN32
 #define LOG_PATH ("d:/mylog.log")
 #else
@@ -106,13 +105,13 @@ int main(int argc, char* argv[])
 {
 	int ret = 0;
 	MEM_CHECK_INIT();
-	lcu_init();
+	lcu_global_init();
 	setup_console();
 	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
 	bool is_press_kb = true; // default status is true for unix
 #if _WIN32
-	LOGI("after %d seconds, it will run automatically. if you want choose test case, just press any key", KB_TIMEOUT);
+	LOGI("after %d seconds, it will run automatically. if you want to choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();
 	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
@@ -142,9 +141,9 @@ int main(int argc, char* argv[])
 			break;
 		}
 		
-#if SAVE_LOG
+#if TEST_SAVE_LOG
 		fprintf(stderr, "\n  ====auto run test case====  \n");
-#endif // SAVE_LOG
+#endif // TEST_SAVE_LOG
 		LOGI("  ====auto run test case====  ");
 		//RUN_TEST(memleak_test);//this will report mem leak.
 		//RUN_TEST(file_util_test);
@@ -171,8 +170,8 @@ int main(int argc, char* argv[])
 
 	LOGI("...bye bye...  %d\n", ret);
 
-	LOG_DEINIT(NULL);
-	lcu_deinit();
+	LOG_GLOBAL_CLEANUP(NULL);
+	lcu_global_cleanup();
 	MEM_CHECK_DEINIT();
 	return ret;
 }
@@ -199,9 +198,9 @@ static void setup_console()
 	//fclose(f);
 	//LOGD("你好");
 
-	//_CrtSetBreakAlloc(81);
+	//_CrtSetBreakAlloc(99);
 #endif // _WIN32
-	LOG_INIT(NULL);
+	LOG_GLOBAL_INIT(NULL);
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
 #if(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
 	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);

@@ -18,7 +18,6 @@
 
 #include "mem/allocation_tracker.h"
 #include "thread/posix_thread.h"
-#include <stdlib.h>
 #include <stdbool.h>
 #include "mem/strings.h"
 #include "data/hash_functions.h"

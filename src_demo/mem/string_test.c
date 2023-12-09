@@ -13,7 +13,7 @@ static int stringbuilder_test()
 	stringbuilder_appendstr(sb, "Hello");
 	stringbuilder_appendchar(sb, ',');
 	stringbuilder_appendnstr(sb, "World!!!", 6);//here stringbuilder internal buffer will grow, because our stringbuilder init buf size is 8.
-	stringbuilder_appendf(sb, " Current thread id:%d. ", gettid());
+	stringbuilder_appendf(sb, " Current thread id:%d. ", GETTID());
 	LOGD("stringbuilder len:%zu, str:%s", stringbuilder_len(sb), stringbuilder_print(sb));// will print "Hello,World!"
 	stringbuilder_destroy(&sb);
 	return 0;
@@ -60,7 +60,7 @@ static int stringsplit_test()
 	{
 		if (receive_splited_str_ptrs[i])
 		{
-			LOGD("receive_splited_str_ptrs[%d]=%s", i, receive_splited_str_ptrs[i]);
+			LOGD("receive_splited_str_ptrs[%zu]=%s", i, receive_splited_str_ptrs[i]);
 		}
 	}
 	return 0;

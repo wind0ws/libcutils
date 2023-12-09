@@ -25,8 +25,10 @@
 #error "You should define \"_LOGX_HEX_IMPL\""
 #endif // _LOG_XX_IMPL definition check
 
-#define LOG_INIT(params)             _LOG_INIT_IMPL(params)
-#define LOG_DEINIT(params)           _LOG_DEINIT_IMPL(params)
+// init at beginning of your app
+#define LOG_GLOBAL_INIT(params)              _LOG_INIT_IMPL(params)
+// cleanup at ending of you app
+#define LOG_GLOBAL_CLEANUP(params)           _LOG_DEINIT_IMPL(params)
 #define LOG_SET_MIN_LEVEL(min_level) _LOG_SET_MIN_LEVEL_IMPL(min_level)
 #define LOG_GET_MIN_LEVEL()          _LOG_GET_MIN_LEVEL_IMPL()
 #define LOG_STD2FILE(file_path)      _LOG_STD2FILE_IMPL(file_path)
@@ -74,8 +76,8 @@
 #define _LOG_NOTHING()               do { } while (0)
 #endif // !_LOG_NOTHING
 
-#define LOG_INIT(params)             _LOG_NOTHING()
-#define LOG_DEINIT(params)           _LOG_NOTHING()
+#define LOG_GLOBAL_INIT(params)             _LOG_NOTHING()
+#define LOG_GLOBAL_CLEANUP(params)           _LOG_NOTHING()
 #define LOG_SET_MIN_LEVEL(min_level) _LOG_NOTHING()
 #define LOG_GET_MIN_LEVEL()          _LOG_NOTHING()
 #define LOG_STD2FILE(file_path)      _LOG_NOTHING()

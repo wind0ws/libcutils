@@ -30,33 +30,33 @@ typedef enum
 	/* output log message with tag and level */
 	LOG_FORMAT_WITH_TAG_LEVEL = (0x1 << 2),
 	/* output log message with thread id */
-	LOG_FORMAT_WITH_TID = (0x1 << 3)
+	LOG_FORMAT_WITH_TID = (0x1 << 3),
 } LogFormat;
 
 typedef enum
 {
 	LOG_FLUSH_MODE_AUTO = 0,
-	LOG_FLUSH_MODE_EVERY
+	LOG_FLUSH_MODE_EVERY,
 } LogFlushMode;
-
-typedef struct 
-{
-	void* arg; /**< Argument to be passed to acquire and release function pointers */
-	int (*acquire)(void* arg); /**< Function pointer to acquire a lock */
-	int (*release)(void* arg); /**< Function pointer to release a lock */
-} xlog_lock_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 	/**
-	 * use a lock to ensure consistent printing order.
-	 * e.g., concurrent printing on logcat/console/file
-	 * 
-	 * if you not provide lock, printing order can't be ensured. 
+     * global init xlog
+     *
+     * call at the beginning of your app.
+     */
+	int xlog_global_init();
+
+	/**
+	 * global cleanup lcu
+	 *
+	 * call at ending of your app,
+	 * otherwise maybe some resource not released
 	 */
-	void xlog_set_lock(xlog_lock_t *lock);
+	int xlog_global_cleanup();
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 	/**
@@ -119,11 +119,8 @@ extern "C" {
 	 *                       multiple target can be combined. 
 	 *                       e.g., (LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE) 
 	 *                       or (LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK)
-	 * 
-	 * @param[in]	lock : use a lock to ensure consistent printing order. if you don't need it, just pass NULL.
-	 *                     e.g., concurrent printing on android(logcat)/console/file(user_cb)
 	 */
-	void xlog_set_target(int target, xlog_lock_t* lock);
+	void xlog_set_target(int target);
 
 	/**
 	 * get current target
@@ -159,7 +156,9 @@ extern "C" {
 	 * DO NOT call this method directly.(for xlog internal use only)
 	 * USE LOGX or TLOGX macro instead.
 	 */
-	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, const char* fmt, ...);
+	PRINTF_FMT_CHK_GNUC(5, 6)
+	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, 
+		PRINTF_FMT_CHK_MSC const char* fmt, ...);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)

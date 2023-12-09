@@ -4,8 +4,8 @@
 
 #include "log/xlog.h"
 
-#define _LOG_INIT_IMPL(params)             do { (void)(params); } while(0)
-#define _LOG_DEINIT_IMPL(params)           do { (void)(params); } while(0)
+#define _LOG_INIT_IMPL(params)             do { (void)(params); xlog_global_init(); } while(0)
+#define _LOG_DEINIT_IMPL(params)           do { (void)(params); xlog_global_cleanup(); } while(0)
 #define _LOG_SET_MIN_LEVEL_IMPL(min_level) do { xlog_set_min_level(min_level); } while(0)
 #define _LOG_GET_MIN_LEVEL_IMPL()          xlog_get_min_level()
 

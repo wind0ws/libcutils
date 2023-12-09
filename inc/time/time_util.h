@@ -2,8 +2,8 @@
 #ifndef LCU_TIME_UTIL_H
 #define LCU_TIME_UTIL_H
 
-#include <time.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifdef _WIN32
 #pragma warning(push)
@@ -20,16 +20,20 @@ extern "C" {
 #endif // __cplusplus
 
 	/**
-	 * global init
+	 * global init once.
+	 * 
+	 * generally speaking, users do not need to call this method, 
+	 * lcu_global_init will call it at the appropriate time.
 	 */
 	int time_util_global_init();
 
 	/**
-	 * global deinit
+	 * global cleanup.for cleanup some resource.
 	 * 
-	 * for cleanup resource.
+	 * just like above, lcu_global_cleanup will 
+	 * call it at the appropriate time.
 	 */
-	int time_util_global_deinit();
+	int time_util_global_cleanup();
 
 #ifdef _WIN32
 

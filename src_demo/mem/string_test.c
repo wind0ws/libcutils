@@ -60,7 +60,7 @@ static int stringsplit_test()
 	{
 		if (receive_splited_str_ptrs[i])
 		{
-			LOGD("receive_splited_str_ptrs[%d]=%s", i, receive_splited_str_ptrs[i]);
+			LOGD("receive_splited_str_ptrs[%zu]=%s", i, receive_splited_str_ptrs[i]);
 		}
 	}
 	return 0;

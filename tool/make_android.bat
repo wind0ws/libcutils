@@ -8,7 +8,7 @@ if not exist %NINJA_BIN% (
 )
 
 if not exist %ANDROID_TOOLCHAIN_FILE% (
-	@echo ERROR: %ANDROID_TOOLCHAIN_FILE% not exists!!
+	@echo ERROR: %ANDROID_TOOLCHAIN_FILE% not exists!! should use NDK version greater than or equal r16b.
 	@exit /b 2
 )
 
@@ -17,6 +17,8 @@ if "%BUILD_ABI%" EQU "armeabi-v7a" goto label_main
 if "%BUILD_ABI%" EQU "arm64-v8a" goto label_main
 if "%BUILD_ABI%" EQU "x86" goto label_main
 if "%BUILD_ABI%" EQU "x86_64" goto label_main
+if "%BUILD_ABI%" EQU "mips" goto label_main
+if "%BUILD_ABI%" EQU "mips64" goto label_main
 @echo params check failed: unknown BUILD_ABI=%BUILD_ABI%
 @exit /b 2
 
@@ -34,6 +36,7 @@ mkdir "%BUILD_DIR:"=%"
 
 %CMAKE_BIN% -H.\ -B%BUILD_DIR:"=%                           ^
 			"-GNinja"                                       ^
+			-DANDROID_ARM_NEON=TRUE                         ^
 			-DANDROID_ABI=%BUILD_ABI%                       ^
 			-DANDROID_NDK=%ANDROID_NDK%                     ^
 			-DCMAKE_BUILD_TYPE=%BUILD_TYPE%                 ^

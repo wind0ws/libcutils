@@ -1,7 +1,7 @@
 /**
  * include this header file at your source file first line.
- * On windows, in debug mode, it will use crtdbg help you find memory leak.
- * Otherwise, use allocator to trace memory.
+ * On windows, in debug mode, it will use crtdbg help you find memory leak;
+ * On other platform, it will use allocator to trace memory.
  * 
  * Note: use memory debug will slow your program. Be aware of that.
  *       use it if your program memory keep growing.
@@ -11,10 +11,10 @@
 #ifndef LCU_MEM_DEBUG_H
 #define LCU_MEM_DEBUG_H
 
-// define this macro(_LCU_MEM_CHECK_FEATURE_ENABLE) will enable memory check feature
+// define this macro(_LCU_MEM_CHECK_FEATURE_ENABLE = 1) will enable memory check feature
 // suggest user add it to compiler on build if you really want to debug memory.
-// don't forget add this file(mem_debug.h) on your source file first line.
-//#define _LCU_MEM_CHECK_FEATURE_ENABLE
+// don't forget include this file(mem_debug.h) on your source file first line.
+//#define _LCU_MEM_CHECK_FEATURE_ENABLE	 1
 
 #ifdef _WIN32
 #ifndef __func__

@@ -1,8 +1,7 @@
 #include "mem/mem_debug.h"
 #include "common_macro.h"
-#include "thread/posix_thread.h"
-#include "sys/dlfcn_wrapper.h"
 #include "mem/strings.h"
+#include "thread/posix_thread.h"
 
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
@@ -106,7 +105,7 @@ int main(int argc, char* argv[])
 {
 	int ret = 0;
 	MEM_CHECK_INIT();
-	lcu_init();
+	lcu_global_init();
 	setup_console();
 	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
@@ -171,8 +170,8 @@ int main(int argc, char* argv[])
 
 	LOGI("...bye bye...  %d\n", ret);
 
-	LOG_DEINIT(NULL);
-	lcu_deinit();
+	LOG_GLOBAL_CLEANUP(NULL);
+	lcu_global_cleanup();
 	MEM_CHECK_DEINIT();
 	return ret;
 }
@@ -201,7 +200,7 @@ static void setup_console()
 
 	//_CrtSetBreakAlloc(99);
 #endif // _WIN32
-	LOG_INIT(NULL);
+	LOG_GLOBAL_INIT(NULL);
 	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
 #if(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
 	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);

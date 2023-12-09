@@ -2,10 +2,10 @@
 #ifndef LCU_STRINGS_H
 #define LCU_STRINGS_H
 
-#include <stddef.h>
-#include <string.h>
 #include <ctype.h> /* for tolower/toupper */
+#include <stddef.h>
 #include <stdio.h> /* for snprintf */
+#include <string.h>
 #ifndef _WIN32
 #include <strings.h> //for bcopy/bzero
 #endif // !_WIN32

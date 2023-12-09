@@ -72,7 +72,8 @@
 #define GETTID()  GetCurrentThreadId()
 #endif
 
-#define PTHREAD_SETNAME(pthread, name) posix_thread_set_name(pthread, name)
+#define PTHREAD_SETNAME(pthread, name)    pthread_setname_np(pthread, name)
+#define PTHREAD_SETNAME_FOR_CURRENT(name) posix_thread_set_current_name(name)
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,8 +83,8 @@ extern "C" {
 	int pthread_setname_np(pthread_t thr, const char* name);
 #endif // _WIN32
 
-	// set name for pthread. suggest use this method instead of pthread_setname_np
-	int posix_thread_set_name(pthread_t thr, const char* name);
+	// set name for current thread. suggest use this method instead of pthread_setname_np
+	int posix_thread_set_current_name(const char* name);
 
 #ifdef __cplusplus
 };

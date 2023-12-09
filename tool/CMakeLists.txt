@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(lcu VERSION 1.5.6 LANGUAGES C CXX)
+project(lcu VERSION 1.6.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录
@@ -293,20 +293,23 @@ if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) 
   #string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
   #string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
   
-  set(COMMON_C_FLGAS   " /utf-8 /W3")
+  set(COMMON_C_FLGAS   " /utf-8 /W3 ")
   set(COMMON_CXX_FLAGS "")
   set(COMMON_EXE_LINKER_FLAGS "")
+  set(COMMON_SHARED_LINKER_FLAGS "${COMMON_EXE_LINKER_FLAGS}")
 else()
   set(COMMON_C_FLGAS " -Wall -Wno-unused-local-typedefs -Wno-unused-function -Wno-comment -Wno-unknown-pragmas -fPIC")
   set(COMMON_CXX_FLAGS " -Wno-write-strings")
   # Android 5.0 以上需要设置 PIE, 为啥不设置-fPIC, 因为 set(POSITION_INDEPENDENT_CODE TRUE)
   set(COMMON_EXE_LINKER_FLAGS "-fPIE")
+  set(COMMON_SHARED_LINKER_FLAGS "${COMMON_EXE_LINKER_FLAGS}")
   #add _GNU_SOURCE for pthread_setname_np
   add_definitions(-D_GNU_SOURCE)
 endif()
 string(APPEND CMAKE_C_FLAGS   "${COMMON_C_FLGAS}")
 string(APPEND CMAKE_CXX_FLAGS "${COMMON_C_FLGAS} ${COMMON_CXX_FLGAS}")
-string(APPEND CMAKE_EXE_LINKER_FLAGS "${COMMON_C_FLGAS} ${COMMON_EXE_LINKER_FLAGS}")
+string(APPEND CMAKE_EXE_LINKER_FLAGS " ${COMMON_EXE_LINKER_FLAGS}")
+string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${COMMON_SHARED_LINKER_FLAGS}")
 
 # replace MD to MT
 if (WIN32 AND MSVC)
@@ -333,8 +336,9 @@ endif (WIN32 AND MSVC)
 #==================== SETUP FLAGS END==================
 
 
-#==================== FIND DEPENDENCY LIB BEGIN ==================
-set(dependency_lib "")
+#==================== FIND DEPENDENCY LIB BEGIN ==================# 
+message(STATUS "CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH}") # <= find_library will find from this path
+set(dependency_libs "")
 IF(UNIX)
   message(STATUS "Current build system is unix!")
   find_package(Threads REQUIRED)
@@ -343,6 +347,11 @@ IF(UNIX)
   check_symbol_exists(pthread_setname_np "pthread.h" HAVE_PTHREAD_SETNAME_NP)
 
   if(ANDROID)
+    if ("${PLATFORM_ABI}" MATCHES "x86_64")
+	  message(STATUS "it is android-x86_64! let's append CMAKE_SYSTEM_LIBRARY_PATH for fix lib not found error in cmake!")
+	  list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${ANDROID_SYSTEM_LIBRARY_PATH}/usr/lib64")
+	  message(STATUS "current CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH}")
+	endif()
     find_library( # Sets the name of the path variable.
             log-lib
 
@@ -358,19 +367,21 @@ ELSEIF(WIN32)
   if(NOT ("x${PRJ_WIN_PTHREAD_MODE}" MATCHES "x0"))
      #find_library(pthread-lib pthread_win_lib)
      #set(pthread-lib ${pthread_win_lib})
-	 #add_compile_options(/LTCG) # 链接时代码生成, 由于在链接时生成代码,可以全局地对所有obj进行优化. 一般用于release版的生成. 该选项与增量链接是冲突的.开启了链接时代码生成,即便在增量链接开启的情况下,仍然要进行完整链接.
+	 # /LTCG 链接时代码生成, 由于在链接时生成代码,可以全局地对所有obj进行优化. 一般用于release版的生成. 
+	 # 该选项与增量链接是冲突的.开启了链接时代码生成,即便在增量链接开启的情况下,仍然要进行完整链接.
+	 #add_compile_options(/LTCG) 
 	 if ("x${PRJ_WIN_PTHREAD_MODE}" MATCHES "x1")
 	   message(STATUS "use win32 pthread static lib")
        set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_lib.lib")
-	   list(APPEND dependency_lib "${pthread-lib}" )
+	   list(APPEND dependency_libs "${pthread-lib}" )
 	 else()
 	   message(STATUS "use win32 pthread dll")
 	   set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.lib")
-	   list(APPEND dependency_lib "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.dll")
+	   list(APPEND dependency_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.dll")
 	 endif()
      #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
      #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
-     #list(APPEND dependency_lib "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
+     #list(APPEND dependency_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
   else()
      set(pthread-lib "")
   endif()
@@ -380,12 +391,12 @@ ELSE()
   set(log-lib "")
 ENDIF(UNIX)
 
-list(LENGTH dependency_lib dependency_lib_length)
-message(STATUS "dependency_lib(${dependency_lib_length}) => ${dependency_lib}")
-IF (dependency_lib_length GREATER 0)
-  message(STATUS "will copy dependency_lib for you")
+list(LENGTH dependency_libs dependency_libs_length)
+message(STATUS "dependency_libs(${dependency_libs_length}) => ${dependency_libs}")
+IF (dependency_libs_length GREATER 0)
+  message(STATUS "will copy dependency_libs for you")
   #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
-  copy_file_on_post_build_to_all_targets(dependency_lib)
+  copy_file_on_post_build_to_all_targets(dependency_libs)
 ENDIF()
 message(STATUS "HAVE_PTHREAD_SETNAME_NP => ${HAVE_PTHREAD_SETNAME_NP}")
 message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")

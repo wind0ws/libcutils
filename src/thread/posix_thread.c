@@ -58,7 +58,7 @@ int pthread_setname_np(pthread_t thr, const char* name)
 }
 #endif // _WIN32
 
-int posix_thread_set_name(pthread_t thr, const char* name)
+int posix_thread_set_current_name(const char* name)
 {
 	int ret = -1;
 	if (NULL == name || '\0' == name[0])
@@ -66,14 +66,14 @@ int posix_thread_set_name(pthread_t thr, const char* name)
 		return ret;
 	}
 #if(defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP)
-	ret = pthread_setname_np(thr, name);
+	ret = pthread_setname_np(pthread_self(), name);
 #elif(defined(__linux__))
 	/* Use prctl (<sys/prctl.h>) instead to prevent using _GNU_SOURCE flag and implicit declaration */
 	ret = prctl(PR_SET_NAME, name);
 #elif(defined(__APPLE__) && defined(__MACH__))
 	ret = pthread_setname_np(name);
 #else
-    #pragma message("posix_thread_set_name(): pthread_setname_np is not supported on this system")
+    #pragma message("posix_thread_set_current_name(): pthread_setname_np is not supported on this os")
 #endif // HAVE_PTHREAD_SETNAME_NP
 	return ret;
 }

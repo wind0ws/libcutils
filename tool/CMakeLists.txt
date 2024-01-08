@@ -28,7 +28,7 @@ IF(WIN32)
   option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "export dll ALL_SYMBOLS" ON)
 ENDIF(WIN32)
 
-message(STATUS "\n current CMakeLists.txt => ${CMAKE_CURRENT_LIST_DIR}\n")
+message(STATUS "\n current CMakeLists.txt on => ${CMAKE_CURRENT_LIST_DIR}\n")
 #get prj root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
 get_filename_component(PRJ_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
 message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n PRJ_ROOT_DIR => ${PRJ_ROOT_DIR}\n")
@@ -42,34 +42,34 @@ message(STATUS "Git hash is ${PRJ_VER_REVISION}")
 set(PRJ_VER_BRANCH "unknown")
 get_git_branch(PRJ_VER_BRANCH ${PRJ_ROOT_DIR})
 message(STATUS "Git branch is ${PRJ_VER_BRANCH}")
-# 设置版本号，供下面的lcu_version.h.in使用
+# 设置版本号，供下面的configure_file _version.h.in使用
 set(PRJ_VER_MAJOR "${PROJECT_VERSION}")
 
 #===========================detect external params START===========================
 if(WIN32)
     if(("x${PRJ_WIN_PTHREAD_MODE}" STREQUAL  "x"))
-       message(WARNING "PRJ_WIN_PTHREAD_MODE value is empty.")
+       message(WARNING "PRJ_WIN_PTHREAD_MODE value is empty. set to default.")
        set(PRJ_WIN_PTHREAD_MODE 0)
     endif()
     message(STATUS "PRJ_WIN_PTHREAD_MODE => ${PRJ_WIN_PTHREAD_MODE}")
 endif(WIN32)  
 
-IF(NOT DEFINED PRJ_OUTPUT_DIR)
-  set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/deploy")
-ENDIF()
 IF(DEFINED PRJ_OUTPUT_DIR_RELATIVE)
     message(STATUS "detect PRJ_OUTPUT_DIR_RELATIVE => ${PRJ_OUTPUT_DIR_RELATIVE}")
-    if(NOT ("${PRJ_OUTPUT_DIR_RELATIVE}" STREQUAL ""))
+    if(NOT ("x${PRJ_OUTPUT_DIR_RELATIVE}" STREQUAL "x"))
       get_filename_component(PRJ_OUTPUT_DIR ${PRJ_OUTPUT_DIR_RELATIVE} ABSOLUTE)
     endif()
+ENDIF()
+IF(NOT DEFINED PRJ_OUTPUT_DIR)
+  set(PRJ_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/deploy")
 ENDIF()
 message(STATUS "current PRJ_OUTPUT_DIR => ${PRJ_OUTPUT_DIR}")
 #===========================detect external params END===========================
 
 #=============================setup output dir START=============================
-IF (NOT DEFINED PLATFORM OR ("${PLATFORM}" STREQUAL ""))
+IF (NOT DEFINED PLATFORM OR ("x${PLATFORM}" STREQUAL "x"))
   if ((NOT ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")) OR (NOT ("${CMAKE_SYSTEM_NAME}" STREQUAL "Generic")))
-    MESSAGE(WARNING "warning: not defined PLATFORM, use CMAKE_SYSTEM_NAME as PLATFORM")
+    MESSAGE(WARNING "warning: not defined PLATFORM, use CMAKE_SYSTEM_NAME(${CMAKE_SYSTEM_NAME}) as PLATFORM")
     set(PLATFORM ${CMAKE_SYSTEM_NAME})
   else()
     MESSAGE(FATAL_ERROR "PLATFORM can not be empty! current CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}")
@@ -84,20 +84,20 @@ ELSEIF(ANDROID)
   set(PLATFORM_ABI ${ANDROID_ABI})
 ELSE()
   IF(CMAKE_CL_64)
-    if(CMAKE_C_FLAGS MATCHES "m32")
-      message(STATUS "CL64 detect m32 in flags")
-      set(PLATFORM_ABI x86)
+    if((CMAKE_C_FLAGS MATCHES "m32") OR (CMAKE_SIZEOF_VOID_P EQUAL 4))
+      message(STATUS "CL64 detect m32 in flags OR VOID_P == 4")
+      set(PLATFORM_ABI x32)
     else()
       message(STATUS "normal x64")
       set(PLATFORM_ABI x64)
     endif()
   ELSE(CMAKE_CL_64)
-    if(CMAKE_C_FLAGS MATCHES "m64")
-      message(STATUS "CL32 detect m64 in flags")
+    if((CMAKE_C_FLAGS MATCHES "m64") OR (CMAKE_SIZEOF_VOID_P EQUAL 8))
+      message(STATUS "CL32 detect m64 in flags OR VOID_P == 8")
       set(PLATFORM_ABI x64)
     else()
-      message(STATUS "normal x86")
-      set(PLATFORM_ABI x86)
+      message(STATUS "normal x32")
+      set(PLATFORM_ABI x32)
     endif()
   ENDIF(CMAKE_CL_64)
 ENDIF(DEFINED PLATFORM_ABI)
@@ -110,6 +110,7 @@ add_definitions(-D_PLATFORM=${PLATFORM} -D_PLATFORM_ABI=${PLATFORM_ABI})
 set(CONFIG_TYPES "DEBUG" "RELEASE" "RELWITHDEBINFO" "MINSIZEREL")
 foreach(cfg ${CONFIG_TYPES})
   if (DEFINED DEPLOY_DIR)
+    message(STATUS "you defined DEPLOY_DIR => ${DEPLOY_DIR}")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${cfg} ${DEPLOY_DIR})
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${cfg} ${DEPLOY_DIR})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${cfg} ${DEPLOY_DIR})
@@ -122,12 +123,6 @@ foreach(cfg ${CONFIG_TYPES})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${cfg} ${output_dir_tmp})
   endif()
 endforeach()
-IF (NOT DEFINED DEPLOY_DIR)
-  set(DEPLOY_DIR "${PRJ_OUTPUT_DIR}/${CMAKE_BUILD_TYPE_TOLOWER}/${PLATFORM_TOLOWER}_${PLATFORM_ABI_TOLOWER}")
-ENDIF()
-message(STATUS  "DEPLOY_DIR => ${DEPLOY_DIR}")
-
-
 #=============================setup output dir END=============================
 
 #============================= config header START ============================= 
@@ -143,8 +138,8 @@ configure_file(
   @ONLY)
 
 #collect header(*.h) directories
-#scan_header_dirs(${PRJ_HEADER_ROOT_DIR} LCU_HEADER_DIRS)
-#message(STATUS "LCU_HEADER_DIRS => \n ${LCU_HEADER_DIRS}\n")
+#scan_header_dirs(${PRJ_HEADER_ROOT_DIR} PRJ_HEADER_DIRS)
+#message(STATUS "PRJ_HEADER_DIRS => \n ${PRJ_HEADER_DIRS}\n")
 include_directories(${PRJ_HEADER_ROOT_DIR}
                     ${CMAKE_BINARY_DIR}/generate/)
 #============================= config header END ============================= 
@@ -189,7 +184,7 @@ source_group(TREE ${PRJ_ROOT_DIR} FILES ${PRJ_DEMO_SRCS})
 #SET(HEADER_FILE_LIST "")
 #file(GLOB_RECURSE TMP_HEADERS ${CMAKE_BINARY_DIR}/generate/*.h)
 #SET(HEADER_FILE_LIST ${HEADER_FILE_LIST} ${TMP_HEADERS})
-#FOREACH (header_dir ${LCU_HEADER_DIRS})
+#FOREACH (header_dir ${PRJ_HEADER_DIRS})
 #   file(GLOB_RECURSE TMP_HEADERS ${header_dir}/*.h)
 #   SET(HEADER_FILE_LIST ${HEADER_FILE_LIST} ${TMP_HEADERS})
 #ENDFOREACH ()
@@ -238,7 +233,16 @@ IF (BUILD_SHARED_LIBS)
   # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
   #set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
   # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-  set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+  if(NOT CYGWIN)
+    # This property causes shared libraries on Linux to have the full version
+    # encoded into their final filename.  We disable this on Cygwin because
+    # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
+    # seems to be the default.
+    #
+    # This has no effect with MSVC, on that platform the version info for
+    # the DLL comes from the resource file win32/zlib1.rc
+    set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+  endif()
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)
@@ -338,7 +342,7 @@ endif (WIN32 AND MSVC)
 
 #==================== FIND DEPENDENCY LIB BEGIN ==================# 
 message(STATUS "CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH}") # <= find_library will find from this path
-set(dependency_libs "")
+set(dependency_local_libs "")
 IF(UNIX)
   message(STATUS "Current build system is unix!")
   find_package(Threads REQUIRED)
@@ -373,15 +377,15 @@ ELSEIF(WIN32)
 	 if ("x${PRJ_WIN_PTHREAD_MODE}" MATCHES "x1")
 	   message(STATUS "use win32 pthread static lib")
        set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_lib.lib")
-	   list(APPEND dependency_libs "${pthread-lib}" )
+	   list(APPEND dependency_local_libs "${pthread-lib}" )
 	 else()
 	   message(STATUS "use win32 pthread dll")
 	   set(pthread-lib "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.lib")
-	   list(APPEND dependency_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.dll")
+	   list(APPEND dependency_local_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthread_dll.dll")
 	 endif()
      #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
      #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
-     #list(APPEND dependency_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
+     #list(APPEND dependency_local_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/libs/windows/${PLATFORM_ABI}/pthreadVC2.dll")
   else()
      set(pthread-lib "")
   endif()
@@ -391,12 +395,12 @@ ELSE()
   set(log-lib "")
 ENDIF(UNIX)
 
-list(LENGTH dependency_libs dependency_libs_length)
-message(STATUS "dependency_libs(${dependency_libs_length}) => ${dependency_libs}")
-IF (dependency_libs_length GREATER 0)
-  message(STATUS "will copy dependency_libs for you")
+list(LENGTH dependency_local_libs dependency_local_libs_length)
+message(STATUS "dependency_local_libs(${dependency_local_libs_length}) => ${dependency_local_libs}")
+IF (dependency_local_libs_length GREATER 0)
+  message(STATUS "will copy dependency_local_libs for you")
   #这里用的是变量名，而没有引用其值。因为他是macro，在macro里会对其解引用
-  copy_file_on_post_build_to_all_targets(dependency_libs)
+  copy_file_on_post_build_to_all_targets(dependency_local_libs)
 ENDIF()
 message(STATUS "HAVE_PTHREAD_SETNAME_NP => ${HAVE_PTHREAD_SETNAME_NP}")
 message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
@@ -425,14 +429,14 @@ ENDIF (BUILD_SHARED_LIBS)
 
 IF (BUILD_DEMO)
   if (BUILD_STATIC_LIBS)
-    set(demo_link_lcu_lib ${target_prj_static})
+    set(demo_link_lib ${target_prj_static})
   else()
-    set(demo_link_lcu_lib ${target_prj_shared})
+    set(demo_link_lib ${target_prj_shared})
   endif (BUILD_STATIC_LIBS)  
   target_link_libraries( # Specifies the target library.
           ${target_prj_demo}
   
-          ${demo_link_lcu_lib}
+          ${demo_link_lib}
           #${target_prj_static}
           #${pthread-lib}
           #${log-lib}

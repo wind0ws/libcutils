@@ -50,7 +50,7 @@ typedef struct xlog_cb_pack
 {
 	xlog_user_callback_fn cb;
 	void* cb_user_data;
-} xlog_cb_pack_t;
+} xlog_cb_parcel_t;
 
 #define XLOG_DEFAULT_TAG_MAX_SIZE (24)
 typedef struct xlog_config
@@ -62,7 +62,7 @@ typedef struct xlog_config
 	/* if you don't pass in the TAG, use the default TAG. */
 	char default_tag[XLOG_DEFAULT_TAG_MAX_SIZE];
 	/* user callback data pack */
-	xlog_cb_pack_t cb_pack;
+	xlog_cb_parcel_t cb_pack;
 	/* LogTarget: log target */
 	int target;
 	/* LogFormat: log format */

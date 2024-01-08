@@ -25,6 +25,8 @@ set NINJA_BIN=D:\env\cmake\bin\ninja.exe
 @echo NINJA_BIN=%NINJA_BIN%
 @echo ANDROID_NDK=%ANDROID_NDK%
 @echo ANDROID_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE%
+@echo ANDROID_PLATFORM=%ANDROID_PLATFORM%
+@echo ANDROID_STL=%ANDROID_STL%
 @echo.
 @echo ======================================================
 

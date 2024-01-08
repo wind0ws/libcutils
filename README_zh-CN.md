@@ -15,21 +15,21 @@
   > 支持Windows上使用posix风格的线程/信号量（thread/semaphore）接口(感谢 [pthread-win32](https://sourceforge.net/projects/pthreads4w/)). 
 
 * **data**
-  > 常用数据结构和操作接口: 包括 ***array***, ***hashmap***, ***list***, ***base64*** ...
+  > 常用数据结构和操作接口: ***array***, ***hashmap***, ***list***, ***base64*** ...
 
 * **file**
-  > 常用文件操作: 包括 **file_util_read/write**, **ini_reader/parser** ...
+  > 常用文件操作:  **file_util_read/write**, **ini_reader/parser** ...
 
 * **memory**
-   *  **string** : 包括 ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
-   *  **allocator** : 跟踪和检测heap内存，帮助你提早发现内存泄露和内存破坏等问题.
+   *  **string** : ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
+   *  **allocator** : 跟踪和检测heap内存，帮助你提早发现内存泄露和踩内存等问题.
    *  **mplite** : 内存池实现 [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
 * **ring_buffer**
-  > 环形队列: 包括 ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
+  > 环形队列: ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
 
 * **time**
-  > 常用时间操作: 包括 ***current_milliseconds***, ***fast_second2date*** ...
+  > 常用时间操作: ***current_milliseconds***, ***fast_second2date*** ...
 
 ----
 ## 编译
@@ -114,7 +114,7 @@
   > 请看 **src_demo** 目录，每个模块有对应的测试用例.
 
 ## 许可证
-  > 本库是免费软件; 你可以根据MIT许可证的条款重新分发或修改它. 详情请见 [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE).
+  > 本库是免费软件; 你可以根据Apache2.0许可证的条款重新分发或修改它. 详情请见 [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
 
 ## 联系方式
   > 邮箱: <hsjfox@foxmail.com>

@@ -573,6 +573,16 @@ if (!end_ptr || *end_ptr != '\0') { ret = INI_PARSER_CODE_FAILED; break; }\
 				result = false;
 				break;
 			}
+			if (0 == strncasecmp(str_value, "yes", 3))
+			{
+				result = true;
+				break;
+			}
+			if (0 == strncasecmp(str_value, "no", 2))
+			{
+				result = false;
+				break;
+			}
 			int num = (int)parse_str2longlong(&ret, str_value);
 			if (INI_PARSER_CODE_SUCCEED == ret)
 			{

@@ -1,5 +1,5 @@
-#include "log/slog.h"
 #include "mem/mem_debug.h"
+#include "log/slog.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
 #include "thread/posix_thread.h"

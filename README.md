@@ -114,7 +114,7 @@
   > see `src_demo` folder, it demonstrate to you simple use case.
 
 ## License
-  > This library is free software; you can redistribute it and or modify it under the terms of the MIT license. See [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE) for details.
+  > This library is free software; you can redistribute it and or modify it under the terms of the [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
 
 ## Contact me
   > email: <hsjfox@foxmail.com>

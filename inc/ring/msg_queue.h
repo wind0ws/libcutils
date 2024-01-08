@@ -5,6 +5,10 @@
 #include "ring/msg_queue_errno.h"
 #include <stdint.h>               /* for uint32_t */
 
+#ifdef _WIN32
+#include <sal.h> /* for in/out param */
+#endif // _WIN32
+
 #ifndef __in
 #define __in
 #endif

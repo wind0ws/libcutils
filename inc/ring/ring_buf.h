@@ -10,21 +10,21 @@ extern "C" {
 
     typedef struct __ring_buf_t* ring_handle;
 
-    /**
-     * create ring_buf.
-     * @param size ring_buf size. can hold (size - 1) byte.
-     * @return ring_buf handle
-     */
-    ring_handle ring_buf_create(const size_t size);
+	/**
+	 * create ring_buf with provided pbuf.
+	 * <p>you maybe need free pbuf yourself after ring_buf_destroy() if your pbuf is malloced</p>
+	 * @param pbuf the buf to hold ring data.
+	 * @param buf_size the pbuf memory size.
+	 * @return ring_buf handle
+	 */
+	ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size);
 
-    /**
-     * create ring_buf with provided pbuf.
-     * <p>you maybe need free pbuf yourself after ring_buf_destroy() if your pbuf is malloced</p>
-     * @param pbuf the buf to hold ring data.
-     * @param buf_size the pbuf memory size.
-     * @return ring_buf handle
-     */
-    ring_handle ring_buf_create_with_mem(void* pbuf, const size_t buf_size);
+	/**
+	 * create ring_buf.
+	 * @param size ring_buf size. can hold (size - 1) byte.
+	 * @return ring_buf handle
+	 */
+	ring_handle ring_buf_create(const size_t size);
 
     /**
      * The data count available to read.

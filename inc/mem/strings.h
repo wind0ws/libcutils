@@ -42,7 +42,7 @@ char* strndup(const char* s, size_t n);
  * be careful!
  */
 #define strcpy(dest, src)                    strcpy_s((dest), strlen(src) + 1, (src)) 
-#define strncpy(dest, src, cp_count)         strncpy_s((dest), (cp_count) + 1, (src), (cp_count))
+#define strncpy(dest, src, cp_count)         strncpy_s((dest), (cp_count), (src), (cp_count) - 1)
 #define strcat(dest, src)                    strcat_s((dest), strlen(dest) + strlen(src) + 1, (src))
 #define strtok_r(str, delimiter, ctx)        strtok_s((str), (delimiter), (ctx))
  //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
@@ -77,7 +77,7 @@ char* strndup(const char* s, size_t n);
 
 	/**
 	 * Appends src to string dst of size "size" (unlike strncat, size is the
-	 * full size of dst, not space left).  At most size-1 characters
+	 * full size of dst, not space left).  At most (size-1) characters
 	 * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
 	 * 
 	 * @return Returns strlen(src) + MIN(size, strlen(initial dst)).

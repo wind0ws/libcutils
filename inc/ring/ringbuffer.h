@@ -2,9 +2,12 @@
 #ifndef LCU_RINGBUFFER_H
 #define LCU_RINGBUFFER_H
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#ifdef _WIN32
+#include <sal.h> /* for in/out param */
+#endif // _WIN32
 
 #ifndef __in
 #define __in

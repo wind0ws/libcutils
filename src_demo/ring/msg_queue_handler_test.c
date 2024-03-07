@@ -1,8 +1,8 @@
 #include "ring/msg_queue_handler.h"
 #include "common_macro.h"
-#include "thread/posix_thread.h"
+#include "thread/portable_thread.h"
 
-#define LOG_TAG "HDL_TEST"
+#define LOG_TAG "HANDLER_TEST"
 #include "log/logger.h"
 
 typedef struct
@@ -12,7 +12,8 @@ typedef struct
 
 static int handler_cb(queue_msg_t* msg_p, void* user_data)
 {
-	LOGD("receive msg(what=%d, obj_len=%d): %s", msg_p->what, msg_p->obj_len, msg_p->obj);
+	LOGD("received msg(what=%d, obj_len=%d): %s", 
+		msg_p->what, msg_p->obj_len, msg_p->obj);
 	return 0;
 }
 
@@ -37,7 +38,7 @@ static int run_msg_queue_handler_testcase()
 			if (MSG_Q_CODE_FULL == status_send)
 			{
 				LOGW("queue full. sleeping at %d", i);
-				usleep(2000);
+				usleep(1000);
 			}
 		} while (status_send != 0 && retry_counter++ < 2);
 		if (status_send)

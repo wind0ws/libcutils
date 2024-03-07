@@ -70,10 +70,12 @@
 #define GETTID()  syscall(__NR_gettid)
 #elif defined(_WIN32)
 #define GETTID()  GetCurrentThreadId()
+#else
+#error should implement macro of GETTID()
 #endif
 
-#define PTHREAD_SETNAME(pthread, name)    pthread_setname_np(pthread, name)
-#define PTHREAD_SETNAME_FOR_CURRENT(name) posix_thread_set_current_name(name)
+#define THREAD_SETNAME(thr, name)        pthread_setname_np(thr, name)
+#define THREAD_SETNAME_FOR_CURRENT(name) posix_thread_set_current_name(name)
 
 #ifdef __cplusplus
 extern "C" {

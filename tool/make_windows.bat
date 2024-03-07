@@ -1,4 +1,8 @@
 call setup_env.bat %*
+if %ERRORLEVEL% NEQ 0 (
+  @echo error on setup_env, check it.
+  @exit /b 2
+) 
 
 @ECHO OFF &PUSHD %~DP0 &TITLE make_windows &color 0A
 
@@ -35,52 +39,52 @@ if "%_TMP_VS_VER%" EQU "" (
 @echo =============== auto detect VS version ===============
 reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE" >> nul 2>&1 
 if %ERRORLEVEL% NEQ 0 (
-  echo VS not installed. you should install it first before compile.
+  @echo VS not installed. you should install it first before compile.
   @exit /b 2
-) else (
-  @echo VS has installed, now detect newest version.
-  
-  reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.17.0" >> nul 2>&1 
-  if %ERRORLEVEL% NEQ 0 (
-    @echo VS 2022 not installed.
-  ) else (
-    @echo VS 2022 installed.
-	set VS_VER="Visual Studio 17 2022"
-	goto label_check_params
-  ) 
-  reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.16.0" >> nul 2>&1 
-  if %ERRORLEVEL% NEQ 0 (
-    @echo VS 2019 not installed.
-  ) else (
-    @echo VS 2019 installed.
-	set VS_VER="Visual Studio 16 2019"
-	goto label_check_params
-  )
-  reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.15.0" >> nul 2>&1 
-  if %ERRORLEVEL% NEQ 0 (
-    @echo VS 2017 not installed.
-  ) else (
-    @echo VS 2017 installed.
-	set VS_VER="Visual Studio 15 2017"
-	goto label_check_params
-  )
-  reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.14.0" >> nul 2>&1 
-  if %ERRORLEVEL% NEQ 0 (
-    @echo VS 2015 not installed.
-  ) else (
-    @echo VS 2015 installed.
-	set VS_VER="Visual Studio 14 2015"
-	goto label_check_params
-  )
-  
-  @echo "error: not support your vs version!"
-  @exit /b 2  
 ) 
-@echo =============== detect VS version succeed ===============
 
+@echo VS has installed, now detect newest version.
+
+reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.17.0" >> nul 2>&1 
+if %ERRORLEVEL% NEQ 0 (
+  @echo VS 2022 not installed.
+) else (
+  @echo VS 2022 installed.
+  set VS_VER="Visual Studio 17 2022"
+  goto label_check_params
+) 
+reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.16.0" >> nul 2>&1 
+if %ERRORLEVEL% NEQ 0 (
+  @echo VS 2019 not installed.
+) else (
+  @echo VS 2019 installed.
+  set VS_VER="Visual Studio 16 2019"
+  goto label_check_params
+)
+reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.15.0" >> nul 2>&1 
+if %ERRORLEVEL% NEQ 0 (
+  @echo VS 2017 not installed.
+) else (
+  @echo VS 2017 installed.
+  set VS_VER="Visual Studio 15 2017"
+  goto label_check_params
+)
+reg query "HKEY_CLASSES_ROOT\VisualStudio.DTE.14.0" >> nul 2>&1 
+if %ERRORLEVEL% NEQ 0 (
+  @echo VS 2015 not installed.
+) else (
+  @echo VS 2015 installed.
+  set VS_VER="Visual Studio 14 2015"
+  goto label_check_params
+)
+
+@echo "error: not support your vs version! maybe it too old!"
+@exit /b 2
+::============= VS check complete =========================  
 
 
 :label_check_params
+@echo =============== detect VS version succeed ===============
 if "%BUILD_ABI%" EQU "Win32" set NEW_VS_ARCH=" -A Win32" & goto label_main
 if "%BUILD_ABI%" EQU "Win64" set NEW_VS_ARCH="" & goto label_main
 @echo params check failed: unknown BUILD_ABI=%BUILD_ABI%
@@ -103,9 +107,7 @@ set CMAKE_EXTEND_ARGS=" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DPRJ_WIN_PTHREAD_MODE=%
 :: 小提示：%VAR% 最后面加的 :"=  是为了去除变量两边的双引号的，如果要保留就不要加
 %CMAKE_BIN% -G %VS_VER% %NEW_VS_ARCH:"=% -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
 ::%CMAKE_BIN% -G "Visual Studio 16 2019" -A Win32 -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
-::-DARG_LCU_OUTPUT_DIR=%output_dir% 
-::IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 15 2017 %BUILD_ABI:"=%" -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
-::IF %ERRORLEVEL% NEQ 0 %CMAKE_BIN% -G "Visual Studio 14 2015 %BUILD_ABI:"=%" -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
+
 set ERR_CODE=%ERRORLEVEL%
 IF %ERR_CODE% NEQ 0 (
    @echo.
@@ -120,11 +122,9 @@ IF %ERR_CODE% NEQ 0 (
    @echo "! Error on build project: %ERR_CODE% !"
    @exit /b %ERR_CODE%
 )
-::mkdir %output_dir%
-::copy /Y .\\build_win32\\Release\\* %output_dir%\\
 
 @echo.
-@echo "compile finished. bye bye..."
+@echo "compile finished(%ERR_CODE%). bye bye..."
 ::@pause>nul
 ::color 0F
 @exit /b %ERR_CODE%

@@ -1,6 +1,6 @@
 #include "common_macro.h"
 #include "mem/strings.h"
-#include "thread/posix_thread.h"
+#include "thread/portable_thread.h"
 #include "time/time_util.h"
 #include <stdio.h>
 
@@ -8,6 +8,7 @@
 #error "TIME_STR_SIZE is too small."
 #endif
 
+// if platform not support rwlock, just disable cache.
 #define USE_TIME_CACHE            (1)
 #define USE_SNPRINTF_MILLISECONDS (0)
 
@@ -19,15 +20,16 @@
 
 typedef struct
 {
-	pthread_rwlock_t rw_lock;
+	portable_rwlock_t rw_lock;
 	int timezone_hour;
 	struct timeval tval;
 	char format_cache[TIME_STR_SIZE];
 } time_cache_t;
 
-static time_cache_t g_time_caches[2] = {
-	{.rw_lock = PTHREAD_RWLOCK_INITIALIZER, },
-	{.rw_lock = PTHREAD_RWLOCK_INITIALIZER, }
+static time_cache_t g_time_caches[2] =
+{
+	{.rw_lock = NULL, },
+	{.rw_lock = NULL, },
 };
 
 #endif // USE_TIME_CACHE
@@ -128,25 +130,33 @@ int gettimeofday(struct timeval* tp, struct timezone* tzp)
 
 int time_util_global_init()
 {
+#if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
+	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
+	{
+		if (g_time_caches[i].rw_lock)
+		{
+			continue;
+		}
+		portable_rwlock_init(&(g_time_caches[i].rw_lock), NULL);
+	}
+#endif // USE_TIME_CACHE  
 	return 0;
 }
 
 int time_util_global_cleanup()
 {
-#if(defined(_MSC_VER) /*&& _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE*/)
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
 	// destroy it(free it's memory), and reset the pointer
 	for (int i = 0; i < ARRAY_LEN(g_time_caches); ++i)
 	{
-		if (PTHREAD_RWLOCK_INITIALIZER == g_time_caches[i].rw_lock)
+		if (NULL == g_time_caches[i].rw_lock)
 		{
 			continue;
 		}
-		pthread_rwlock_destroy(&(g_time_caches[i].rw_lock));
-		g_time_caches[i].rw_lock = PTHREAD_RWLOCK_INITIALIZER;
+		portable_rwlock_destroy(&(g_time_caches[i].rw_lock));
+		g_time_caches[i].rw_lock = NULL;
 	}
 #endif // USE_TIME_CACHE  
-#endif // _MSC_VER
 	return 0;
 }
 
@@ -234,12 +244,12 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 	if (use_cache)
 	{
 		time_cache_t* cache_p = &g_time_caches[GET_TIME_FORMAT_TYPE(time_format)];
-		pthread_rwlock_rdlock(&cache_p->rw_lock); // lock rdlock
+		portable_rwlock_rdlock(&cache_p->rw_lock); // lock rdlock
 		if (cache_p->timezone_hour == timezone_hour && cache_p->tval.tv_sec == tval_p->tv_sec)
 		{	// hit cache, just copy whole cached time string
 			ftime_len = (int)strlcpy(str, cache_p->format_cache, TIME_STR_SIZE);
 			bool update_millis = cache_p->tval.tv_usec != tval_p->tv_usec;
-			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
+			portable_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
 			if (update_millis)
 			{
 				// snprintf(str + (ftime_len - 4), TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
@@ -248,7 +258,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 		}
 		else // not hit sec cache
 		{
-			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
+			portable_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
 #endif // USE_TIME_CACHE
 
 			ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
@@ -257,7 +267,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 			ftime_len += 4;
 
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
-			pthread_rwlock_wrlock(&cache_p->rw_lock); // lock wrlock
+			portable_rwlock_wrlock(&cache_p->rw_lock); // lock wrlock
 			if (cache_p->tval.tv_sec != tval_p->tv_sec)
 			{
 				//printf("now write time cache: %s\n", str);
@@ -265,7 +275,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 				cache_p->timezone_hour = timezone_hour;
 				cache_p->tval = *tval_p;
 			}
-			pthread_rwlock_unlock(&cache_p->rw_lock); // unlock wrlock
+			portable_rwlock_unlock(&cache_p->rw_lock); // unlock wrlock
 		}
 	}
 	else // not use cache

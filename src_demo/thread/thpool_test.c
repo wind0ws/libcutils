@@ -79,14 +79,14 @@ static int thpool_test_wait()
 static void sleep_4_secs(void* parm) 
 {
 	const char* task_name = (const char*)parm;
-	LOGD_TRACE("%s now exec on %d...", task_name, gettid());
+	LOGD_TRACE("%s now exec on %ld...", task_name, GETTID());
 	//sleep(4);
 	for (int i = 0; i < 100; i++)
 	{
 		usleep(40000);
-		printf("  [%d: %02d ]  ", gettid(), i);
+		LOGD("  [%ld: %02d ]  ", GETTID(), i);
 	}
-	LOGD_TRACE("%s exec finshed on %d...", task_name, gettid());
+	LOGD_TRACE("%s exec finshed on %ld...", task_name, GETTID());
 }
 
 static int thpool_test_pause_resume() 

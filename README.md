@@ -40,11 +40,11 @@
 	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
-    |platform     | onekey deploy build                      | manual build                                     |
-    | --------    | :-----                                   | :----                                            |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
+    |platform     | onekey deploy build                      | manual build                                                    |
+    | --------    | :-----                                   | :----                                                           |
+    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                            |
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                        |
 	
     > there 3 way to integration pthread on windows：
     > * 0: implementing the pthread interface using the windows api

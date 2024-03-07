@@ -27,14 +27,14 @@
 ** it will be true for all numbers that are power of 2.
 ** Lastly we make sure that n is superior to 0.
 */
-static inline int is_power_of_2(uint32_t n)
+static inline int pri_is_power_of_2(uint32_t n)
 {
 	return (n > 1 && !(n & (n - 1)));
 }
 
-static inline uint32_t roundup_pow_of_two(uint32_t x)
+static inline uint32_t pri_roundup_pow_of_two(uint32_t x)
 {
-	if (x == 0 || is_power_of_2(x))
+	if (x == 0 || pri_is_power_of_2(x))
 	{
 		return x;
 	}
@@ -59,7 +59,7 @@ struct __ring_buffer_t
 #define _RING_AVAILABLE_READ(ring_handle)  (ring_handle->in - ring_handle->out)
 #define _RING_AVAILABLE_WRITE(ring_handle) (ring_handle->size - (_RING_AVAILABLE_READ(ring_handle)))
 
-ring_buffer_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_size)
+ring_buffer_handle RingBuffer_create_with_mem(__in void* buf, __in uint32_t buf_size)
 {
 	if (!buf)
 	{
@@ -72,15 +72,15 @@ ring_buffer_handle RingBuffer_create_with_mem(__in char* buf, __in uint32_t buf_
 		return NULL;
 	}
 	uint32_t ring_buf_size = buf_size - ring_buffer_struct_size;
-	if (!is_power_of_2(ring_buf_size))
+	if (!pri_is_power_of_2(ring_buf_size))
 	{
 		RING_LOGW("%s buf_size=%u is not power of 2", __func__, ring_buf_size);
-		ring_buf_size = roundup_pow_of_two(ring_buf_size) >> 1;
+		ring_buf_size = (pri_roundup_pow_of_two(ring_buf_size) >> 1);
 		RING_LOGW("%s changed buf_size to %u ", __func__, ring_buf_size);
 	}
 	ring_buffer_handle ring_buffer_p = (ring_buffer_handle)buf;
 	ring_buffer_p->need_free_myself = false;
-	ring_buffer_p->buf = buf + ring_buffer_struct_size;
+	ring_buffer_p->buf = (char *)buf + ring_buffer_struct_size;
 	ring_buffer_p->size = ring_buf_size;
 	ring_buffer_p->in = 0;
 	ring_buffer_p->out = 0;
@@ -94,10 +94,10 @@ ring_buffer_handle RingBuffer_create(__in uint32_t buf_size)
 		RING_LOGE("invalid buf_size: %u", buf_size);
 		return NULL;
 	}
-	if (!is_power_of_2(buf_size))
+	if (!pri_is_power_of_2(buf_size))
 	{
 		RING_LOGW("%s buf_size=%u is not power of 2", __func__, buf_size);
-		buf_size = roundup_pow_of_two(buf_size);
+		buf_size = pri_roundup_pow_of_two(buf_size);
 		RING_LOGW("%s changed buf_size to %u ", __func__, buf_size);
 	}
 

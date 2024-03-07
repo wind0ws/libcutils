@@ -41,11 +41,11 @@
     
     > 简要示例:
     
-    |平台         | 一键部署编译                             | 手动编译                                         |
-    | --------    | :-----                                   | :----                                            |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
+    |平台         | 一键部署编译                             | 手动编译                                                           |
+    | --------    | :-----                                   | :----                                                              |
+    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                               | 
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                           |
   
     > windows 平台 posix pthread 实现方式有三种: 
     >  * 0: 使用 windows api 模拟 pthread 接口

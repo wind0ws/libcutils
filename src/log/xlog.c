@@ -1,42 +1,14 @@
 #include "mem/mem_debug.h"
 #include "log/xlog.h"
-#include "mem/strings.h"         /* for strlcpy  */
-#include "thread/posix_thread.h" /* for pthread_mutex */
-#include "time/time_util.h"      /* for get time */
+#include "mem/strings.h"             /* for strlcpy        */
+#include "thread/portable_thread.h"  /* for portable_mutex */
+#include "time/time_util.h"          /* for get time       */
 #include <malloc.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-// header for gettid.
-#if(defined(__APPLE__))
-#include "AvailabilityMacros.h"  // For MAC_OS_X_VERSION_MAX_ALLOWED
-#include <stdint.h>
-#include <stdlib.h>
-#include <sys/syscall.h>
-#include <sys/time.h>
-#include <unistd.h>
-#elif(defined(__linux__) || defined(__ANDROID__))
-#include <syscall.h>
-#include <unistd.h>
-#elif defined(_WIN32)
-#pragma warning(push)
-#pragma warning(disable: 5105)
-#include <windows.h>
-#pragma warning(pop)
-#endif
-
-/* macro for gettid */
-#if(defined(__ANDROID__))
-#include <android/log.h>
-#define XLOG_GETTID()      (int)gettid()
-#elif defined(__APPLE__)
-#define XLOG_GETTID()      (int)syscall(SYS_thread_selfid)
-#elif defined(__linux__)
-#define XLOG_GETTID()      (int)syscall(__NR_gettid)
-#elif defined(_WIN32)
-#define XLOG_GETTID()      (int)GetCurrentThreadId()
-#endif
+#define XLOG_GETTID()      (int)GETTID()
 
 #define DEFAULT_LOG_BUF_SIZE (512)
 
@@ -121,9 +93,9 @@ static xlog_config_t g_xlog_cfg =
 	},
 };
 
-static pthread_mutex_t g_xlog_mutex = PTHREAD_MUTEX_INITIALIZER;
-#define XLOG_LOCK() 	pthread_mutex_lock(&g_xlog_mutex)
-#define XLOG_UNLOCK() 	pthread_mutex_unlock(&g_xlog_mutex)
+static portable_mutex_t g_xlog_mutex = NULL;
+#define XLOG_LOCK() 	do { if (!g_xlog_mutex) {abort();} portable_mutex_lock(&g_xlog_mutex); } while (0)
+#define XLOG_UNLOCK() 	do { if (!g_xlog_mutex) {abort();} portable_mutex_unlock(&g_xlog_mutex); } while (0)
 
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
@@ -141,19 +113,22 @@ static const int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_
 
 int xlog_global_init()
 {
+	if (g_xlog_mutex)
+	{
+		return 1;
+	}
+	portable_mutex_init(&g_xlog_mutex, NULL);
 	return 0;
 }
 
 int xlog_global_cleanup()
 {
-#if(defined(_MSC_VER)) 
-	if (PTHREAD_MUTEX_INITIALIZER == g_xlog_mutex)
+	if (NULL == g_xlog_mutex)
 	{
-		return 0;
+		return 1;
 	}
-	pthread_mutex_destroy(&g_xlog_mutex);
-	g_xlog_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif // _MSC_VER
+	portable_mutex_destroy(&g_xlog_mutex);
+	g_xlog_mutex = NULL;
 	return 0;
 }
 

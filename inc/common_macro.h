@@ -49,24 +49,35 @@ typedef float               FLOAT;
 #endif // !UNUSED_ATTR
 
 // annotation: for mark parameters
+// on windows, sal.h already defined it.
+// param in: which only read
 #ifndef __in
 #define __in
 #endif // !__in
+// param out: which only write
 #ifndef __out
 #define __out
 #endif // !__out
+// param in,out: both read/write it
 #ifndef __inout
 #define __inout
 #endif // !__inout
+// param in, can be NULL
 #ifndef __in_opt
 #define __in_opt
 #endif // !__in_opt
+// param out, can be NULL
 #ifndef __out_opt
 #define __out_opt
 #endif // !__out_opt
+// param in,out, can be NULL
 #ifndef __inout_opt
 #define __inout_opt
 #endif // !__inout_opt
+// mark success path, eg: __success(return == 0)
+#ifndef __success
+#define __success(expr) 
+#endif // !__success
 
 // for API_EXPORT/IMPORT
 #if defined(_MSC_VER) //  Microsoft 
@@ -233,8 +244,9 @@ typedef intptr_t ssize_t;
  // Macros for safe integer to pointer conversion. In the C language, data is
  // commonly cast to opaque pointer containers and back for generic parameter
  // passing in callbacks. These macros should be used sparingly in new code
- // (never in C++ code). Whenever integers need to be passed as a pointer, 
- // use these macros. for compatible with 64bit OS, suggest use PTR_TO_LONG64 and LONG64_TO_PTR
+ // (never in C++ code). 
+ // Whenever integers need to be passed as a pointer, use these macros. 
+ // for compatible with 64bit OS, suggest use PTR_TO_LONG64 and LONG64_TO_PTR
 #define PTR_TO_UINT(p)    ((uintptr_t) (p)))
 #define UINT_TO_PTR(u)    ((void *) ((uintptr_t) (u)))
 #define PTR_TO_INT(p)     (((intptr_t) (p))

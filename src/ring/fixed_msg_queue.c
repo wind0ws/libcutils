@@ -45,7 +45,8 @@ bool fixed_msg_queue_push(__in fixed_msg_queue msg_queue, __in const void *msg_p
            msg_queue->one_msg_byte_size;
 }
 
-bool fixed_msg_queue_pop(__in fixed_msg_queue msg_queue, __in void *msg_p)
+__success(return == true)
+bool fixed_msg_queue_pop(__in fixed_msg_queue msg_queue, __out void* msg_p)
 {
     if (fixed_msg_queue_is_empty(msg_queue) || !msg_p) 
     {

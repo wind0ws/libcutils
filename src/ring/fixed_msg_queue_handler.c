@@ -2,7 +2,7 @@
 #include "log/slog.h"
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
-#include "thread/posix_thread.h"
+#include "thread/portable_thread.h"
 #include <malloc.h>
 
 #define _LOG_TAG          "FIXED_Q_HDL"
@@ -24,9 +24,9 @@ struct _fixed_msg_queue_handler_s
 	fixed_msg_queue msg_queue_p;
 	fixed_msg_handler_callback_t callback;
 	void* callback_userdata;
-	pthread_t thread_handler;
-	sem_t semaphore;
-	volatile bool flag_exit_thread;
+	portable_thread_t thread_handler;
+	portable_sem_t semaphore;
+	volatile bool flag2exit;
 
 	fixed_handler_msg_t msg_send_cache;
 	size_t token_counter;
@@ -39,8 +39,8 @@ static void* thread_fun_handle_msg(void* thread_context)
 	fixed_handler_msg_t handler_msg = { 0, {0} };
 	for (;;)
 	{
-		sem_wait(&handler->semaphore);
-		if (handler->flag_exit_thread)
+		portable_sem_wait(&handler->semaphore);
+		if (handler->flag2exit)
 		{
 			break;
 		}
@@ -50,7 +50,11 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 		if (handler_msg.token >= handler->min_valid_token)
 		{
-			handler->callback(&handler_msg.out_msg, handler->callback_userdata);
+			if (handler->callback(&handler_msg.out_msg, handler->callback_userdata))
+			{
+				MY_LOGE("err on user process msg, now exit");
+				break;
+			}
 		}
 		else
 		{
@@ -58,6 +62,9 @@ static void* thread_fun_handle_msg(void* thread_context)
 				handler_msg.token, handler->min_valid_token);
 		}
 	}
+
+	handler->flag2exit = true;// <-- for mark thread not handle msg yet!
+	MY_LOGE(" %s:%d thread exited...", __func__, __LINE__);
 	return NULL;
 }
 
@@ -70,24 +77,18 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	{
 		return NULL;
 	}
-	handler->flag_exit_thread = false;
+	handler->flag2exit = false;
 	handler->callback = callback;
 	handler->callback_userdata = callback_userdata;
 	handler->token_counter = 0;
 	handler->min_valid_token = 0;
-	sem_init(&(handler->semaphore), 0, 0);
-	if (0 == pthread_create(&(handler->thread_handler), NULL, thread_fun_handle_msg, handler))
+	portable_sem_init(&(handler->semaphore), 0, 0);
+	handler->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
+	if (!handler->msg_queue_p || 
+		0 != portable_thread_create(&(handler->thread_handler), NULL, thread_fun_handle_msg, handler))
 	{
-		char thr_name[32] = { 0 };
-		snprintf(thr_name, sizeof(thr_name) - 1, "fixedq_hdl_%p", handler);
-		PTHREAD_SETNAME(handler->thread_handler, thr_name);
-		handler->msg_queue_p = fixed_msg_queue_create(sizeof(fixed_handler_msg_t), max_msg_capacity);
-	}
-	else
-	{
-		MY_LOGE("error on create pthread of queue handle msg");
-		sem_destroy(&(handler->semaphore));
-		free(handler);
+		MY_LOGE("error on create thread or queue!");
+		fixed_msg_queue_handler_destroy(&handler);
 		handler = NULL;
 	}
 	return handler;
@@ -95,7 +96,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 
 MSG_Q_CODE fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t* msg_p)
 {
-	if (!handler || !(handler->msg_queue_p) || handler->flag_exit_thread)
+	if (!handler || !(handler->msg_queue_p) || handler->flag2exit)
 	{
 		return MSG_Q_CODE_NULL_HANDLE;
 	}
@@ -111,7 +112,7 @@ MSG_Q_CODE fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __
 	}
 	
 	++handler->token_counter;
-	sem_post(&(handler->semaphore));
+	portable_sem_post(&(handler->semaphore));
 	return MSG_Q_CODE_SUCCESS;
 }
 
@@ -149,15 +150,19 @@ void fixed_msg_queue_handler_destroy(__inout fixed_msg_queue_handler* handler_p)
 		return;
 	}
 	fixed_msg_queue_handler handler = *handler_p;
-	handler->flag_exit_thread = true;
-	//send a signal to make sure thread is not stuck at sem_wait
-	sem_post(&(handler->semaphore));
-	if (0 != pthread_join(handler->thread_handler, NULL))
+	handler->flag2exit = true;
+	//send a signal to make sure thread is not stuck at sem_wait()
+	portable_sem_post(&(handler->semaphore));
+	if (handler->thread_handler && 
+		0 != portable_thread_join(handler->thread_handler, NULL))
 	{
 		MY_LOGE("error on join handle msg thread.");
 	}
-	sem_destroy(&(handler->semaphore));
-	fixed_msg_queue_destroy(&handler->msg_queue_p);
+	portable_sem_destroy(&(handler->semaphore));
+	if (handler->msg_queue_p)
+	{
+		fixed_msg_queue_destroy(&(handler->msg_queue_p));
+	}
 	handler->msg_queue_p = NULL;
 	free(handler);
 	*handler_p = NULL;

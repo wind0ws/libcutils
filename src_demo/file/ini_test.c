@@ -80,10 +80,10 @@ static int ini_parser_test()
 		return 1;
 	}
 	INI_PARSER_CODE err;
-	err = ini_parser_have_section(parser, "config");
+	err = ini_parser_has_section(parser, "config");
 	LOGD("have \"config\" section: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
 	ASSERT(err == INI_PARSER_CODE_SUCCEED);
-	err = ini_parser_have_section_key(parser, "config", "test");
+	err = ini_parser_has_section_key(parser, "config", "test");
 	LOGD("have \"[config] test\" section_key: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
 	ASSERT(err == INI_PARSER_CODE_SUCCEED);
 

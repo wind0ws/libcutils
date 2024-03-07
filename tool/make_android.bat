@@ -1,11 +1,10 @@
 call setup_env.bat %*
+if %ERRORLEVEL% NEQ 0 (
+  @echo error on setup_env, check it.
+  @exit /b 2
+) 
 
 @ECHO OFF &PUSHD %~DP0 &TITLE android &color 0A
-
-if not exist %NINJA_BIN% (
-	@echo ERROR: %NINJA_BIN% not exists!!
-	@exit /b 2
-)
 
 if not exist %ANDROID_TOOLCHAIN_FILE% (
 	@echo ERROR: %ANDROID_TOOLCHAIN_FILE% not exists!! should use NDK version greater than or equal r16b.

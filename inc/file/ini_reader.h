@@ -1,15 +1,20 @@
 /* inih -- simple .INI file parser
+
 SPDX-License-Identifier: BSD-3-Clause
+
 Copyright (C) 2009-2020, Ben Hoyt
+
 inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
-https://github.com/benhoyt/inih 
+
+https://github.com/benhoyt/inih
+
 */
 #pragma once
 #ifndef LCU_INI_READER_H
 #define LCU_INI_READER_H
 
- /* Make this header file easier to include in C++ code */
+/* Make this header file easier to include in C++ code */
 #ifdef __cplusplus
 extern "C" {
 #endif

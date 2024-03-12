@@ -60,10 +60,10 @@
             然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-      # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
-      SET(PLATFORM Hisi)           # important: tell script the platform name
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      SET(PLATFORM hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_DIR "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux")
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-himix100-linux-")
@@ -98,8 +98,7 @@
       
       > 示例: 进入 ***tool*** 文件夹里，执行命令:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
-      cmake --build ./build_hisi --config Release
+	  ./make_cross_platform.sh hisi Release
       ```
      > 若平台(编译链)仅支持编译静态库，可以这么来编译:
      ```shell
@@ -121,6 +120,10 @@
 ----
 ## 更新日志
 
+* **1.7.0**
+  > 1. 新增: portable_thread.h 线程抽象层，方便移植不同平台的线程函数实现 
+  > 2. 更新: make_cross_platform.sh 支持自动加载交叉编译文件（toolchain.cmake）并编译。
+  
 * **1.6.0**
   > 1. 更新: 添加 pthread-win32 静态库和动态库，Windows编译支持3种pthread依赖方式（0/1/2）
   > 2. 修复: 在Windows下 include <windows.h> 报 C5105 警告

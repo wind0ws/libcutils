@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#if(defined(__ANDROID__))
+#include <android/log.h>
+#endif
+
 #define XLOG_GETTID()      (int)GETTID()
 
 #define DEFAULT_LOG_BUF_SIZE (512)
@@ -94,8 +98,8 @@ static xlog_config_t g_xlog_cfg =
 };
 
 static portable_mutex_t g_xlog_mutex = NULL;
-#define XLOG_LOCK() 	do { if (!g_xlog_mutex) {abort();} portable_mutex_lock(&g_xlog_mutex); } while (0)
-#define XLOG_UNLOCK() 	do { if (!g_xlog_mutex) {abort();} portable_mutex_unlock(&g_xlog_mutex); } while (0)
+#define XLOG_LOCK()     do { if (g_xlog_mutex) { portable_mutex_lock(&g_xlog_mutex);} } while (0)
+#define XLOG_UNLOCK()   do { if (g_xlog_mutex) { portable_mutex_unlock(&g_xlog_mutex);} } while (0)
 
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)

@@ -29,44 +29,6 @@
 #define _LOGW_HEX_IMPL(tag, chars, chars_count) SLOGW_HEX(tag, chars, chars_count)
 #define _LOGE_HEX_IMPL(tag, chars, chars_count) SLOGE_HEX(tag, chars, chars_count)
 
-#undef LOG_STD2FILE
-#undef LOG_BACK2STD
-
-#undef TLOGV
-#undef TLOGD
-#undef TLOGI
-#undef TLOGW
-#undef TLOGE
-
-#undef TLOGV_TRACE
-#undef TLOGD_TRACE
-#undef TLOGI_TRACE
-#undef TLOGW_TRACE
-#undef TLOGE_TRACE
-
-#undef LOGV
-#undef LOGD
-#undef LOGI
-#undef LOGW
-#undef LOGE
-
-#undef LOGV_TRACE
-#undef LOGD_TRACE
-#undef LOGI_TRACE
-#undef LOGW_TRACE
-#undef LOGE_TRACE
-
-#undef TLOGV_HEX
-#undef TLOGD_HEX
-#undef TLOGI_HEX
-#undef TLOGW_HEX
-#undef TLOGE_HEX
-
-#undef LOGV_HEX
-#undef LOGD_HEX
-#undef LOGI_HEX
-#undef LOGW_HEX
-#undef LOGE_HEX
 
 #include "logger_facade.h"
 

@@ -259,10 +259,10 @@ static void thread_hold(int sig_id) {
 	(void)sig_id;
 	threads_on_hold = 1;
 	while (threads_on_hold) {
-		err("thread_hold(): thread(%ld) on sleep(1)...\n", GETTID());
+		err("thread_hold(): thread(%ld) on sleep(1)...\n", (long)GETTID());
 		sleep(1);
 	}
-	err("thread_hold(): thread(%ld) now awake from sleep...\n", GETTID());
+	err("thread_hold(): thread(%ld) now awake from sleep...\n", (long)GETTID());
 }
 
 /* Pause all threads in threadpool */

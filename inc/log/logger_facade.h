@@ -1,11 +1,52 @@
+/*
+ * DO NOT include this header directly!
+ * @brief: this is a facade of logger,
+ *         a logger should implement definition of _LOG_XXX_IMPL
+ */
 #pragma once
 #ifndef LCU_LOGGER_FACADE_H
 #define LCU_LOGGER_FACADE_H
 
-/* DO NOT include this header directly, 
- * this is a facade of logger, 
- * a logger should implement definition of _LOG_XXX_IMPL
- */
+//================CLEANUP PREVIOUS DEFINITION================
+#undef LOG_STD2FILE
+#undef LOG_BACK2STD
+
+#undef TLOGV
+#undef TLOGD
+#undef TLOGI
+#undef TLOGW
+#undef TLOGE
+
+#undef TLOGV_TRACE
+#undef TLOGD_TRACE
+#undef TLOGI_TRACE
+#undef TLOGW_TRACE
+#undef TLOGE_TRACE
+
+#undef LOGV
+#undef LOGD
+#undef LOGI
+#undef LOGW
+#undef LOGE
+
+#undef LOGV_TRACE
+#undef LOGD_TRACE
+#undef LOGI_TRACE
+#undef LOGW_TRACE
+#undef LOGE_TRACE
+
+#undef TLOGV_HEX
+#undef TLOGD_HEX
+#undef TLOGI_HEX
+#undef TLOGW_HEX
+#undef TLOGE_HEX
+
+#undef LOGV_HEX
+#undef LOGD_HEX
+#undef LOGI_HEX
+#undef LOGW_HEX
+#undef LOGE_HEX
+//================CLEANUP PREVIOUS DEFINITION================
 
 #if(!defined(_LCU_LOGGER_DISABLE) || 0 != _LCU_LOGGER_DISABLE)
 
@@ -26,9 +67,9 @@
 #endif // _LOG_XX_IMPL definition check
 
 // init at beginning of your app
-#define LOG_GLOBAL_INIT(params)              _LOG_INIT_IMPL(params)
+#define LOG_GLOBAL_INIT(params)      _LOG_INIT_IMPL(params)
 // cleanup at ending of you app
-#define LOG_GLOBAL_CLEANUP(params)           _LOG_DEINIT_IMPL(params)
+#define LOG_GLOBAL_CLEANUP(params)   _LOG_DEINIT_IMPL(params)
 #define LOG_SET_MIN_LEVEL(min_level) _LOG_SET_MIN_LEVEL_IMPL(min_level)
 #define LOG_GET_MIN_LEVEL()          _LOG_GET_MIN_LEVEL_IMPL()
 #define LOG_STD2FILE(file_path)      _LOG_STD2FILE_IMPL(file_path)
@@ -76,8 +117,8 @@
 #define _LOG_NOTHING()               do { } while (0)
 #endif // !_LOG_NOTHING
 
-#define LOG_GLOBAL_INIT(params)             _LOG_NOTHING()
-#define LOG_GLOBAL_CLEANUP(params)           _LOG_NOTHING()
+#define LOG_GLOBAL_INIT(params)      _LOG_NOTHING()
+#define LOG_GLOBAL_CLEANUP(params)   _LOG_NOTHING()
 #define LOG_SET_MIN_LEVEL(min_level) _LOG_NOTHING()
 #define LOG_GET_MIN_LEVEL()          _LOG_NOTHING()
 #define LOG_STD2FILE(file_path)      _LOG_NOTHING()

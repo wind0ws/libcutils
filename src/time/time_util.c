@@ -16,7 +16,10 @@
 #define TIME_STAMP_FORMAT_FOR_FILE_NAME ("%m%d%H%M%S")
 
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
-#define GET_TIME_FORMAT_TYPE(fmt) ((fmt[8] == ':') ? 0 : 1) 
+#define GET_TIME_FORMAT_TYPE(fmt) ((fmt[8] == ':') ? 0 : 1)
+#define TIME_UTIL_RD_LOCK(lock_p) do {if (lock_p){ portable_rwlock_rdlock(lock_p); }} while (0)
+#define TIME_UTIL_WR_LOCK(lock_p) do {if (lock_p){ portable_rwlock_wrlock(lock_p); }} while (0)
+#define TIME_UTIL_RW_UNLOCK(lock_p) do {if (lock_p){ portable_rwlock_unlock(lock_p); }} while (0)
 
 typedef struct
 {
@@ -244,12 +247,12 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 	if (use_cache)
 	{
 		time_cache_t* cache_p = &g_time_caches[GET_TIME_FORMAT_TYPE(time_format)];
-		portable_rwlock_rdlock(&cache_p->rw_lock); // lock rdlock
+		TIME_UTIL_RD_LOCK(&cache_p->rw_lock); // lock rdlock
 		if (cache_p->timezone_hour == timezone_hour && cache_p->tval.tv_sec == tval_p->tv_sec)
 		{	// hit cache, just copy whole cached time string
 			ftime_len = (int)strlcpy(str, cache_p->format_cache, TIME_STR_SIZE);
 			bool update_millis = cache_p->tval.tv_usec != tval_p->tv_usec;
-			portable_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
+			TIME_UTIL_RW_UNLOCK(&cache_p->rw_lock); // unlock rdlock
 			if (update_millis)
 			{
 				// snprintf(str + (ftime_len - 4), TIME_STR_SIZE - ftime_len, ".%03ld", tval_p->tv_usec / 1000);
@@ -258,7 +261,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 		}
 		else // not hit sec cache
 		{
-			portable_rwlock_unlock(&cache_p->rw_lock); // unlock rdlock
+			TIME_UTIL_RW_UNLOCK(&cache_p->rw_lock); // unlock rdlock
 #endif // USE_TIME_CACHE
 
 			ftime_len = format_time(str, &cur_time, time_format, timezone_hour);
@@ -267,7 +270,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 			ftime_len += 4;
 
 #if(defined(USE_TIME_CACHE) && USE_TIME_CACHE)
-			portable_rwlock_wrlock(&cache_p->rw_lock); // lock wrlock
+			TIME_UTIL_WR_LOCK(&cache_p->rw_lock); // lock wrlock
 			if (cache_p->tval.tv_sec != tval_p->tv_sec)
 			{
 				//printf("now write time cache: %s\n", str);
@@ -275,7 +278,7 @@ static inline int get_time_str(char str[TIME_STR_SIZE], struct timeval* tval_p,
 				cache_p->timezone_hour = timezone_hour;
 				cache_p->tval = *tval_p;
 			}
-			portable_rwlock_unlock(&cache_p->rw_lock); // unlock wrlock
+			TIME_UTIL_RW_UNLOCK(&cache_p->rw_lock); // unlock wrlock
 		}
 	}
 	else // not use cache

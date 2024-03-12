@@ -6,12 +6,12 @@
 #define LOG_TAG "AUTOCOVER"
 #include "log/logger.h"
 
-typedef struct 
+typedef struct
 {
 	auto_cover_buf_handle cover_buf_p;
 	pthread_mutex_t mutex_coverbuf;
 	volatile uint32_t data_in_counter;
-	volatile bool exit_flag;
+	volatile bool flag_exit;
 } cover_case_data_t;
 
 static int autocover_buf_lock(void* user_data)
@@ -32,7 +32,7 @@ static void* thread_consumer(void* param)
 	cover_case_data_t* data_p = (cover_case_data_t*)param;
 	int ret = 0;
 	char buffer[16];
-	while (!(data_p->exit_flag))
+	while (!(data_p->flag_exit))
 	{
 		if (data_p->data_in_counter < sizeof(buffer)) // no enough data in queue
 		{
@@ -46,7 +46,8 @@ static void* thread_consumer(void* param)
 		{
 			LOGI("now read_pos=%u", read_pos);
 		}*/
-		if ((int)(sizeof(buffer)) == (ret = auto_cover_buf_read(data_p->cover_buf_p, read_pos, buffer, sizeof(buffer))))
+		if ((int)(sizeof(buffer)) == (ret = auto_cover_buf_read(data_p->cover_buf_p,
+			read_pos, (void*)buffer, sizeof(buffer))))
 		{
 			if (0x00 != buffer[0] || 0x0F != buffer[sizeof(buffer) - 1])
 			{
@@ -75,10 +76,11 @@ static void* thread_producer(void* param)
 	LOGD("--> producer thread in");
 	cover_case_data_t* data_p = (cover_case_data_t*)param;
 	char buffer[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F };
-	while (!(data_p->exit_flag))
+	while (!(data_p->flag_exit))
 	{
 		autocover_buf_lock(param);
-		if ((int)(sizeof(buffer)) == auto_cover_buf_write(data_p->cover_buf_p, buffer, sizeof(buffer)))
+		if ((int)(sizeof(buffer)) == auto_cover_buf_write(data_p->cover_buf_p,
+			(void*)buffer, sizeof(buffer)))
 		{
 			if (0 == data_p->data_in_counter)
 			{
@@ -103,7 +105,7 @@ int autocover_buffer_test()
 	LOGD("--> now test autocover_buffer!");
 	cover_case_data_t case_data = { 0 };
 	case_data.data_in_counter = 0;
-	case_data.exit_flag = false;
+	case_data.flag_exit = false;
 	pthread_mutex_init(&case_data.mutex_coverbuf, NULL);
 	//auto_cover_buf_lock_t buf_lock = 
 	//{
@@ -122,7 +124,7 @@ int autocover_buffer_test()
 
 	LOGI("running....wait 80s...");
 	sleep(80);
-	case_data.exit_flag = true;
+	case_data.flag_exit = true;
 	pthread_join(pthread_producer, NULL);
 	pthread_join(pthread_consumer, NULL);
 	LOGI("producer and consumer are both exited...");

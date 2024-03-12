@@ -40,11 +40,11 @@
 	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
-    |platform     | onekey deploy build                      | manual build                                     |
-    | --------    | :-----                                   | :----                                            |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
+    |platform     | onekey deploy build                      | manual build                                                    |
+    | --------    | :-----                                   | :----                                                           |
+    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                            |
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                        |
 	
     > there 3 way to integration pthread on windows：
     > * 0: implementing the pthread interface using the windows api
@@ -59,10 +59,10 @@
                and write some config like this:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-      # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
-      SET(PLATFORM Hisi)           # important: tell script the platform name
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      SET(PLATFORM hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_DIR "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux")
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-himix100-linux-")
@@ -97,8 +97,7 @@
       
       > example: go to ***tool*** folder, execute command:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
-      cmake --build ./build_hisi --config Release
+	  ./make_cross_platform.sh hisi Release
       ```
       > if target platform(toolchain) only support compile static library, follow these steps:
       ```shell
@@ -114,13 +113,17 @@
   > see `src_demo` folder, it demonstrate to you simple use case.
 
 ## License
-  > This library is free software; you can redistribute it and or modify it under the terms of the MIT license. See [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE) for details.
+  > This library is free software; you can redistribute it and or modify it under the terms of the [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
 
 ## Contact me
   > email: <hsjfox@foxmail.com>
 
 ----
 ## Release Log
+
+* **1.7.0**
+  > 1. added: portable_thread.h thread abstraction layer to facilitate porting thread function implementations on different platforms
+  > 2. update: make_cross_platform.sh supports automatically loading cross-compilation files (toolchain.cmake) and compiling.
 
 * **1.6.0**
   > 1. update: add pthread-win32 static library and dynamic library, Windows compilation supports 3 types of pthread dependency (0/1/2) 
@@ -131,7 +134,7 @@
 * **1.5.6**
   > 1. fix：when time_util hit cache, fmt_len over calculated.
   > 2. update: inih code, rename "ini_" to "ini_reader_", for prevent conflict with other projects
-  > 3. add：cmake script support define PLATFORM and PLATFORM_ABI, format output dir structure
+  > 3. added：cmake script support define PLATFORM and PLATFORM_ABI, format output dir structure
   > 4. feat: xlog support lock to enusure printing order on multi target
   > 5. add: README_zh-CN.md
   

@@ -25,16 +25,17 @@ struct _auto_cover_buf
 	buf_handle->buf_lock.release(buf_handle->buf_lock.arg);\
 };
 
-auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_buf_lock_t *buf_lock_p)
+auto_cover_buf_handle auto_cover_buf_create(__in uint32_t capacity_size,
+	__in_opt auto_cover_buf_lock_t* buf_lock_p)
 {
 	auto_cover_buf_handle buf_handle = (auto_cover_buf_handle)calloc(1, sizeof(struct _auto_cover_buf));
 	if (!buf_handle)
 	{
 		return NULL;
 	}
-#ifdef _WIN32
-#pragma warning(suppress:6386)
-#endif // _WIN32
+//#ifdef _WIN32
+//#pragma warning(suppress:6386)
+//#endif // _WIN32
 	if (buf_lock_p)
 	{
 		memcpy(&buf_handle->buf_lock, buf_lock_p, sizeof(auto_cover_buf_lock_t));
@@ -53,7 +54,8 @@ auto_cover_buf_handle auto_cover_buf_create(uint32_t capacity_size, auto_cover_b
  * read cover buf  start from read_pos
  * @return if return value below 0, that means the data you want to read start from read_pos is already covered.
  */
-static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, uint32_t read_pos, char* target, uint32_t request_read_len)
+static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, 
+	uint32_t read_pos, void* target, uint32_t request_read_len)
 {
 	ASSERT(buf_handle);
 	AUTOCOVER_LOCK(buf_handle);
@@ -114,26 +116,29 @@ static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, 
 	return real_can_read_len;
 }
 
-int auto_cover_buf_available_read(const auto_cover_buf_handle buf_handle, uint32_t read_pos)
+int auto_cover_buf_available_read(__in const auto_cover_buf_handle buf_handle,
+	__in uint32_t read_pos)
 {
 	return auto_cover_buf_internal_read(buf_handle, read_pos, NULL, 0);
 }
 
-int auto_cover_buf_read(const auto_cover_buf_handle buf_handle, uint32_t read_pos, char* target, uint32_t req_read_len)
+int auto_cover_buf_read(__in const auto_cover_buf_handle buf_handle,
+	__in uint32_t read_pos, __out void* target, __in uint32_t req_read_len)
 {
 	ASSERT(target);
 	ASSERT(req_read_len);
-	const int available_read_data = auto_cover_buf_internal_read(buf_handle, read_pos, target, req_read_len);
+	const int available_read_data = auto_cover_buf_internal_read(buf_handle, 
+		read_pos, target, req_read_len);
 	if (available_read_data < 0)
 	{
-		//error: data is been covered.
+		//error: data has been covered. we are return error code.
 		return available_read_data;
 	}
 	int real_read_len;
 	if (available_read_data < (int)req_read_len)
 	{
 		//error: not enough data, we NOT perform read operation.
-		real_read_len = AUTO_COVER_BUF_ERROR_DATA_NOT_ENOUGH;
+		real_read_len = AUTO_COVER_BUF_ERR_DATA_NOT_ENOUGH;
 	}
 	else
 	{
@@ -143,7 +148,8 @@ int auto_cover_buf_read(const auto_cover_buf_handle buf_handle, uint32_t read_po
 	return real_read_len;
 }
 
-int auto_cover_buf_write(const auto_cover_buf_handle buf_handle, char* source, uint32_t write_len)
+int auto_cover_buf_write(__in const auto_cover_buf_handle buf_handle,
+	__in const void* source, __in uint32_t write_len)
 {
 	ASSERT(buf_handle);
 	ASSERT(source);
@@ -161,7 +167,7 @@ int auto_cover_buf_write(const auto_cover_buf_handle buf_handle, char* source, u
 	return (int)real_write_len;
 }
 
-void auto_cover_buf_destroy(auto_cover_buf_handle* buf_handle_p)
+void auto_cover_buf_destroy(__inout auto_cover_buf_handle* buf_handle_p)
 {
 	if (NULL == buf_handle_p || NULL == *buf_handle_p)
 	{

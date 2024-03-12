@@ -15,21 +15,21 @@
   > 支持Windows上使用posix风格的线程/信号量（thread/semaphore）接口(感谢 [pthread-win32](https://sourceforge.net/projects/pthreads4w/)). 
 
 * **data**
-  > 常用数据结构和操作接口: 包括 ***array***, ***hashmap***, ***list***, ***base64*** ...
+  > 常用数据结构和操作接口: ***array***, ***hashmap***, ***list***, ***base64*** ...
 
 * **file**
-  > 常用文件操作: 包括 **file_util_read/write**, **ini_reader/parser** ...
+  > 常用文件操作:  **file_util_read/write**, **ini_reader/parser** ...
 
 * **memory**
-   *  **string** : 包括 ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
-   *  **allocator** : 跟踪和检测heap内存，帮助你提早发现内存泄露和内存破坏等问题.
+   *  **string** : ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
+   *  **allocator** : 跟踪和检测heap内存，帮助你提早发现内存泄露和踩内存等问题.
    *  **mplite** : 内存池实现 [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
 * **ring_buffer**
-  > 环形队列: 包括 ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
+  > 环形队列: ***ringbuffer***, ***ring_msg_queue***, ***msg_queue_handler***, ***autocover_buffer*** ...
 
 * **time**
-  > 常用时间操作: 包括 ***current_milliseconds***, ***fast_second2date*** ...
+  > 常用时间操作: ***current_milliseconds***, ***fast_second2date*** ...
 
 ----
 ## 编译
@@ -41,11 +41,11 @@
     
     > 简要示例:
     
-    |平台         | 一键部署编译                             | 手动编译                                         |
-    | --------    | :-----                                   | :----                                            |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `             | 
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_linux.sh m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `         |
+    |平台         | 一键部署编译                             | 手动编译                                                           |
+    | --------    | :-----                                   | :----                                                              |
+    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                               | 
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                           |
   
     > windows 平台 posix pthread 实现方式有三种: 
     >  * 0: 使用 windows api 模拟 pthread 接口
@@ -60,10 +60,10 @@
             然后写一些类似下面的交叉编译配置信息:
       ```cmake
       SET(UNIX TRUE CACHE BOOL "")
-      # Tell the cmake script what the platform name is, must setup this for cross compile
       SET(CMAKE_SYSTEM_NAME Linux) # this one is important
       SET(CMAKE_SYSTEM_VERSION 1)  # this one not so much
-      SET(PLATFORM Hisi)           # important: tell script the platform name
+	  # Tell the cmake script what the platform name is, must setup this for cross compile
+      SET(PLATFORM hisi)           # important: tell script the platform name
       
       SET(CROSS_TOOLCHAIN_DIR "/root/toolchains/hisi-linux/x86-arm/arm-himix100-linux")
       SET(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-himix100-linux-")
@@ -98,8 +98,7 @@
       
       > 示例: 进入 ***tool*** 文件夹里，执行命令:
       ```shell
-      cmake -H. -B./build_hisi -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchains/hisi.toolchain.cmake 
-      cmake --build ./build_hisi --config Release
+	  ./make_cross_platform.sh hisi Release
       ```
      > 若平台(编译链)仅支持编译静态库，可以这么来编译:
      ```shell
@@ -114,13 +113,17 @@
   > 请看 **src_demo** 目录，每个模块有对应的测试用例.
 
 ## 许可证
-  > 本库是免费软件; 你可以根据MIT许可证的条款重新分发或修改它. 详情请见 [MIT License](https://github.com/wind0ws/libcutils/blob/master/LICENSE).
+  > 本库是免费软件; 你可以根据Apache2.0许可证的条款重新分发或修改它. 详情请见 [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
 
 ## 联系方式
   > 邮箱: <hsjfox@foxmail.com>
 ----
 ## 更新日志
 
+* **1.7.0**
+  > 1. 新增: portable_thread.h 线程抽象层，方便移植不同平台的线程函数实现 
+  > 2. 更新: make_cross_platform.sh 支持自动加载交叉编译文件（toolchain.cmake）并编译。
+  
 * **1.6.0**
   > 1. 更新: 添加 pthread-win32 静态库和动态库，Windows编译支持3种pthread依赖方式（0/1/2）
   > 2. 修复: 在Windows下 include <windows.h> 报 C5105 警告

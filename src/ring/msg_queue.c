@@ -15,11 +15,11 @@ typedef struct
 
 msg_queue msg_queue_create(__in uint32_t buf_size)
 {
-	if (buf_size < 2)
+	if (buf_size < (sizeof(msg_header_t) + 4U))
 	{
 		return NULL;
 	}
-	const size_t expect_mem_size = buf_size + sizeof(struct __msg_queue);
+	const size_t expect_mem_size = sizeof(struct __msg_queue) + buf_size;
 	char *raw_mem = (char *)malloc(expect_mem_size);
 	if (!raw_mem)
 	{
@@ -68,7 +68,8 @@ uint32_t msg_queue_next_msg_size(__in msg_queue msg_queue_p)
 	return header.msg_size;
 }
 
-MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __inout void* msg_p, __inout uint32_t* msg_size_p)
+__success(return == MSG_Q_CODE_SUCCESS)
+MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __out void* msg_p, __inout uint32_t * msg_size_p)
 {
 	if (!msg_queue_p || !msg_p || !msg_size_p)
 	{

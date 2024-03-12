@@ -8,8 +8,8 @@
 #include <stdio.h>       /* for fopen */
 #include <stdlib.h>      /* for atoi/atol/atof */
 
-#define INI_VALUE_STACK_SIZE (128)
-#define SECTION_NAME_MAX_SIZE INI_VALUE_STACK_SIZE
+#define INI_VALUE_STACK_SIZE (256)
+#define SECTION_NAME_MAX_SIZE (INI_VALUE_STACK_SIZE / 4)
 
 typedef enum
 {
@@ -29,7 +29,7 @@ typedef struct
 
 typedef struct
 {
-	char key[INI_VALUE_STACK_SIZE];
+	char key[SECTION_NAME_MAX_SIZE];
 	char value[INI_VALUE_STACK_SIZE];
 } key_value_t;
 
@@ -373,19 +373,19 @@ INI_PARSER_CODE ini_parser_delete_section(ini_parser_handle parser_p, const char
 
 static bool iter_key_value_for_dump(void* data, void* context)
 {
-	if (!data || !context) // key is key, value is value.
+	if (!data || !context) // data is pointer of key_value_t.
 	{
 		return true; // just continue
 	}
 	key_value_t* p_kv = (key_value_t*)data;
-	dump_ini_context* dup_ctx = (dump_ini_context*)context;
-	if ((dup_ctx->ret_code = stringbuilder_appendf(dup_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)) != 0)
+	dump_ini_context* dump_ctx = (dump_ini_context*)context;
+	if ((dump_ctx->ret_code = stringbuilder_appendf(dump_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)) != 0)
 	{
 #if(!defined(NDEBUG) || defined(_DEBUG))
 		printf("ERROR[%s:%d]: failed on append %s=%s to stringbuilder. %d",
-			__FILE__, __LINE__, p_kv->key, p_kv->value, dup_ctx->ret_code);
+			__FILE__, __LINE__, p_kv->key, p_kv->value, dump_ctx->ret_code);
 #endif // !NDEBUG || _DEBUG
-		ASSERT_ABORT(dup_ctx->ret_code);
+		ASSERT_ABORT(dump_ctx->ret_code);
 		return false;
 	}
 	return true;
@@ -393,19 +393,19 @@ static bool iter_key_value_for_dump(void* data, void* context)
 
 static bool iter_section_for_dump(void* data, void* context)
 {
-	if (!data || !context) // data is section_info_t *
+	if (!data || !context) // data is pointer of section_info_t.
 	{
 		return true;
 	}
 	section_info_t* p_section = (section_info_t*)data;
-	dump_ini_context* dup_ctx = (dump_ini_context*)context;
-	if (dup_ctx->ret_code)
+	dump_ini_context* dump_ctx = (dump_ini_context*)context;
+	if (dump_ctx->ret_code)
 	{
 		return false; // error occurred on foreach last section, break chain.
 	}
-	stringbuilder_appendf(dup_ctx->sb, "[%s]\r\n", (char*)p_section->section_name);
-	list_foreach(p_section->plist_section, iter_key_value_for_dump, dup_ctx);
-	stringbuilder_appendstr(dup_ctx->sb, "\r\n");
+	stringbuilder_appendf(dump_ctx->sb, "[%s]\r\n", (char*)p_section->section_name);
+	list_foreach(p_section->plist_section, iter_key_value_for_dump, dump_ctx);
+	stringbuilder_appendstr(dump_ctx->sb, "\r\n");
 	return true;
 }
 
@@ -459,14 +459,14 @@ INI_PARSER_CODE ini_parser_save(ini_parser_handle parser_p, const char* file_pat
 	return INI_PARSER_CODE_SUCCEED;
 }
 
-INI_PARSER_CODE ini_parser_have_section_key(ini_parser_handle parser_p, const char* section, const char* key)
+INI_PARSER_CODE ini_parser_has_section_key(ini_parser_handle parser_p, const char* section, const char* key)
 {
 	return ini_parser_get_string(parser_p, section, key, NULL, 0);
 }
 
-INI_PARSER_CODE ini_parser_have_section(ini_parser_handle parser_p, const char* section)
+INI_PARSER_CODE ini_parser_has_section(ini_parser_handle parser_p, const char* section)
 {
-	return ini_parser_have_section_key(parser_p, section, NULL);
+	return ini_parser_has_section_key(parser_p, section, NULL);
 }
 
 INI_PARSER_CODE ini_parser_get_bool(ini_parser_handle parser_p, const char* section, const char* key, bool* value)
@@ -541,7 +541,7 @@ static INI_PARSER_CODE ini_parser_get_value(ini_parser_handle parser_p,
 	const char* section, const char* key, void* value, INI_VALUE_TYPE value_type)
 {
 	char str_value[INI_VALUE_STACK_SIZE] = { 0 };
-	INI_PARSER_CODE ret = ini_parser_get_string(parser_p, section, key, str_value, INI_VALUE_STACK_SIZE);
+	INI_PARSER_CODE ret = ini_parser_get_string(parser_p, section, key, str_value, sizeof(str_value));
 	if (INI_PARSER_CODE_SUCCEED != ret)
 	{
 		return ret;
@@ -569,6 +569,16 @@ if (!end_ptr || *end_ptr != '\0') { ret = INI_PARSER_CODE_FAILED; break; }\
 				break;
 			}
 			if (0 == strncasecmp(str_value, "false", 5))
+			{
+				result = false;
+				break;
+			}
+			if (0 == strncasecmp(str_value, "yes", 3))
+			{
+				result = true;
+				break;
+			}
+			if (0 == strncasecmp(str_value, "no", 2))
 			{
 				result = false;
 				break;

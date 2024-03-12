@@ -7,7 +7,7 @@
 #include <windows.h>
 #pragma warning(pop)
 
-static const DWORD MS_VC_EXCEPTION = 0x406D1388;
+#define MS_VC_EXCEPTION  (DWORD)0x406D1388
 #pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO
 {

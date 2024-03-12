@@ -4,6 +4,7 @@
 //extern 
 LogLevel _g_slog_min_level = LOG_LEVEL_VERBOSE;
 
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 typedef struct slog_config
 {
 	/* the file pointer after redirect stdout */
@@ -11,15 +12,16 @@ typedef struct slog_config
 } slog_config_t;
 
 static slog_config_t g_slog = { NULL };
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
 void slog_set_min_level(LogLevel min_level)
 {
 	if (min_level < LOG_LEVEL_OFF || min_level > LOG_LEVEL_ERROR)
 	{
-		fprintf(stderr, "[SLog] (%s:%d) invalid min_level:%d\n", __func__, __LINE__, min_level);
+		fprintf(stderr, "[slog] (%s:%d) invalid min_level:%d\n", __func__, __LINE__, min_level);
 		return; // invalid min_level
 	}
-	fprintf(stderr, "[SLog] (%s:%d) set new log_min_level:%d\n", __func__, __LINE__, min_level);
+	fprintf(stderr, "[slog] (%s:%d) set new log_min_level:%d\n", __func__, __LINE__, min_level);
 	_g_slog_min_level = min_level;
 }
 
@@ -42,7 +44,7 @@ void slog_stdout2file(char* file_path)
 	}
 	if (g_slog.fp_out && (g_slog.fp_out != stdout))
 	{
-		fprintf(stderr, "[SLog] (%s:%d) WARN: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
+		fprintf(stderr, "[slog] (%s:%d) WARN: did you forgot to close the redirect stdout file stream!\n", __func__, __LINE__);
 		fflush(g_slog.fp_out);
 		fclose(g_slog.fp_out);
 	}
@@ -50,7 +52,7 @@ void slog_stdout2file(char* file_path)
 	g_slog.fp_out = freopen(file_path, "w", stdout);
 	if (!g_slog.fp_out)
 	{
-		fprintf(stderr, "[SLog] (%s:%d) Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+		fprintf(stderr, "[slog] (%s:%d) Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
 	}
 }
 
@@ -66,7 +68,7 @@ void slog_back2stdout()
 	g_slog.fp_out = NULL;
 	if (!freopen(_STDOUT_NODE, "w", stdout))
 	{
-		fprintf(stderr, "[SLog] (%s:%d) Error: failed on freopen to stdout\n", __func__, __LINE__);
+		fprintf(stderr, "[slog] (%s:%d) Error: failed on freopen to stdout\n", __func__, __LINE__);
 	}
 }
 
@@ -76,9 +78,9 @@ void slog_back2stdout()
 
 #endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
-void __slog_internal_hex_print(int level, const char* tag, char* chars, size_t chars_count)
+void __slog_internal_hex_print(int level, const char* tag, const char* chars, size_t chars_count)
 {
-	char buf[512];
+	char buf[256];// use small stack size
 	str_char2hex(buf, sizeof(buf), chars, chars_count);
 	switch (level)
 	{

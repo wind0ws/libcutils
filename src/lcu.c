@@ -16,6 +16,7 @@ int lcu_global_init()
 	{
 		return 0;
 	}
+	// do not use any lcu function before init! such as XLOG, get TIME 
 	int ret = time_util_global_init();
 	ret |= xlog_global_init();
 	return ret;
@@ -27,6 +28,7 @@ int lcu_global_cleanup()
 	{
 		return 0;
 	}
+	// now cleanup, do not use any lcu function after cleanup!
 	int ret = xlog_global_cleanup();
 	ret |= time_util_global_cleanup();
 	return ret;

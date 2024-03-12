@@ -1,4 +1,4 @@
-#include "thread/posix_thread.h"
+#include "thread/portable_thread.h"
 #define LOG_TAG "THREAD_TEST"
 #include "log/logger.h"
 #include <string.h>
@@ -10,10 +10,10 @@ static void* thread_test_func(void* args)
 		goto EXIT;
 	}
 	int code;
-	PTHREAD_SETNAME(pthread_self(), "thr_func");
+	THREAD_SETNAME_FOR_CURRENT("thr_test");
 	LOGI("Hello pthread. id:%ld, now sem_wait...", (long)GETTID());
-	sem_t* psem = (sem_t*)args;
-	if (0 != (code = sem_wait(psem)))
+	portable_sem_t* psem = (portable_sem_t*)args;
+	if (0 != (code = portable_sem_wait(psem)))
 	{
 		LOGE_TRACE("error on sem_wait, code=%d", code);
 	}
@@ -26,27 +26,25 @@ EXIT:
 static int sem_test()
 {
 	int code;
-	sem_t sem;
+	portable_sem_t sem;
 	LOGD_TRACE(" --> ");
 
 	memset(&sem, 0, sizeof(sem));
-	sem_t* psem = &sem;
-	sem_init(psem, 0, 0);
+	portable_sem_t* psem = &sem;
+	portable_sem_init(psem, 0, 0);
 
-	pthread_t thread;
-	pthread_create(&thread, NULL, thread_test_func, psem);
+	portable_thread_t thread;
+	portable_thread_create(&thread, NULL, thread_test_func, psem);
 
 	sleep(1);
 	LOGD("now sem_post...");
-	if ((code = sem_post(psem)))
+	if ((code = portable_sem_post(psem)))
 	{
 		LOGE("error on sem_post. code=%d", code);
 	}
-	pthread_join(thread, NULL);
+	portable_thread_join(thread, NULL);
 
-	sem_destroy(psem);
-	//sem_unlink(sem);
-	//sem_close(sem);
+	portable_sem_destroy(psem);
 	LOGD_TRACE(" <-- ");
 	return 0;
 }

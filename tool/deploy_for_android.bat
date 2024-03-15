@@ -1,15 +1,21 @@
-@ECHO OFF &PUSHD %~DP0 &TITLE deploy_android &color 0A
+@ECHO OFF &PUSHD %~DP0 &TITLE deploy_android &COLOR 0A
+
+set _build_type=%1
+if "%_build_type%" EQU "" (
+  set _build_type=Release
+) 
+@echo BUILD_TYPE=%_build_type%
 
 set BUILD_SCRIPT=make_android.bat
 ::param 1 for arch
 ::param 2 for build type
-call %BUILD_SCRIPT% armeabi-v7a Release
+call %BUILD_SCRIPT% armeabi-v7a %_build_type%
 IF %ERRORLEVEL% NEQ 0 goto label_build_failed
-call %BUILD_SCRIPT% arm64-v8a Release
+call %BUILD_SCRIPT% arm64-v8a %_build_type%
 IF %ERRORLEVEL% NEQ 0 goto label_build_failed
-call %BUILD_SCRIPT% x86 Release
+call %BUILD_SCRIPT% x86 %_build_type%
 IF %ERRORLEVEL% NEQ 0 goto label_build_failed
-call %BUILD_SCRIPT% x86_64 Release
+call %BUILD_SCRIPT% x86_64 %_build_type%
 IF %ERRORLEVEL% NEQ 0 (goto label_build_failed) else (goto label_build_succeed)
 
 :label_build_failed
@@ -21,5 +27,5 @@ IF %ERRORLEVEL% NEQ 0 (goto label_build_failed) else (goto label_build_succeed)
 
 :label_build_succeed
 @echo.
-@echo ...deploy android finished...
+@echo ...deploy android(%_build_type%) finished...
 @echo.

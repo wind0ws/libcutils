@@ -1,5 +1,10 @@
-@ECHO OFF &PUSHD %~DP0 &TITLE setup_env &color 0A
+@ECHO OFF & PUSHD %~DP0 & TITLE setup_env & COLOR 0A
 
+::for /f %%a in ('dir /a:d /b %ANDROID_SDK%\cmake\') do set cmake_version=%%a
+::echo "find cmake version %cmake_version%"
+::set cmake_version=3.10.2.4988404
+::set CMAKE_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
+::set NINJA_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set CMAKE_BIN=cmake.exe
 @echo cmake version: 
 %CMAKE_BIN% --version
@@ -14,20 +19,6 @@ IF %ERR_CODE% NEQ 0 (
    )
 )
 @echo.
-
-::set ANDROID_SDK=D:\Android\android-sdk
-::set ANDROID_NDK=%ANDROID_SDK%\ndk\16.1.4479499
-set ANDROID_NDK=D:\Android\ndk-multiversion\android-ndk-r16b
-set ANDROID_TOOLCHAIN_FILE=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
-set ANDROID_PLATFORM=android-19 
-set ANDROID_STL=c++_static
-::set ANDROID_STL=gnustl_static
-
-::for /f %%a in ('dir /a:d /b %ANDROID_SDK%\cmake\') do set cmake_version=%%a
-::echo "find cmake version %cmake_version%"
-::set cmake_version=3.10.2.4988404
-::set CMAKE_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\cmake.exe
-::set NINJA_BIN=%ANDROID_SDK%\cmake\%cmake_version%\bin\ninja.exe
 set NINJA_BIN=ninja.exe
 @echo ninja version: 
 %NINJA_BIN% --version
@@ -43,25 +34,20 @@ IF %ERR_CODE% NEQ 0 (
 )
 @echo.
 
-
+@echo.
 @echo =================== Your Environment ===================
-@echo.
 @echo CMAKE_BIN=%CMAKE_BIN%
-@echo.
 @echo NINJA_BIN=%NINJA_BIN%
-@echo ANDROID_NDK=%ANDROID_NDK%
-@echo ANDROID_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE%
-@echo ANDROID_PLATFORM=%ANDROID_PLATFORM%
-@echo ANDROID_STL=%ANDROID_STL%
-@echo.
 @echo ========================================================
+@echo.
+
 
 set BUILD_ABI=%1
 if "%BUILD_ABI%" EQU "" (
   @echo Now you should input build abi.
   goto label_input_abi
 ) else (
-  @echo your BUILD_ABI is %BUILD_ABI%
+  @echo your BUILD_ABI: %BUILD_ABI%
   goto label_check_build_type
 )
 
@@ -76,10 +62,11 @@ if "%BUILD_TYPE%" EQU "Release" goto label_run_next_bat
 if "%BUILD_TYPE%" EQU "Debug" goto label_run_next_bat
 if "%BUILD_TYPE%" EQU "MinSizeRel" goto label_run_next_bat
 if "%BUILD_TYPE%" EQU "RelWithDebInfo" goto label_run_next_bat
-@echo unknown BUILD_TYPE=%BUILD_TYPE%, available "Debug" / "Release"
+@echo unknown BUILD_TYPE=%BUILD_TYPE%, available types are: "Debug" / "Release" / "MinSizeRel" / "RelWithDebInfo"
 @exit /b 2
 
 :label_run_next_bat
 @echo.
-@echo   hello... now compile it...
+@echo   hello... now compile it(%BUILD_ABI%  %BUILD_TYPE%)...
 @echo.
+@exit /b 0

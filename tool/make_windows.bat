@@ -9,10 +9,10 @@ if %ERRORLEVEL% NEQ 0 (
 :lable_check_thread_mode
 set WIN_PTHREAD_MODE=%3
 if "%WIN_PTHREAD_MODE%" EQU "" (
-  @echo now you should choose win pthread mode.
+  @echo now you should choose windows pthread_mode.
   goto label_choose_win_pthread
 ) else (
-  @echo your pthread_mode is %WIN_PTHREAD_MODE%
+  @echo your windows pthread_mode is %WIN_PTHREAD_MODE%
   goto label_select_vs
 )
 
@@ -78,7 +78,7 @@ if %ERRORLEVEL% NEQ 0 (
   goto label_check_params
 )
 
-@echo "error: not support your vs version! maybe it too old!"
+@echo error: not support your vs version! maybe it too old!
 @exit /b 2
 ::============= VS check complete =========================  
 
@@ -124,7 +124,7 @@ IF %ERR_CODE% NEQ 0 (
 )
 
 @echo.
-@echo "compile finished(%ERR_CODE%). bye bye..."
+@echo "compile %PLATFORM% %BUILD_ABI% %BUILD_TYPE% finished(%ERR_CODE%). bye bye..."
 ::@pause>nul
 ::color 0F
 @exit /b %ERR_CODE%

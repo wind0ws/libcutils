@@ -22,7 +22,7 @@ stringbuilder_t* stringbuilder_create(size_t init_buf_size)
 	{
 		return NULL;
 	}
-	if (init_buf_size < 8)
+	if (init_buf_size < 2)
 	{
 		init_buf_size = STRING_BUILDER_DEFAULT_SIZE;
 	}
@@ -177,7 +177,7 @@ size_t stringbuilder_len(const stringbuilder_t* sb)
 	return sb->length;
 }
 
-const char* stringbuilder_print(const stringbuilder_t* sb)
+const char* stringbuilder_to_string(const stringbuilder_t* sb)
 {
 	return sb->buffer;
 }

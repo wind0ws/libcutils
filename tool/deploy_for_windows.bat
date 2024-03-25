@@ -12,10 +12,10 @@ if "%_build_type%" EQU "" (
 ::param 4 for VS_VER: such as "Visual Studio 14 2015"; if you not provide, script auto detect it
 :: example: call make_windows.bat Win64 Debug 1 "Visual Studio 14 2015 Win64"
 :: example: call make_windows.bat Win32 Debug 1 "Visual Studio 14 2015"
-:: example: call make_windows.bat Win32 Debug 1 "Visual Studio 14 2017"
-:: example: call make_windows.bat Win64 Debug 1 "Visual Studio 14 2017"
-::  as you can see, vs version below 2017, Win64 should append on version string.
-::  vs2017/2019/2022 no need do that. should be careful of this
+:: example: call make_windows.bat Win32 Debug 1 "Visual Studio 16 2019"
+:: example: call make_windows.bat Win64 Debug 1 "Visual Studio 16 2019"
+::  as you can see, vs version below 2019, Win64 should append on version string.
+::  vs2019/2022 no need do that. should be careful of this
 
 call make_windows.bat Win32 %_build_type% 1
 IF %ERRORLEVEL% NEQ 0 goto label_build_failed

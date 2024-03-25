@@ -171,7 +171,7 @@ int portable_rwlock_init(portable_rwlock_t* lock, const void* attr)
 		return -2;
 	}
 	memset(posix, 0, sizeof(portable_rwlock_posix_t));
-	ret = pthread_rwlock_init(&posix->id, attr);
+	ret = pthread_rwlock_init(&posix->id, (const pthread_rwlockattr_t*)attr);
 	if (0 == ret)
 	{
 		*lock = posix;

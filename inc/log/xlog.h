@@ -228,10 +228,13 @@ extern "C" {
 #endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
 
 // better 'define LOG_TAG "xxx"' before include "xlog.h"
-// if not, we use default TAG which you called on xlog_set_default_tag
+// if not, we use default TAG, which you called on xlog_set_default_tag
 #ifndef LOG_TAG
 #define LOG_TAG  NULL
 #endif // !LOG_TAG
+#ifndef _LOG_TAG
+#define _LOG_TAG LOG_TAG
+#endif // !_LOG_TAG
 
 #define TLOGV(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGD(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
@@ -239,11 +242,11 @@ extern "C" {
 #define TLOGW(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__)
 #define TLOGE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__)
 
-#define LOGV(fmt, ...) TLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...) TLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...) TLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...) TLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...) TLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...) TLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...) TLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) TLOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) TLOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) TLOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define TLOGV_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGD_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
@@ -251,11 +254,11 @@ extern "C" {
 #define TLOGW_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGE_TRACE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define LOGV_TRACE(fmt, ...) TLOGV_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD_TRACE(fmt, ...) TLOGD_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI_TRACE(fmt, ...) TLOGI_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW_TRACE(fmt, ...) TLOGW_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE_TRACE(fmt, ...) TLOGE_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV_TRACE(fmt, ...) TLOGV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...) TLOGD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...) TLOGI_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...) TLOGW_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...) TLOGE_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define TLOGV_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_VERBOSE, tag, chars, chars_count)
 #define TLOGD_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_DEBUG, tag, chars, chars_count)
@@ -263,11 +266,11 @@ extern "C" {
 #define TLOGW_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_WARN, tag, chars, chars_count)
 #define TLOGE_HEX(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_ERROR, tag, chars, chars_count)
 
-#define LOGV_HEX(chars, chars_count) TLOGV_HEX(LOG_TAG, chars, chars_count)
-#define LOGD_HEX(chars, chars_count) TLOGD_HEX(LOG_TAG, chars, chars_count)
-#define LOGI_HEX(chars, chars_count) TLOGI_HEX(LOG_TAG, chars, chars_count)
-#define LOGW_HEX(chars, chars_count) TLOGW_HEX(LOG_TAG, chars, chars_count)
-#define LOGE_HEX(chars, chars_count) TLOGE_HEX(LOG_TAG, chars, chars_count)
+#define LOGV_HEX(chars, chars_count) TLOGV_HEX(_LOG_TAG, chars, chars_count)
+#define LOGD_HEX(chars, chars_count) TLOGD_HEX(_LOG_TAG, chars, chars_count)
+#define LOGI_HEX(chars, chars_count) TLOGI_HEX(_LOG_TAG, chars, chars_count)
+#define LOGW_HEX(chars, chars_count) TLOGW_HEX(_LOG_TAG, chars, chars_count)
+#define LOGE_HEX(chars, chars_count) TLOGE_HEX(_LOG_TAG, chars, chars_count)
 
 #endif // LCU_XLOG_OFF
 

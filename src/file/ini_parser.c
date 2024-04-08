@@ -248,7 +248,7 @@ static bool iter_for_search_target_section(void* data, void* context)
 {
 	char* section_name = (char*)context;
 	section_info_t* p_section_info = (section_info_t*)data;
-	return strcasecmp(section_name, p_section_info->section_name) != 0;
+	return 0 != strcasecmp(section_name, p_section_info->section_name);
 }
 
 static section_info_t* search_target_section(ini_parser_handle parser_p, bool auto_create,

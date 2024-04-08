@@ -6,6 +6,20 @@
 #ifndef LOG_TAG
 #error you forgot to 'define LOG_TAG' before include "logger.h"!
 #endif // !LOG_TAG
+#ifdef _LOG_TAG
+#error DO NOT 'define LOG_TAG', define LOG_TAG instead!
+#endif // _LOG_TAG
+
+#ifndef LOG_TAG_PREFIX
+#define LOG_TAG_PREFIX ""
+#endif // !LOG_TAG_PREFIX
+
+#ifndef LOG_TAG_SUFFIX
+#define LOG_TAG_SUFFIX ""
+#endif // !LOG_TAG_SUFFIX
+
+// the real LOG TAG for macro to use.
+#define _LOG_TAG   LOG_TAG_PREFIX LOG_TAG LOG_TAG_SUFFIX 
 
 #define  _LCU_LOGGER_TYPE_XLOG  (0)
 #define  _LCU_LOGGER_TYPE_SLOG  (1)

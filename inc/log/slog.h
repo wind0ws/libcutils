@@ -88,6 +88,9 @@ extern "C" {
 #ifndef LOG_TAG
 #define LOG_TAG  "SLOG"
 #endif // !LOG_TAG
+#ifndef _LOG_TAG
+#define _LOG_TAG LOG_TAG
+#endif // !_LOG_TAG
 
 #define SLOGV(tag, fmt, ...)          _SLOGV_IMPL(tag, fmt, ##__VA_ARGS__)
 #define SLOGD(tag, fmt, ...)          _SLOGD_IMPL(tag, fmt, ##__VA_ARGS__)
@@ -109,23 +112,23 @@ extern "C" {
 
 //===================================================================================================
 
-#define LOGV(fmt, ...) SLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...) SLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...) SLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...) SLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...) SLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...) SLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...) SLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) SLOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) SLOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) SLOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define LOGV_TRACE(fmt, ...) SLOGV_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD_TRACE(fmt, ...) SLOGD_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI_TRACE(fmt, ...) SLOGI_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW_TRACE(fmt, ...) SLOGW_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE_TRACE(fmt, ...) SLOGE_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV_TRACE(fmt, ...) SLOGV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...) SLOGD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...) SLOGI_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...) SLOGW_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...) SLOGE_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define LOGV_HEX(chars, chars_count) SLOGV_HEX(LOG_TAG, chars, chars_count)
-#define LOGD_HEX(chars, chars_count) SLOGD_HEX(LOG_TAG, chars, chars_count)
-#define LOGI_HEX(chars, chars_count) SLOGI_HEX(LOG_TAG, chars, chars_count)
-#define LOGW_HEX(chars, chars_count) SLOGW_HEX(LOG_TAG, chars, chars_count)
-#define LOGE_HEX(chars, chars_count) SLOGE_HEX(LOG_TAG, chars, chars_count)
+#define LOGV_HEX(chars, chars_count) SLOGV_HEX(_LOG_TAG, chars, chars_count)
+#define LOGD_HEX(chars, chars_count) SLOGD_HEX(_LOG_TAG, chars, chars_count)
+#define LOGI_HEX(chars, chars_count) SLOGI_HEX(_LOG_TAG, chars, chars_count)
+#define LOGW_HEX(chars, chars_count) SLOGW_HEX(_LOG_TAG, chars, chars_count)
+#define LOGE_HEX(chars, chars_count) SLOGE_HEX(_LOG_TAG, chars, chars_count)
 
 #define TLOGV(tag, fmt, ...)  SLOGV(tag, fmt, ##__VA_ARGS__)
 #define TLOGD(tag, fmt, ...)  SLOGD(tag, fmt, ##__VA_ARGS__)

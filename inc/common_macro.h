@@ -211,7 +211,7 @@ typedef intptr_t ssize_t;
      do {                                                                           \
           if (expr) break;                                                          \
           EMERGENCY_LOG("API check '%s' failed at '%s' (%s:%d)",                    \
-	          #expr, __PRETTY_FUNCTION__, __FILE__, line);                          \
+	          #expr, __func__, __FILE__, line);                                     \
 	      abort();                                                                  \
      } while(0)
 #else

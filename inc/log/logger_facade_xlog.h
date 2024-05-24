@@ -4,10 +4,12 @@
 
 #include "log/xlog.h"
 
-#define _LOG_INIT_IMPL(params)             do { (void)(params); xlog_global_init(); } while(0)
-#define _LOG_DEINIT_IMPL(params)           do { (void)(params); xlog_global_cleanup(); } while(0)
-#define _LOG_SET_MIN_LEVEL_IMPL(min_level) xlog_set_min_level(min_level)
-#define _LOG_GET_MIN_LEVEL_IMPL()          xlog_get_min_level()
+#define _LOG_INIT_IMPL(params)              do { (void)(params); xlog_global_init(); } while(0)
+#define _LOG_DEINIT_IMPL(params)            do { (void)(params); xlog_global_cleanup(); } while(0)
+#define _LOG_SET_MIN_LEVEL_IMPL(min_level)  do { if ((min_level) < LOG_LEVEL_OFF || (min_level) > LOG_LEVEL_UNKNOWN) { break; } \
+                                                 xlog_set_min_level((LogLevel)(min_level)); \
+                                            } while (0)
+#define _LOG_GET_MIN_LEVEL_IMPL()           xlog_get_min_level()
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #define _LOG_STD2FILE_IMPL(file_path)       xlog_stdout2file(file_path)

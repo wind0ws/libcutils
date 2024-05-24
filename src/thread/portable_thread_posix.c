@@ -29,7 +29,7 @@ typedef struct
 } portable_sem_posix_t;
 
 
-unsigned long portable_gettid()
+unsigned long portable_thread_gettid()
 {	
 	return (unsigned long)GETTID();
 }

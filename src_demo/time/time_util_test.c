@@ -4,7 +4,7 @@
 #include "time/time_rfc2822.h"
 #include "thread/posix_thread.h"
 
-#define LOG_TAG          ("TIME_TEST")
+#define LOG_TAG          "TIME_TEST"
 #include "log/logger.h"
 
 #define HOUR_TO_SECONDS  (3600)

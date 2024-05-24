@@ -3,6 +3,7 @@
 #define LCU_LOGGER_H
 
 //don't forget to '#define LOG_TAG "xxx" ' before include this header
+// notice: do not add parenthesis for LOG_TAG string
 #ifndef LOG_TAG
 #error you forgot to 'define LOG_TAG' before include "logger.h"!
 #endif // !LOG_TAG

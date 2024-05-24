@@ -5,13 +5,13 @@
 #include "thread/portable_thread.h"
 #include <malloc.h>
 
-#define _LOG_TAG          "FIXED_Q_HDL"
+#define Q_LOG_TAG         "FIXED_Q_HDL"
 
-#define MY_LOGV(fmt,...)  SLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGD(fmt,...)  SLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGI(fmt,...)  SLOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGW(fmt,...)  SLOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
-#define MY_LOGE(fmt,...)  SLOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGV(fmt,...)  SLOGV(Q_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGD(fmt,...)  SLOGD(Q_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGI(fmt,...)  SLOGI(Q_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGW(fmt,...)  SLOGW(Q_LOG_TAG, fmt, ##__VA_ARGS__)
+#define MY_LOGE(fmt,...)  SLOGE(Q_LOG_TAG, fmt, ##__VA_ARGS__)
 
 typedef struct
 {

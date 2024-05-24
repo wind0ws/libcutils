@@ -199,8 +199,7 @@ static bool iter_foreach_section_key_value(void* data, void* context)
 {
 	ini_foreach_context_t* context_p = (ini_foreach_context_t*)context;
 	key_value_t* p_kv = (key_value_t*)data;
-	if (NULL == p_kv || NULL == p_kv->key
-		|| '\0' == p_kv->key[0])
+	if (NULL == p_kv || '\0' == p_kv->key[0])
 	{
 		return true; // just ignored empty key and continue
 	}

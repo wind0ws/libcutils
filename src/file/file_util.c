@@ -19,7 +19,7 @@
 #define WRITE_FUNC                     _write
 #else								   
 #define ACCESS(file_name, access_mode) access(file_name, access_mode)
-#define MKDIR(path)                    mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IWOTH | S_IXOTH);
+#define MKDIR(path)                    mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IWOTH | S_IXOTH)
 #define READ_FUNC                      read
 #define WRITE_FUNC                     write
 #endif // WIN32

@@ -10,9 +10,9 @@ typedef struct
 	msg_queue_handler handler;
 } my_handler_t;
 
-static void pri_on_notify_msg_handler_status(msg_q_handler_status_e status, void* user_data)
+static void pri_on_msg_q_handler_status_changed(msg_q_handler_status_e status, void* user_data)
 {
-	LOGI("detect msg queue hander status: %d", status);
+	LOGI("detected msg_queue_hander new status: %d", status);
 }
 
 static int pri_handle_queue_msg(queue_msg_t* msg_p, void* user_data)
@@ -29,8 +29,8 @@ static int run_msg_queue_handler_testcase()
 	msg_queue_handler_init_param_t init_param =
 	{
 		.user_data = &my_hdl,
-		.process_msg = pri_handle_queue_msg,
-		.notify_msg_handler_status = pri_on_notify_msg_handler_status,
+		.fn_handle_msg = pri_handle_queue_msg,
+		.fn_on_status_changed = pri_on_msg_q_handler_status_changed,
 	};
 	my_hdl.handler = msg_queue_handler_create(4U * 1024U, &init_param);
 	ASSERT_ABORT(my_hdl.handler);
@@ -52,9 +52,9 @@ static int run_msg_queue_handler_testcase()
 				usleep(1000);
 			}
 		} while (MSG_Q_CODE_SUCCESS != status_send && retry_counter++ < 2);
-		if (status_send)
+		if (MSG_Q_CODE_SUCCESS != status_send)
 		{
-			LOGE("failed(%d) on send msg %d", status_send, i);
+			LOGE("failed(%d) on push msg(%d) to queue", status_send, i);
 		}
 	}
 	free(msg_p);

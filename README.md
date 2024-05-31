@@ -121,6 +121,12 @@
 ----
 ## Release Log
 
+* **1.8.0**
+  > 1. feat: support thread ready/about to stop status information for hook msg_queue_handler/fix_msg_queue_handler
+  > 2. feat: support setting prefix and suffix for LOG-TAG, for example, on Android, it is easy to filter out all TAG logs of the process based on the prefix
+  > 3. update: compilation script supports automatic search for the location of tools such as cmake/ninja/NDK, and supports batch compilation
+  > 4. fix: fix mkdir does not grant write permissions to other users on Unix
+  
 * **1.7.0**
   > 1. added: portable_thread.h thread abstraction layer to facilitate porting thread function implementations on different platforms
   > 2. update: make_cross_platform.sh supports automatically loading cross-compilation files (toolchain.cmake) and compiling.

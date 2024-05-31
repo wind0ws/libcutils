@@ -120,6 +120,12 @@
 ----
 ## 更新日志
 
+* **1.8.0**
+  > 1. 新增: 支持hook msg_queue_handler/fix_msg_queue_handler 的线程就绪/即将停止状态信息
+  > 2. 新增: 支持对 LOG_TAG 设置前缀后缀，比如在Android上就可以轻松根据前缀过滤出进程所有的TAG日志
+  > 3. 更新: 编译脚本支持自动查找 cmake/ninja/NDK 等工具的位置，支持批量编译
+  > 4. 修复: fix mkdir在unix上没有对其他用户赋予写入权限的问题
+
 * **1.7.0**
   > 1. 新增: portable_thread.h 线程抽象层，方便移植不同平台的线程函数实现 
   > 2. 更新: make_cross_platform.sh 支持自动加载交叉编译文件（toolchain.cmake）并编译。

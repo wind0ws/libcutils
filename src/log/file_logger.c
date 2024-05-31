@@ -82,8 +82,8 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	msg_queue_handler_init_param_t msg_q_init_param =
 	{
 		.user_data = handle,
-		.process_msg = handle_log_queue_msg,
-		.notify_msg_handler_status = NULL,
+		.fn_handle_msg = handle_log_queue_msg,
+		.fn_on_status_changed = NULL,
 	};
 	handle->msg_queue = msg_queue_handler_create((uint32_t)cfg_p->log_queue_size * 1024U, &msg_q_init_param);
 	if (NULL == handle->msg_queue)

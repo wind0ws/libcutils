@@ -35,7 +35,7 @@ msg_queue msg_queue_create(__in uint32_t buf_size)
 	return msg_queue_p;
 }
 
-MSG_Q_CODE msg_queue_push(__in msg_queue msg_queue_p, __in const void* msg_p, __in const uint32_t msg_size)
+msg_q_code_e msg_queue_push(__in msg_queue msg_queue_p, __in const void* msg_p, __in const uint32_t msg_size)
 {
 	if (!msg_queue_p || !msg_p || 0 == msg_size)
 	{
@@ -69,7 +69,7 @@ uint32_t msg_queue_next_msg_size(__in msg_queue msg_queue_p)
 }
 
 __success(return == MSG_Q_CODE_SUCCESS)
-MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __out void* msg_p, __inout uint32_t * msg_size_p)
+msg_q_code_e msg_queue_pop(__in msg_queue msg_queue_p, __out void* msg_p, __inout uint32_t * msg_size_p)
 {
 	if (!msg_queue_p || !msg_p || !msg_size_p)
 	{

@@ -44,9 +44,9 @@ extern "C" {
 	 * @param[in] msg_queue_p msg_queue
 	 * @param[in] msg_p       the msg pointer which to read and copy it memory to queue tail
 	 *
-	 * @return see MSG_Q_CODE
+	 * @return see msg_q_code_e
 	 */
-	MSG_Q_CODE msg_queue_push(__in msg_queue msg_queue_p, __in const void* msg_p, __in const uint32_t msg_size);
+	msg_q_code_e msg_queue_push(__in msg_queue msg_queue_p, __in const void* msg_p, __in const uint32_t msg_size);
 
 	/**
 	 * @brief get next msg size from queue(just peek it size, not pop it).
@@ -67,10 +67,10 @@ extern "C" {
 	 * @param[in,out] msg_size_p  allocated memory size pointer of msg_p. this size will changed by this function,
 						          caller can use this to know real memory size of popped msg
 
-	 * @return see MSG_Q_CODE
+	 * @return see msg_q_code_e
 	 */
 	__success(return == MSG_Q_CODE_SUCCESS)
-	MSG_Q_CODE msg_queue_pop(__in msg_queue msg_queue_p, __out void* msg_p, __inout uint32_t* msg_size_p);
+	msg_q_code_e msg_queue_pop(__in msg_queue msg_queue_p, __out void* msg_p, __inout uint32_t* msg_size_p);
 
 	/**
 	 * @brief clear all queue msg.

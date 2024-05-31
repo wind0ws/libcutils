@@ -41,20 +41,20 @@
     
     > 简要示例:
     
-    |平台         | 一键部署编译                             | 手动编译                                                           |
-    | --------    | :-----                                   | :----                                                              |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                               | 
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh.sh linux m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                           |
+    |platform     | onekey deploy build                                 | manual build                                                    |
+    | --------    | :-----                                              | :----                                                           |
+    | **windows** | `deploy_for_windows.bat Release`                    | ` make_windows.bat Win32 Release 1 `                            |
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh Release`    | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat Release c++_static`         | ` make_android.bat armeabi-v7a Release `                        |
   
     > windows 平台 posix pthread 实现方式有三种: 
-    >  * 0: 使用 windows api 模拟 pthread 接口
-    >  * 1: 使用 pthread-win32 静态库。如果你使用lcu静态库，记得还需要依赖这个pthread静态库
-    >  * 2: 使用 pthread-win32 动态库。在你使用lcu库的工程里记得放pthread的dll
+    >  * 0: 使用 windows api 模拟实现 pthread 接口
+    >  * 1: 使用 pthread 静态库。如果你使用 lcu 静态库，记得还需要依赖这个 pthread 静态库
+    >  * 2: 使用 pthread 动态库。在你使用 lcu 库的工程运行目录里记得放 pthread 的dll
   
   * ### 其他平台 (交叉编译)
     1. #### 首先，在 **tool/cmake/toolchains** 文件夹下写cmake交叉编译规则文件:
-      > 定义 c/cxx 编译器位置和平台编译参数.
+      > 定义 `c/cxx` 编译器位置和平台编译参数.
       
       > 示例: 在 **tool/cmake/toolchains** 文件夹下创建 **hisi.toolchain.cmake** 文件, 
             然后写一些类似下面的交叉编译配置信息:
@@ -119,6 +119,12 @@
   > 邮箱: <hsjfox@foxmail.com>
 ----
 ## 更新日志
+
+* **1.8.0**
+  > 1. 新增: 支持hook msg_queue_handler/fix_msg_queue_handler 的线程就绪/即将停止状态信息
+  > 2. 新增: 支持对 LOG_TAG 设置前缀后缀，比如在Android上就可以轻松根据前缀过滤出进程所有的TAG日志
+  > 3. 更新: 编译脚本支持自动查找 cmake/ninja/NDK 等工具的位置，支持批量编译
+  > 4. 修复: fix mkdir在unix上没有对其他用户赋予写入权限的问题
 
 * **1.7.0**
   > 1. 新增: portable_thread.h 线程抽象层，方便移植不同平台的线程函数实现 

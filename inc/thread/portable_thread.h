@@ -42,7 +42,7 @@
 #endif // Sleep
 
 #ifndef GETTID
-#define GETTID()   portable_gettid()
+#define GETTID()   portable_thread_gettid()
 #endif // !GETTID
 #ifndef THREAD_SETNAME_FOR_CURRENT
 #define THREAD_SETNAME_FOR_CURRENT(name) portable_thread_set_current_name(name)
@@ -66,7 +66,7 @@ extern "C"
 #endif
 
     // get current tid. you can cast it to pid_t
-    unsigned long portable_gettid();
+    unsigned long portable_thread_gettid();
 
 	// set name for current thread. suggest use this method instead of pthread_setname_np
 	int portable_thread_set_current_name(const char* name);

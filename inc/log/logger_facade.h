@@ -50,9 +50,9 @@
 
 #if(!defined(_LCU_LOGGER_DISABLE) || 0 != _LCU_LOGGER_DISABLE)
 
-#ifndef LOG_TAG
-#error "You should define \"LOG_TAG\" before include <logger_facade_xx.h>"
-#endif // !LOG_TAG
+#ifndef _LOG_TAG
+#error "You should define \"_LOG_TAG\" before include <logger_facade_xx.h>"
+#endif // !_LOG_TAG
 
 #if(!defined(_LOG_INIT_IMPL) || !defined(_LOG_DEINIT_IMPL))
 #error "You should define \"_LOG_INIT/DEINIT_IMPL\" first, did you forget to include implement?"
@@ -87,17 +87,17 @@
 #define TLOGW_TRACE(tag, fmt, ...)     _LOGW_TRACE_IMPL(tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define TLOGE_TRACE(tag, fmt, ...)     _LOGE_TRACE_IMPL(tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define LOGV(fmt, ...)         TLOGV(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...)         TLOGD(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...)         TLOGI(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...)         TLOGW(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...)         TLOGE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...)         TLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...)         TLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...)         TLOGI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...)         TLOGW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...)         TLOGE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define LOGV_TRACE(fmt, ...)     TLOGV_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGD_TRACE(fmt, ...)     TLOGD_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGI_TRACE(fmt, ...)     TLOGI_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGW_TRACE(fmt, ...)     TLOGW_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
-#define LOGE_TRACE(fmt, ...)     TLOGE_TRACE(LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGV_TRACE(fmt, ...)     TLOGV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGD_TRACE(fmt, ...)     TLOGD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGI_TRACE(fmt, ...)     TLOGI_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGW_TRACE(fmt, ...)     TLOGW_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGE_TRACE(fmt, ...)     TLOGE_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #define TLOGV_HEX(tag, chars, chars_count)     _LOGV_HEX_IMPL(tag, chars, chars_count)
 #define TLOGD_HEX(tag, chars, chars_count)     _LOGD_HEX_IMPL(tag, chars, chars_count)
@@ -105,11 +105,11 @@
 #define TLOGW_HEX(tag, chars, chars_count)     _LOGW_HEX_IMPL(tag, chars, chars_count)
 #define TLOGE_HEX(tag, chars, chars_count)     _LOGE_HEX_IMPL(tag, chars, chars_count)
 
-#define LOGV_HEX(chars, chars_count)  TLOGV_HEX(LOG_TAG, chars, chars_count)
-#define LOGD_HEX(chars, chars_count)  TLOGD_HEX(LOG_TAG, chars, chars_count)
-#define LOGI_HEX(chars, chars_count)  TLOGI_HEX(LOG_TAG, chars, chars_count)
-#define LOGW_HEX(chars, chars_count)  TLOGW_HEX(LOG_TAG, chars, chars_count)
-#define LOGE_HEX(chars, chars_count)  TLOGE_HEX(LOG_TAG, chars, chars_count)
+#define LOGV_HEX(chars, chars_count)  TLOGV_HEX(_LOG_TAG, chars, chars_count)
+#define LOGD_HEX(chars, chars_count)  TLOGD_HEX(_LOG_TAG, chars, chars_count)
+#define LOGI_HEX(chars, chars_count)  TLOGI_HEX(_LOG_TAG, chars, chars_count)
+#define LOGW_HEX(chars, chars_count)  TLOGW_HEX(_LOG_TAG, chars, chars_count)
+#define LOGE_HEX(chars, chars_count)  TLOGE_HEX(_LOG_TAG, chars, chars_count)
 
 #else
 

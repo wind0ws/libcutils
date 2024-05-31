@@ -40,20 +40,20 @@
 	then execute script to build it, it will copy the compiled product to the specified location
     
     for example:
-    |platform     | onekey deploy build                      | manual build                                                    |
-    | --------    | :-----                                   | :----                                                           |
-    | **windows** | `deploy_for_windows.bat`                 | ` make_windows.bat Win32 Release 0 `                            |
-    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh` | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
-    | **android** | `deploy_for_android.bat`                 | ` make_android.bat armeabi-v7a Release `                        |
+    |platform     | onekey deploy build                                 | manual build                                                    |
+    | --------    | :-----                                              | :----                                                           |
+    | **windows** | `deploy_for_windows.bat Release`                    | ` make_windows.bat Win32 Release 1 `                            |
+    | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh Release`    | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
+    | **android** | `deploy_for_android.bat Release c++_static`         | ` make_android.bat armeabi-v7a Release `                        |
 	
     > there 3 way to integration pthread on windows：
     > * 0: implementing the pthread interface using the windows api
-    > * 1: use pthread-win32 static library. if you use static library, don't forget dependency pthread lib
-    > * 2: use pthread-win32 dynamic library. you should place pthread dll on your project
+    > * 1: use pthread static library. if you use static library, don't forget dependency pthread lib
+    > * 2: use pthread dynamic library. you should place pthread dll on your project
   
   * ### other platforms (cross-compilation)
     1. #### first, write cmake cross-compilation toolchain file on **tool/cmake/toolchains** folder:
-      > for define c/cxx compiler location and flags.
+      > for define `c/cxx` compiler location and flags.
       
       example: create **hisi.toolchain.cmake** file on **tool/cmake/toolchains** folder,
                and write some config like this:
@@ -121,6 +121,12 @@
 ----
 ## Release Log
 
+* **1.8.0**
+  > 1. feat: support thread ready/about to stop status information for hook msg_queue_handler/fix_msg_queue_handler
+  > 2. feat: support setting prefix and suffix for LOG-TAG, for example, on Android, it is easy to filter out all TAG logs of the process based on the prefix
+  > 3. update: compilation script supports automatic search for the location of tools such as cmake/ninja/NDK, and supports batch compilation
+  > 4. fix: fix mkdir does not grant write permissions to other users on Unix
+  
 * **1.7.0**
   > 1. added: portable_thread.h thread abstraction layer to facilitate porting thread function implementations on different platforms
   > 2. update: make_cross_platform.sh supports automatically loading cross-compilation files (toolchain.cmake) and compiling.

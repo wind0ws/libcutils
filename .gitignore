@@ -3,6 +3,7 @@ cmake-build-debug/
 cmake-build-release/
 .idea/
 .vs/
+.vscode/
 tool/backup/
 tool/output/
 tool/out/

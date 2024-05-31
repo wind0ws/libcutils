@@ -111,7 +111,8 @@ int main(int argc, char* argv[])
 
 	bool is_press_kb = true; // default status is true for unix
 #if _WIN32
-	LOGI("after %d seconds, it will run automatically. if you want to choose test case, just press any key", KB_TIMEOUT);
+	LOGI("after %d seconds, it will run automatically."  
+		 "if you want to choose test case, just press any key", KB_TIMEOUT);
 	clock_t tstart = clock();
 	int pressed_char = 'y';                   // default key press
 	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)

@@ -50,26 +50,45 @@ extern "C" {
 
 	typedef struct _fixed_msg_queue_handler_s* fixed_msg_queue_handler;
 
-	/**
-	 * @brief callback prototype of handle msg
-	 * 
-	 * @param[in] msg_p      fixed_msg_t need to process
-	 * @param[in] user_data	 your data pointer passed in fixed_msg_queue_handler_create()
-	 * 
-	 * @return 0 for succeed, otherwise will break chain.
-	 */
-	typedef int (*fixed_msg_handler_callback_t)(fixed_msg_t* msg_p, void* user_data);
+	typedef struct
+	{
+		/* user_data that will pass in callback function */
+		void* user_data;
+
+		/**
+		  * @brief callback prototype of handle msg.
+		  *
+		  * note: you shouldn't do too much time-consuming operation on here.
+		  *
+		  * @param[in] msg_p        pointer to popped msg. do not freed this msg memory.
+		  * @param[in] user_data    user data pointer that you passed in init_param
+		  *
+		  * @return 0 for normal status, otherwise will break the handler queue
+		  */
+		int (*fn_handle_msg)(fixed_msg_t* msg_p, void* user_data);
+
+		/**
+		 * @brief callback prototype of notify handler status changed
+		 *
+		 * note: do NOT call any function of msg_queue_handler on this function,
+		 *       otherwise may cause stuck on thread of msg_queue_handler.
+		 *
+		 * @param[in] status   	   status of current msg_queue_handler
+		 * @param[in] user_data    user data pointer that you passed in init_param
+		 */
+		void (*fn_on_status_changed)(msg_q_handler_status_e status, void* user_data);
+	} fixed_msg_queue_handler_init_param_t;
 
 	/**
 	 * @brief create fixed_queue_handler
 	 *
 	 * @param[in] max_msg_capacity   max capacity
-	 * @param[in] callback   handle msg function
+	 * @param[in] param_p            pointer of fixed_msg_queue_handler_init_param_t.
 	 * 
 	 * @return queue handler ptr
 	 */
 	fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_capacity,
-		__in fixed_msg_handler_callback_t callback, __in void* callback_userdata);
+		__in fixed_msg_queue_handler_init_param_t *init_param_p);
 
 	/**
 	 * @brief push msg at tail of queue handler,
@@ -80,7 +99,7 @@ extern "C" {
 	 * 
 	 * @return 0 succeed. otherwise failed
 	 */
-	MSG_Q_CODE fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t* msg_p);
+	msg_q_code_e fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t* msg_p);
 
 	/**
 	 * @brief current available push msg amount

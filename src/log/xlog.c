@@ -420,8 +420,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	PRINTF_FMT_CHK_MSC const char* fmt, ...)
 {
 	va_list va;
-	//no need init buffer.
-	char default_buffer[DEFAULT_LOG_BUF_SIZE];
+	char default_buffer[DEFAULT_LOG_BUF_SIZE] = { 0 };
 	size_t default_buffer_remaining_size;
 	char* buffer_log = default_buffer;
 	size_t buffer_log_size = sizeof(default_buffer);

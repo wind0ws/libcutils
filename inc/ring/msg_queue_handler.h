@@ -31,38 +31,55 @@ extern "C" {
 	 */
 	typedef struct
 	{
-		int what;
-		int arg1;
-		int arg2;
-		int obj_len;
+		int what;	 /* msg type  */
+		int arg1;	 /* user arg1 */
+		int arg2;	 /* user arg2 */
+		int obj_len; /* length of obj */
 		char obj[0]; /* must be last field of struct */
 	} queue_msg_t;
 
 	typedef struct _msg_queue_handler_s* msg_queue_handler;
 
-	/**
-	 * @brief callback prototype that handle msg.
-	 * 
-	 * note: you shouldn't do too much time-consuming operation on here.
-	 *
-	 * @param[in] queue_msg_t  pointer to popped msg. do not freed this msg memory.
-	 * @param[in] user_data    user data pointer that you passed in msg_queue_handler_create()
-	 *
-	 * @return 0 for normal status, otherwise will break the handler queue
-	 */
-	typedef int (*msg_handler_callback_t)(queue_msg_t* msg_p, void* user_data);
+	/* init param for msg_queue_handler_create */
+	typedef struct  
+	{
+		/* user_data that will pass in callback function */
+		void* user_data;
+	    
+		/**
+	      * @brief callback prototype of handle msg.
+	      *
+	      * note: you shouldn't do too much time-consuming operation on here.
+	      *
+	      * @param[in] msg_p        pointer to popped msg. do not freed this msg memory.
+	      * @param[in] user_data    user data pointer that you passed in init_param
+	      *
+	      * @return 0 for normal status, otherwise will break the handler queue
+	      */
+		int (*fn_handle_msg)(queue_msg_t* msg_p, void* user_data);
+		
+		/**
+		 * @brief callback prototype of notify handler status changed
+		 * 
+		 * note: do NOT call any function of msg_queue_handler on this function, 
+		 *       otherwise may cause stuck on thread of msg_queue_handler.
+		 * 
+		 * @param[in] status   	   status of current msg_queue_handler
+		 * @param[in] user_data    user data pointer that you passed in init_param
+		 */
+		void (*fn_on_status_changed)(msg_q_handler_status_e status, void* user_data);
+	} msg_queue_handler_init_param_t;
 
 	/**
 	 * @brief create msg_queue_handler.
 	 *
 	 * @param[in] queue_buf_size    total size of memory to hold msg
-	 * @param[in] callback          handle msg function
-	 * @param[in] callback_userdata user_data will pass in callback
+	 * @param[in] param_p           pointer of msg_queue_handler_init_param_t.
 	 *
 	 * @return queue handler ptr if success, otherwise return null
 	 */
 	msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
-		__in msg_handler_callback_t callback, __in void* callback_userdata);
+		__in msg_queue_handler_init_param_t *param_p);
 
 	/**
 	 * @brief push msg at tail of queue handler.
@@ -74,7 +91,7 @@ extern "C" {
 	 *
 	 * @return status. 0 succeed. otherwise failed(see error code details on msg_queue_errno.h)
 	 */
-	MSG_Q_CODE msg_queue_handler_push(__in msg_queue_handler handler, __in queue_msg_t* msg_p);
+	msg_q_code_e msg_queue_handler_push(__in msg_queue_handler handler, __in queue_msg_t* msg_p);
 
 	/**
 	 * @brief available push byte size.

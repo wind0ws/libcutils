@@ -10,7 +10,12 @@ typedef struct
 	msg_queue_handler handler;
 } my_handler_t;
 
-static int handler_cb(queue_msg_t* msg_p, void* user_data)
+static void pri_on_msg_q_handler_status_changed(msg_q_handler_status_e status, void* user_data)
+{
+	LOGI("detected msg_queue_hander new status: %d", status);
+}
+
+static int pri_handle_queue_msg(queue_msg_t* msg_p, void* user_data)
 {
 	LOGD("received msg(what=%d, obj_len=%d): %s", 
 		msg_p->what, msg_p->obj_len, msg_p->obj);
@@ -21,7 +26,13 @@ static int handler_cb(queue_msg_t* msg_p, void* user_data)
 static int run_msg_queue_handler_testcase()
 {
 	my_handler_t my_hdl = { 0 };
-	my_hdl.handler = msg_queue_handler_create(4 * 1024, handler_cb, &my_hdl);
+	msg_queue_handler_init_param_t init_param =
+	{
+		.user_data = &my_hdl,
+		.fn_handle_msg = pri_handle_queue_msg,
+		.fn_on_status_changed = pri_on_msg_q_handler_status_changed,
+	};
+	my_hdl.handler = msg_queue_handler_create(4U * 1024U, &init_param);
 	ASSERT_ABORT(my_hdl.handler);
 
 	queue_msg_t* msg_p = (queue_msg_t*)calloc(1, sizeof(queue_msg_t) + MSG_OBJ_MAX_SIZE);
@@ -30,7 +41,7 @@ static int run_msg_queue_handler_testcase()
 	{
 		msg_p->what = i;
 		msg_p->obj_len = snprintf(msg_p->obj, MSG_OBJ_MAX_SIZE, "hello, I'm queue msg %d", i) + 1;
-		MSG_Q_CODE status_send;
+		msg_q_code_e status_send;
 		int retry_counter = 0;
 		do
 		{
@@ -40,14 +51,14 @@ static int run_msg_queue_handler_testcase()
 				LOGW("queue full. sleeping at %d", i);
 				usleep(1000);
 			}
-		} while (status_send != 0 && retry_counter++ < 2);
-		if (status_send)
+		} while (MSG_Q_CODE_SUCCESS != status_send && retry_counter++ < 2);
+		if (MSG_Q_CODE_SUCCESS != status_send)
 		{
-			LOGE("error(%d) on send msg. %d", status_send, i);
+			LOGE("failed(%d) on push msg(%d) to queue", status_send, i);
 		}
 	}
 	free(msg_p);
-	sleep(2); // give some time for handler to handle message. this is not necessary
+	sleep(1); // give some time for handler to handle message. this is not necessary
 	msg_queue_handler_destroy(&my_hdl.handler);
 	return 0;
 }

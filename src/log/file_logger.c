@@ -79,7 +79,13 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	}
 	handle->msg_cache_p = msg;
 	handle->cur_msg_obj_capacity = cur_msg_size;
-	handle->msg_queue = msg_queue_handler_create((uint32_t)cfg_p->log_queue_size * 1024U, handle_log_queue_msg, handle);
+	msg_queue_handler_init_param_t msg_q_init_param =
+	{
+		.user_data = handle,
+		.fn_handle_msg = handle_log_queue_msg,
+		.fn_on_status_changed = NULL,
+	};
+	handle->msg_queue = msg_queue_handler_create((uint32_t)cfg_p->log_queue_size * 1024U, &msg_q_init_param);
 	if (NULL == handle->msg_queue)
 	{
 		free(msg);
@@ -116,7 +122,7 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 int file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 {
 #define MAX_RETRY_LOG_TIMES_IF_FAIL (2)
-	MSG_Q_CODE status = MSG_Q_CODE_BUF_NOT_ENOUGH;
+	msg_q_code_e status = MSG_Q_CODE_BUF_NOT_ENOUGH;
 	int retry_counter = 0;
 	
 	FILE_LOGGER_LOCK(handle);
@@ -142,7 +148,7 @@ int file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 		{
 			break;//everything all right, sending completed
 		}
-		//MY_LOGE("failed(%d) on send log to queue this time. queue full?", status);
+		//MY_LOGE("failed(%d) on send log to queue at this time. queue is full?", status);
 		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break;// caution: here we must be lost this log message!

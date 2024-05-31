@@ -22,7 +22,7 @@ stringbuilder_t* stringbuilder_create(size_t init_buf_size)
 	{
 		return NULL;
 	}
-	if (init_buf_size < 8)
+	if (init_buf_size < 2)
 	{
 		init_buf_size = STRING_BUILDER_DEFAULT_SIZE;
 	}
@@ -41,7 +41,7 @@ stringbuilder_t* stringbuilder_create(size_t init_buf_size)
 
 void stringbuilder_destroy(stringbuilder_t** sb_p)
 {
-	if (sb_p == NULL || *sb_p == NULL)
+	if (NULL == sb_p || NULL == *sb_p)
 	{
 		return;
 	}
@@ -54,19 +54,19 @@ void stringbuilder_destroy(stringbuilder_t** sb_p)
 
 static int sb_ensure_space(stringbuilder_t* sb, size_t string_len)
 {
-	if (sb == NULL || sb->buffer == NULL || string_len == 0)
+	if (NULL == sb || NULL == sb->buffer || 0 == string_len)
 	{
 		return -1;
 	}
-	if (sb->allocated >= sb->length + string_len + 1)
+	if (sb->allocated >= sb->length + string_len + 1U)
 	{
 		return 0; // buf size is already enough.
 	}
 	size_t should_alloc_buf_size = sb->allocated;
-	while (should_alloc_buf_size < sb->length + string_len + 1)
+	while (should_alloc_buf_size < sb->length + string_len + 1U)
 	{
 		should_alloc_buf_size <<= 1;
-		if (should_alloc_buf_size == 0)
+		if (0 == should_alloc_buf_size)
 		{
 			/* wow, what a huge string! */
 			//--should_alloc_buf_size;
@@ -90,7 +90,7 @@ int stringbuilder_appendchar(stringbuilder_t* sb, char c)
 	{
 		return -1;
 	}
-	if (sb_ensure_space(sb, sizeof(char)) != 0)
+	if (0 != sb_ensure_space(sb, sizeof(char)))
 	{
 		return -1;
 	}
@@ -139,7 +139,7 @@ int stringbuilder_appendf(stringbuilder_t* sb, const char* format, ...)
 	va_list va;
 
 	va_start(va, format);
-	//first we get the string length that will write. ('\0' is not belong of the length)
+	// first we get the string length that will write. ('\0' is not belong of the length)
 	size_t len = vsnprintf(NULL, 0, format, va);
 	va_end(va);
 	if (len < 1)
@@ -177,7 +177,7 @@ size_t stringbuilder_len(const stringbuilder_t* sb)
 	return sb->length;
 }
 
-const char* stringbuilder_print(const stringbuilder_t* sb)
+const char* stringbuilder_to_string(const stringbuilder_t* sb)
 {
 	return sb->buffer;
 }

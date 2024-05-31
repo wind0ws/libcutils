@@ -29,7 +29,7 @@ typedef struct
 } portable_sem_posix_t;
 
 
-unsigned long portable_gettid()
+unsigned long portable_thread_gettid()
 {	
 	return (unsigned long)GETTID();
 }
@@ -171,7 +171,7 @@ int portable_rwlock_init(portable_rwlock_t* lock, const void* attr)
 		return -2;
 	}
 	memset(posix, 0, sizeof(portable_rwlock_posix_t));
-	ret = pthread_rwlock_init(&posix->id, attr);
+	ret = pthread_rwlock_init(&posix->id, (const pthread_rwlockattr_t*)attr);
 	if (0 == ret)
 	{
 		*lock = posix;

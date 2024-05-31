@@ -52,20 +52,31 @@ extern "C" {
 
 	typedef struct
 	{
-		/* user_data for callback */
+		/* user_data that will pass in callback function */
 		void* user_data;
+
 		/**
 		  * @brief callback prototype of handle msg.
 		  *
 		  * note: you shouldn't do too much time-consuming operation on here.
 		  *
-		  * @param[in] queue_msg_t  pointer to popped msg. do not freed this msg memory.
+		  * @param[in] msg_p        pointer to popped msg. do not freed this msg memory.
 		  * @param[in] user_data    user data pointer that you passed in init_param
 		  *
 		  * @return 0 for normal status, otherwise will break the handler queue
 		  */
-		int (*process_msg)(fixed_msg_t* msg_p, void* user_data);
-		void (*notify_msg_handler_status)(msg_q_handler_status_e status, void* user_data);
+		int (*fn_handle_msg)(fixed_msg_t* msg_p, void* user_data);
+
+		/**
+		 * @brief callback prototype of notify handler status changed
+		 *
+		 * note: do NOT call any function of msg_queue_handler on this function,
+		 *       otherwise may cause stuck on thread of msg_queue_handler.
+		 *
+		 * @param[in] status   	   status of current msg_queue_handler
+		 * @param[in] user_data    user data pointer that you passed in init_param
+		 */
+		void (*fn_on_status_changed)(msg_q_handler_status_e status, void* user_data);
 	} fixed_msg_queue_handler_init_param_t;
 
 	/**

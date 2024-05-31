@@ -32,20 +32,20 @@ static size_t pri_roundup_power2(size_t n)
 	return n;
 }
 
-static void pri_notify_status(msg_queue_handler handler, msg_q_handler_status_e status)
+static void pri_notify_status_changed(msg_queue_handler handler, msg_q_handler_status_e status)
 {
-	if (NULL == handler->param.notify_msg_handler_status)
+	if (NULL == handler->param.fn_on_status_changed)
 	{
 		return;
 	}
-	handler->param.notify_msg_handler_status(status, handler->param.user_data);
+	handler->param.fn_on_status_changed(status, handler->param.user_data);
 }
 
 static void* thread_worker_handle_msg(void* thread_context)
 {
 	msg_queue_handler handler = (msg_queue_handler)thread_context;
-	LOGI(" %s:%d thread(%lu) started...", __func__, __LINE__, GETTID());
-	pri_notify_status(handler, MSG_Q_HANDLER_STATUS_STARTED);
+	LOGI(" (%s:%d) thread(%lu) started...", __func__, __LINE__, GETTID());
+	pri_notify_status_changed(handler, MSG_Q_HANDLER_STATUS_READY_TO_GO);
 
 	size_t cur_msg_buf_size = 4096U;
 	char* poped_msg_buf = (char *)malloc(cur_msg_buf_size);
@@ -53,7 +53,7 @@ static void* thread_worker_handle_msg(void* thread_context)
 	{
 		handler->flag2exit = true;
 		LOGE("can't malloc(%zu) on %s:%d, now thread exit...", cur_msg_buf_size, __func__, __LINE__);
-		pri_notify_status(handler, MSG_Q_HANDLER_STATUS_STOPPED);
+		pri_notify_status_changed(handler, MSG_Q_HANDLER_STATUS_ABOUT_TO_STOP);
 		return NULL;
 	}
 
@@ -93,7 +93,7 @@ static void* thread_worker_handle_msg(void* thread_context)
 		}
 
 		queue_msg_t* msg = (queue_msg_t*)poped_msg_buf;
-		if (0 != (user_handle_ret = handler->param.process_msg(msg, handler->param.user_data)))
+		if (0 != (user_handle_ret = handler->param.fn_handle_msg(msg, handler->param.user_data)))
 		{
 			LOGE("error(%d) on user process msg, now exit...", user_handle_ret);
 			break;
@@ -105,8 +105,8 @@ static void* thread_worker_handle_msg(void* thread_context)
 	{
 		free(poped_msg_buf);
 	}
-	LOGI(" %s:%d thread(%lu) exited...", __func__, __LINE__, GETTID());
-	pri_notify_status(handler, MSG_Q_HANDLER_STATUS_STOPPED);
+	LOGI(" (%s:%d) thread(%lu) exited...", __func__, __LINE__, GETTID());
+	pri_notify_status_changed(handler, MSG_Q_HANDLER_STATUS_ABOUT_TO_STOP);
 	return NULL;
 }
 
@@ -114,7 +114,7 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 	__in msg_queue_handler_init_param_t* param_p)
 {
 	LOGD("create msg_queue_handler. queue_buf_size=%d", queue_buf_size);
-	if (queue_buf_size < 4U || !param_p || NULL == param_p->process_msg)
+	if (queue_buf_size < 4U || !param_p || NULL == param_p->fn_handle_msg)
 	{
 		LOGE("queue_buf_size(%u) shouldn't smaller than 4, and param_p(%p) with callback shouldn't be NULL", 
 			queue_buf_size, (void *)param_p);
@@ -182,7 +182,7 @@ void msg_queue_handler_destroy(__inout msg_queue_handler* handler_p)
 	portable_sem_destroy(&(handler->semaphore));
 	if (handler->msg_queue_p)
 	{
-		msg_queue_destroy(&handler->msg_queue_p);
+		msg_queue_destroy(&(handler->msg_queue_p));
 	}
 	handler->msg_queue_p = NULL;
 	free(handler);

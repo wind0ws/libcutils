@@ -4,8 +4,10 @@
 
 typedef enum
 {
-	MSG_Q_HANDLER_STATUS_STARTED = 0,
-	MSG_Q_HANDLER_STATUS_STOPPED,
+	// thread is started, and ready to pop msg
+	MSG_Q_HANDLER_STATUS_READY_TO_GO = 0,
+	// thread is about to stop
+	MSG_Q_HANDLER_STATUS_ABOUT_TO_STOP,
 } msg_q_handler_status_e;
 
 typedef enum

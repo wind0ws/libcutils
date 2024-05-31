@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(lcu VERSION 1.7.0 LANGUAGES C CXX)
+project(lcu VERSION 1.8.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # 添加自定义cmake文件目录

@@ -3,6 +3,7 @@
 #include "ring/fixed_msg_queue.h"
 #include "ring/fixed_msg_queue_handler.h"
 #include "thread/portable_thread.h"
+#include <string.h>
 #include <malloc.h>
 
 #define Q_LOG_TAG         "FIXED_Q_HDL"
@@ -21,22 +22,35 @@ typedef struct
 
 struct _fixed_msg_queue_handler_s
 {
+	fixed_msg_queue_handler_init_param_t param;
 	fixed_msg_queue msg_queue_p;
-	fixed_msg_handler_callback_t callback;
-	void* callback_userdata;
+
+	volatile bool flag2exit;
 	portable_thread_t thread_handler;
 	portable_sem_t semaphore;
-	volatile bool flag2exit;
 
 	fixed_handler_msg_t msg_send_cache;
 	size_t token_counter;
 	volatile size_t min_valid_token;
 };
 
+static void pri_notify_status(fixed_msg_queue_handler handler, msg_q_handler_status_e status)
+{
+	if (NULL == handler->param.notify_msg_handler_status)
+	{
+		return;
+	}
+	handler->param.notify_msg_handler_status(status, handler->param.user_data);
+}
+
 static void* thread_fun_handle_msg(void* thread_context)
 {
 	fixed_msg_queue_handler handler = (fixed_msg_queue_handler)thread_context;
+	MY_LOGI(" %s:%d thread(%lu) started...", __func__, __LINE__, GETTID());
+	pri_notify_status(handler, MSG_Q_HANDLER_STATUS_STARTED);
+
 	fixed_handler_msg_t handler_msg = { 0, {0} };
+	int user_handle_ret;
 	for (;;)
 	{
 		portable_sem_wait(&handler->semaphore);
@@ -50,27 +64,33 @@ static void* thread_fun_handle_msg(void* thread_context)
 		}
 		if (handler_msg.token >= handler->min_valid_token)
 		{
-			if (handler->callback(&handler_msg.out_msg, handler->callback_userdata))
+			if (0 != (user_handle_ret = handler->param.process_msg(&handler_msg.out_msg, handler->param.user_data)))
 			{
-				MY_LOGE("err on user process msg, now exit");
+				MY_LOGE("error(%d) on user process msg, now exit", user_handle_ret);
 				break;
 			}
 		}
 		else
 		{
-			MY_LOGW("abandon msg, token=%zu, min_valid_token=%zu", 
+			MY_LOGW("abandon msg: token=%zu, min_valid_token=%zu", 
 				handler_msg.token, handler->min_valid_token);
 		}
 	}
 
 	handler->flag2exit = true;// <-- for mark thread not handle msg yet!
-	MY_LOGE(" %s:%d thread exited...", __func__, __LINE__);
+	MY_LOGI(" %s:%d thread(%lu) exited...", __func__, __LINE__, GETTID());
+	pri_notify_status(handler, MSG_Q_HANDLER_STATUS_STOPPED);
 	return NULL;
 }
 
 fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_capacity,
-	__in fixed_msg_handler_callback_t callback, __in void* callback_userdata)
+	__in fixed_msg_queue_handler_init_param_t* init_param_p)
 {
+	if (max_msg_capacity < 2U || NULL == init_param_p || NULL == init_param_p->process_msg)
+	{
+		MY_LOGD("invalid param. max_msg_capacity=%u", max_msg_capacity);
+		return NULL;
+	}
 	MY_LOGD("create fixed_queue_handler. max_msg_capacity=%u", max_msg_capacity);
 	fixed_msg_queue_handler handler = (fixed_msg_queue_handler)calloc(1, sizeof(struct _fixed_msg_queue_handler_s));
 	if (!handler)
@@ -78,8 +98,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 		return NULL;
 	}
 	handler->flag2exit = false;
-	handler->callback = callback;
-	handler->callback_userdata = callback_userdata;
+	memcpy(&handler->param, init_param_p, sizeof(fixed_msg_queue_handler_init_param_t));
 	handler->token_counter = 0;
 	handler->min_valid_token = 0;
 	portable_sem_init(&(handler->semaphore), 0, 0);
@@ -94,7 +113,7 @@ fixed_msg_queue_handler fixed_msg_queue_handler_create(__in uint32_t max_msg_cap
 	return handler;
 }
 
-MSG_Q_CODE fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t* msg_p)
+msg_q_code_e fixed_msg_queue_handler_push(__in fixed_msg_queue_handler handler, __in fixed_msg_t* msg_p)
 {
 	if (!handler || !(handler->msg_queue_p) || handler->flag2exit)
 	{

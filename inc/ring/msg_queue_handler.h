@@ -40,29 +40,34 @@ extern "C" {
 
 	typedef struct _msg_queue_handler_s* msg_queue_handler;
 
-	/**
-	 * @brief callback prototype that handle msg.
-	 * 
-	 * note: you shouldn't do too much time-consuming operation on here.
-	 *
-	 * @param[in] queue_msg_t  pointer to popped msg. do not freed this msg memory.
-	 * @param[in] user_data    user data pointer that you passed in msg_queue_handler_create()
-	 *
-	 * @return 0 for normal status, otherwise will break the handler queue
-	 */
-	typedef int (*msg_handler_callback_t)(queue_msg_t* msg_p, void* user_data);
+	typedef struct  
+	{
+		/* user_data for callback */
+		void* user_data;
+	    /**
+	      * @brief callback prototype of handle msg.
+	      *
+	      * note: you shouldn't do too much time-consuming operation on here.
+	      *
+	      * @param[in] queue_msg_t  pointer to popped msg. do not freed this msg memory.
+	      * @param[in] user_data    user data pointer that you passed in init_param
+	      *
+	      * @return 0 for normal status, otherwise will break the handler queue
+	      */
+		int (*process_msg)(queue_msg_t* msg_p, void* user_data);
+		void (*notify_msg_handler_status)(msg_q_handler_status_e status, void* user_data);
+	} msg_queue_handler_init_param_t;
 
 	/**
 	 * @brief create msg_queue_handler.
 	 *
 	 * @param[in] queue_buf_size    total size of memory to hold msg
-	 * @param[in] callback          handle msg function
-	 * @param[in] callback_userdata user_data will pass in callback
+	 * @param[in] param_p           pointer of msg_queue_handler_init_param_t.
 	 *
 	 * @return queue handler ptr if success, otherwise return null
 	 */
 	msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
-		__in msg_handler_callback_t callback, __in void* callback_userdata);
+		__in msg_queue_handler_init_param_t *param_p);
 
 	/**
 	 * @brief push msg at tail of queue handler.
@@ -74,7 +79,7 @@ extern "C" {
 	 *
 	 * @return status. 0 succeed. otherwise failed(see error code details on msg_queue_errno.h)
 	 */
-	MSG_Q_CODE msg_queue_handler_push(__in msg_queue_handler handler, __in queue_msg_t* msg_p);
+	msg_q_code_e msg_queue_handler_push(__in msg_queue_handler handler, __in queue_msg_t* msg_p);
 
 	/**
 	 * @brief available push byte size.

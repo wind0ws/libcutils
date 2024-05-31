@@ -434,7 +434,7 @@ static bool iter_key_value_for_dump(void* data, void* context)
 	}
 	key_value_t* p_kv = (key_value_t*)data;
 	dump_ini_context* dump_ctx = (dump_ini_context*)context;
-	if ((dump_ctx->ret_code = stringbuilder_appendf(dump_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)) != 0)
+	if (0 != (dump_ctx->ret_code = stringbuilder_appendf(dump_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)))
 	{
 #if(!defined(NDEBUG) || defined(_DEBUG))
 		printf("ERROR[%s:%d]: failed on append %s=%s to stringbuilder. %d",
@@ -454,7 +454,7 @@ static bool iter_section_for_dump(void* data, void* context)
 	}
 	section_info_t* p_section = (section_info_t*)data;
 	dump_ini_context* dump_ctx = (dump_ini_context*)context;
-	if (dump_ctx->ret_code)
+	if (0 != dump_ctx->ret_code)
 	{
 		return false; // error occurred on foreach last section, break chain.
 	}
@@ -464,12 +464,8 @@ static bool iter_section_for_dump(void* data, void* context)
 	return true;
 }
 
-char* ini_parser_dump(ini_parser_handle parser_p)
+static stringbuilder_t* pri_dump_ini(ini_parser_handle parser_p)
 {
-	if (!parser_p)
-	{
-		return NULL;
-	}
 	const size_t sb_mem_size = parser_p->prediction_str_size + 64U;
 	stringbuilder_t* sb = stringbuilder_create(sb_mem_size);
 	if (!sb)
@@ -482,9 +478,65 @@ char* ini_parser_dump(ini_parser_handle parser_p)
 		.sb = sb,
 	};
 	list_foreach(parser_p->plist_sections, iter_section_for_dump, &dump_context);
-	char* ret_str = dump_context.ret_code ? NULL : strdup(stringbuilder_to_string(sb));
+	if (0 != dump_context.ret_code)
+	{
+		stringbuilder_destroy(&sb);
+		return NULL;
+	}
+	return sb;
+}
+
+ini_parser_code_e ini_parser_dump_to_mem(ini_parser_handle parser_p, char* mem, size_t* mem_size_p)
+{
+	if (!parser_p || !mem || !mem_size_p)
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
+	}
+	if (*mem_size_p < (parser_p->prediction_str_size + 64U))
+	{
+		return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
+	}
+	stringbuilder_t* sb = pri_dump_ini(parser_p);
+	if (NULL == sb)
+	{
+		return INI_PARSER_CODE_FAILED;
+	}
+	ini_parser_code_e parser_code = INI_PARSER_CODE_FAILED;
+	const char* ini_string = stringbuilder_to_string(sb);
+	do 
+	{
+		if (NULL == ini_string || '\0' == ini_string[0])
+		{
+			break;
+		}
+		size_t ini_string_size = strlen(ini_string) + 1U;
+		if (*mem_size_p < ini_string_size)
+		{
+			parser_code = INI_PARSER_CODE_NO_ENOUGH_MEMORY;
+			break;
+		}
+		memcpy(mem, ini_string, ini_string_size);
+		*mem_size_p = ini_string_size;
+		parser_code = INI_PARSER_CODE_SUCCEED;
+	} while (0);
 	stringbuilder_destroy(&sb);
-	return ret_str;
+	return parser_code;
+}
+
+char* ini_parser_dump(ini_parser_handle parser_p)
+{
+	if (!parser_p)
+	{
+		return NULL;
+	}
+	stringbuilder_t* sb = pri_dump_ini(parser_p);
+	if (NULL == sb)
+	{
+		return NULL;
+	}
+	char* ini_string = strdup(stringbuilder_to_string(sb));
+	stringbuilder_destroy(&sb);
+	return ini_string;
 }
 
 ini_parser_code_e ini_parser_save(ini_parser_handle parser_p, const char* file_path)
@@ -499,16 +551,16 @@ ini_parser_code_e ini_parser_save(ini_parser_handle parser_p, const char* file_p
 		return INI_PARSER_CODE_INVALID_PARAM;
 	}
 	char* ini_str = ini_parser_dump(parser_p);
-	if (!ini_str)
+	if (!ini_str || '\0' == ini_str[0])
 	{
-		fclose(fp);
+		if (ini_str)
+		{
+			free(ini_str);
+		}
 		return INI_PARSER_CODE_FAILED;
 	}
 	size_t ini_str_len = strlen(ini_str);
-	if (ini_str_len > 0)
-	{
-		fwrite(ini_str, 1, ini_str_len, fp);
-	}
+	fwrite(ini_str, 1, ini_str_len, fp);
 	free(ini_str);
 	fclose(fp);
 	return INI_PARSER_CODE_SUCCEED;
@@ -584,11 +636,11 @@ ini_parser_code_e ini_parser_destroy(ini_parser_handle* parser_pp)
 	return INI_PARSER_CODE_SUCCEED;
 }
 
-static long long parse_str2longlong(ini_parser_code_e* p_err, char* str_value)
+static long long parse_str2longlong(ini_parser_code_e* code_p, char* str_value)
 {
 	char* end_ptr = NULL;
-	long long result = strtoll(str_value, &end_ptr, 10);
-	*p_err = (!end_ptr || *end_ptr != '\0') ? INI_PARSER_CODE_FAILED : INI_PARSER_CODE_SUCCEED;
+	long long result = strtoll(str_value, &end_ptr, 0); // <-- when 0 == radix, it will auto detect radix 
+	*code_p = (!end_ptr || '\0' != *end_ptr) ? INI_PARSER_CODE_FAILED : INI_PARSER_CODE_SUCCEED;
 	return result;
 }
 

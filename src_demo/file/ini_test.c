@@ -7,7 +7,8 @@
 #define LOG_TAG "INI_TEST"
 #include "log/logger.h"
 
-static const char* test_ini_str = "[config]\r\n\
+static const char* test_ini_str = "\
+[config]\r\n\
 #this is comment\r\n\
 #number=1\r\n\
 nNum1 = 6\r\n\
@@ -16,6 +17,9 @@ test=\r\n\
 nNum2 = 2\n\
 #test double number\r\n\
 nNum3=0.035\r\n\
+# 测试16进制数字解析\r\n\
+nNum4 = 0xFF\n\
+nNUm5 = 0Xff\n\
 \r\n\
 [config2]\r\n\
 #test true false\r\n\
@@ -34,22 +38,22 @@ run_mode =  \r\n\
 
 /**
  * ini parse callback
- *   return true continue, 
- *   return false will cause 'ini_reader_parse' returned non-zero code. 
+ *   return true continue,
+ *   return false will cause 'ini_reader_parse' returned non-zero code.
  */
 static int my_ini_reader_handler(void* user,
 	const char* section, const char* key, const char* value
 #if INI_HANDLER_LINENO
 	, int lineno
 #endif // INI_HANDLER_LINENO
-) 
+)
 {
 	if (!section || !key)
 	{
 		return true; // just ignore and continue
 	}
 	LOGD("[%s] %s=%s", section, key, value);
-	#define INI_MATCH(s, k) (strcmp(section, (s)) == 0 && strcmp(key, (k)) == 0)
+#define INI_MATCH(s, k) (strcmp(section, (s)) == 0 && strcmp(key, (k)) == 0)
 	if (INI_MATCH("config", "nNum1"))
 	{
 		LOGD("  ~~ hi ~~ detect nNum1=%d", atoi(value));
@@ -72,7 +76,7 @@ static int ini_reader_test()
 
 //==============================================================
 
-static int my_ini_parser_handler(const char* section, 
+static int my_ini_parser_handler(const char* section,
 	const char* key, const char* value, const void* user)
 {
 	LOGD("[%s] %s=%s", section, key, value);
@@ -82,7 +86,7 @@ static int my_ini_parser_handler(const char* section,
 static int ini_parser_test()
 {
 	ini_parser_code_e err;
-	char buffer[128] = {0};
+	char buffer[256] = { 0 };
 	ini_parser_handle parser = ini_parser_parse_str(test_ini_str);
 	if (!parser)
 	{
@@ -116,6 +120,15 @@ static int ini_parser_test()
 	err = ini_parser_get_float(parser, "config", "nNum3", &num3);
 	LOGI("%d get nNum3=%.3f", err, num3);
 
+	long long num4 = 0, num5 = 0;
+	err = ini_parser_get_long_long(parser, "config", "nNum4", &num4);
+	ASSERT(INI_PARSER_CODE_SUCCEED == err);
+	LOGI("num4=%lld", num4);
+	err = ini_parser_get_long_long(parser, "config", "nNum5", &num5);
+	ASSERT(INI_PARSER_CODE_SUCCEED == err);
+	LOGI("num5=%lld", num5);
+	ASSERT(num4 == num5);
+
 	buffer[0] = 'a';
 	buffer[1] = '\0';
 	err = ini_parser_get_string(parser, "config", "test", buffer, sizeof(buffer));
@@ -145,12 +158,23 @@ static int ini_parser_test()
 		LOGE("failed(%d) get path", err);
 	}
 
+	size_t buffer_mem_size = sizeof(buffer);
+	if (INI_PARSER_CODE_SUCCEED == ini_parser_dump_to_mem(parser, buffer, &buffer_mem_size))
+	{
+		LOGD("dump ini(%zu): \n%s", buffer_mem_size, buffer);
+	}
+	else
+	{
+		LOGE("failed of dump ini to mem");
+	}
+
 	err = ini_parser_put_string(parser, "config", "new_key", "new_value");
 	LOGD("%s on put new config", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
 	err = ini_parser_delete_by_section_key(parser, "config", "test");
 	LOGD("%s on delete [config] test", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
 	err = ini_parser_delete_section(parser, "config4");
 	LOGD("%s on delete [config4]", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
+
 	//dump string should free after use.
 	char* ini_dump = ini_parser_dump(parser);
 	ASSERT(ini_dump);

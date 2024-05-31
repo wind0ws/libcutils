@@ -25,8 +25,16 @@ if "%WIN_PTHREAD_MODE%" EQU "" (
 set /p WIN_PTHREAD_MODE="please choose LCU pthread mode:"
 
 :label_select_vs
-set _TMP_VS_VER=%~4
-set VS_VER=%4
+set _TMP_VS_VER=%~3
+set VS_VER=%3
+if "%_TMP_VS_VER:~0,14%" == "Visual Studio " (
+  @echo "ok, the No.3 param is %VS_VER%"
+) else (
+  @echo "oops, No.3 param is not visual studio! use No.4 param!"
+  set _TMP_VS_VER=%~4
+  set VS_VER=%4
+)
+
 @echo VS_VER=%VS_VER%
 if "%_TMP_VS_VER%" EQU "" (
   @echo now auto detect vs version for you...
@@ -102,7 +110,9 @@ rmdir /S /Q %BUILD_DIR:"=% 2>nul
 mkdir %BUILD_DIR:"=%
 
 
-set CMAKE_EXTEND_ARGS=" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DPRJ_WIN_PTHREAD_MODE=%WIN_PTHREAD_MODE% -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON" 
+::set CMAKE_EXTEND_ARGS=" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DPRJ_WIN_PTHREAD_MODE=%WIN_PTHREAD_MODE% -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON" 
+set "CMAKE_EXTEND_ARGS=%CMAKE_EXTEND_ARGS% -DPRJ_WIN_PTHREAD_MODE=%WIN_PTHREAD_MODE%"
+@echo make_windows-CMAKE_EXTEND_ARGS=%CMAKE_EXTEND_ARGS:"=%
 :: VS2019 添加 arch 方式与其他版本不同，默认不加 -A 选项就是Win64(而且不能显式的添加Win64)
 :: 小提示：%VAR% 最后面加的 :"=  是为了去除变量两边的双引号的，如果要保留就不要加
 %CMAKE_BIN% -G %VS_VER% %NEW_VS_ARCH:"=% -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%

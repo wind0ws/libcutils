@@ -29,6 +29,7 @@ set ANDROID_TOOLCHAIN_FILE=%ANDROID_NDK%\build\cmake\android.toolchain.cmake
 set ANDROID_PLATFORM=android-19 
 set ANDROID_STL=c++_static
 ::set ANDROID_STL=gnustl_static
+
 set PARAM3=%3
 if "%PARAM3%" NEQ "" (
   if "%PARAM3%" EQU "c++_static" goto label_set_stl
@@ -90,7 +91,8 @@ mkdir "%BUILD_DIR:"=%"
             -DCMAKE_BUILD_TYPE=%BUILD_TYPE%                 ^
             -DCMAKE_TOOLCHAIN_FILE=%ANDROID_TOOLCHAIN_FILE% ^
             -DCMAKE_MAKE_PROGRAM=%NINJA_BIN%                ^
-            -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
+            %CMAKE_EXTEND_ARGS:"=%
+::            -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DBUILD_DEMO=ON
 ::          -DPRJ_OUTPUT_DIR_RELATIVE=%OUTPUT_DIR% 
 
 set ERR_CODE=%ERRORLEVEL%
@@ -107,7 +109,7 @@ set ERR_CODE=%ERRORLEVEL%
 ::copy /Y .\build_android_v7a\liblcu.so %OUTPUT_DIR%\\
 
 @echo.
-@echo "compile finished. bye bye..."
+@echo "compile finished(%ERR_CODE%). bye bye..."
 ::@pause>nul
 ::color 0F
 @exit /b %ERR_CODE%

@@ -143,6 +143,17 @@ extern "C" {
 	ini_parser_code_e ini_parser_delete_section(ini_parser_handle parser_p, const char* section);
 
 	/**
+     * @brief dump all ini config string to the provided mem.
+     *
+	 * @param[in] parser_p ini_parser inst pointer
+	 * @param[in] mem the target memory, that will copy config string to it.
+	 * @param[in] mem_size_p the pointer of target memory size. if dump succeed, the size will be override.
+	 * 
+	 * @return see ini_parser_code_e
+     */
+	ini_parser_code_e ini_parser_dump_to_mem(ini_parser_handle parser_p, char *mem, size_t *mem_size_p);
+
+	/**
 	 * @brief dump all ini config to string.
 	 *
 	 * The returned pointer should be FREED after use!
@@ -152,7 +163,7 @@ extern "C" {
 	char* ini_parser_dump(ini_parser_handle parser_p);
 
 	/**
-	 * @brief save all ini config to file.
+	 * @brief save all ini config to the file.
 	 * the target file will be override.
 	 * 
 	 * @return see ini_parser_code_e

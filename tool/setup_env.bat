@@ -12,11 +12,12 @@ set ERR_CODE=%ERRORLEVEL%
 IF %ERR_CODE% NEQ 0 (
    set CMAKE_BIN=D:\env\cmake\bin\cmake.exe
    @echo.
-   @echo "cmake not in your environment, we point a default location for you" 
+   @echo "cmake not found on your environment, we point a location(%CMAKE_BIN%) for you." 
    if not exist %CMAKE_BIN% (
      @echo ERROR: %CMAKE_BIN% not exists!!
      @exit /b 2
    )
+   %CMAKE_BIN% --version
 )
 @echo.
 set NINJA_BIN=ninja.exe
@@ -26,11 +27,12 @@ set ERR_CODE=%ERRORLEVEL%
 IF %ERR_CODE% NEQ 0 (
    set NINJA_BIN=D:\env\cmake\bin\ninja.exe
    @echo.
-   @echo "ninja not in your environment, we point a location for you" 
+   @echo "ninja not found on your environment, we point a location(%NINJA_BIN%) for you." 
    if not exist %NINJA_BIN% (
      @echo ERROR: %NINJA_BIN% not exists!!
      @exit /b 2
    )
+   %NINJA_BIN% --version
 )
 @echo.
 
@@ -41,6 +43,8 @@ IF %ERR_CODE% NEQ 0 (
 @echo ========================================================
 @echo.
 
+:: ON/OFF: ON for SHARED libs.
+set BUILD_SHARED_LIBS=ON
 
 set BUILD_ABI=%1
 if "%BUILD_ABI%" EQU "" (
@@ -66,6 +70,9 @@ if "%BUILD_TYPE%" EQU "RelWithDebInfo" goto label_run_next_bat
 @exit /b 2
 
 :label_run_next_bat
+@echo.
+set CMAKE_EXTEND_ARGS=" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS% -DBUILD_STATIC_LIBS=ON -DBUILD_DEMO=ON" 
+@echo CMAKE_EXTEND_ARGS=%CMAKE_EXTEND_ARGS:"=%
 @echo.
 @echo   hello... now compile it(%BUILD_ABI%  %BUILD_TYPE%)...
 @echo.

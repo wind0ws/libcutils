@@ -37,7 +37,7 @@ static int run_msg_queue_handler_testcase()
 
 	queue_msg_t* msg_p = (queue_msg_t*)calloc(1, sizeof(queue_msg_t) + MSG_OBJ_MAX_SIZE);
 	ASSERT_ABORT(msg_p);
-	for (int i = 0; i < 512; ++i)
+	for (int i = 0; i < 2048; ++i)
 	{
 		msg_p->what = i;
 		msg_p->obj_len = snprintf(msg_p->obj, MSG_OBJ_MAX_SIZE, "hello, I'm queue msg %d", i) + 1;

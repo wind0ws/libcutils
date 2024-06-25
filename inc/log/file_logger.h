@@ -23,7 +23,7 @@ extern "C" {
 #define MAX_LOG_FOLDER_PATH_SIZE (128)
 #define MAX_LOG_FILE_NAME_PREFIX_SIZE (32)
 		char log_folder_path[MAX_LOG_FOLDER_PATH_SIZE];
-		char log_file_name_prefix[MAX_LOG_FILE_NAME_PREFIX_SIZE];/**< log file name prefix */
+		char log_file_name_prefix[MAX_LOG_FILE_NAME_PREFIX_SIZE];/* log file name prefix */
 		size_t one_piece_file_max_len; /* the max len of one piece log file */
 		size_t log_queue_size; /* how many 1024 byte */
 		bool is_try_my_best_to_keep_log;
@@ -34,7 +34,7 @@ extern "C" {
 
 	int file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size);
 
-	int file_logger_deinit(file_logger_handle* handle_p);
+	int file_logger_destroy(file_logger_handle* handle_p);
 
 #ifdef __cplusplus
 }

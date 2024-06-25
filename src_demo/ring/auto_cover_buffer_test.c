@@ -1,7 +1,8 @@
-#include "ring/autocover_buffer.h"
+#include "ring/auto_cover_buffer.h"
 #include "common_macro.h"
 #include "thread/posix_thread.h"
 #include <string.h>
+#include <stdbool.h>
 
 #define LOG_TAG "AUTOCOVER"
 #include "log/logger.h"
@@ -14,13 +15,13 @@ typedef struct
 	volatile bool flag_exit;
 } cover_case_data_t;
 
-static int autocover_buf_lock(void* user_data)
+static int my_autocover_buf_lock(void* user_data)
 {
 	cover_case_data_t* data_p = (cover_case_data_t*)user_data;
 	return pthread_mutex_lock(&data_p->mutex_coverbuf);
 }
 
-static int autocover_buf_unlock(void* user_data)
+static int my_autocover_buf_unlock(void* user_data)
 {
 	cover_case_data_t* data_p = (cover_case_data_t*)user_data;
 	return pthread_mutex_unlock(&data_p->mutex_coverbuf);
@@ -31,41 +32,36 @@ static void* thread_consumer(void* param)
 	LOGD("--> consumer thread in");
 	cover_case_data_t* data_p = (cover_case_data_t*)param;
 	int ret = 0;
-	char buffer[16];
+	char buffer[8];
 	while (!(data_p->flag_exit))
 	{
-		if (data_p->data_in_counter < sizeof(buffer)) // no enough data in queue
+		Sleep(1);// mock the situation that we are not always get data from queue, let queue automatically recycle it
+		if (data_p->data_in_counter < 2U * sizeof(buffer)) // no enough data in queue
 		{
-			Sleep(1);// mock the situation that we are not always get data from queue, let queue automatically recycle it
 			continue;
 		}
-		memset(buffer, 0, sizeof(buffer));
-		autocover_buf_lock(param);
-		const uint32_t read_pos = data_p->data_in_counter - sizeof(buffer);
-		/*if (read_pos < 512)
-		{
-			LOGI("now read_pos=%u", read_pos);
-		}*/
+
+		my_autocover_buf_lock(param);
+		const uint32_t read_pos = data_p->data_in_counter - 2U * sizeof(buffer);
 		if ((int)(sizeof(buffer)) == (ret = auto_cover_buf_read(data_p->cover_buf_p,
 			read_pos, (void*)buffer, sizeof(buffer))))
 		{
-			if (0x00 != buffer[0] || 0x0F != buffer[sizeof(buffer) - 1])
+			if ((0x00 != buffer[0] && 0x08 != buffer[0]) ||
+				(0x07 != buffer[sizeof(buffer) - 1] && 0x0F != buffer[sizeof(buffer) - 1]))
 			{
-				LOGE("!!! read error !!! read_pos=%u", read_pos);
+				LOGE_TRACE("!!! read error !!! read_pos=%u", read_pos);
 				ASSERT_ABORT(0);
 			}
 			else
 			{
 				//LOGI(" *** read succeed! --> read_pos=%u", read_pos);
 			}
-			//Sleep(1);
 		}
 		else
 		{
-			//LOGE("not able read. read_pos=%u, ret=%d", read_pos, ret);
-			//Sleep(1);
+			LOGE_TRACE("not able read. read_pos=%u, ret=%d", read_pos, ret);
 		}
-		autocover_buf_unlock(param);
+		my_autocover_buf_unlock(param);
 	}
 	LOGD("<-- consumer thread out. counter=%u", data_p->data_in_counter);
 	return NULL;
@@ -78,7 +74,7 @@ static void* thread_producer(void* param)
 	char buffer[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F };
 	while (!(data_p->flag_exit))
 	{
-		autocover_buf_lock(param);
+		my_autocover_buf_lock(param);
 		if ((int)(sizeof(buffer)) == auto_cover_buf_write(data_p->cover_buf_p,
 			(void*)buffer, sizeof(buffer)))
 		{
@@ -93,7 +89,7 @@ static void* thread_producer(void* param)
 			LOGE("!!!failed on write!!! it's unusual. shouldn't reach here!!! ");
 			ASSERT_ABORT(0);
 		}
-		autocover_buf_unlock(param);
+		my_autocover_buf_unlock(param);
 		//Sleep(1);
 	}
 	LOGD("<-- producer thread out. counter=%u", data_p->data_in_counter);

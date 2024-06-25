@@ -1,6 +1,6 @@
 #include "mem/mem_debug.h"
-#include "ring/autocover_buffer.h"
-#include "ring/ringbuffer.h"
+#include "ring/auto_cover_buffer.h"
+#include "ring/ring_buffer.h"
 #include "common_macro.h"
 #include <malloc.h>
 #include <string.h>
@@ -9,8 +9,8 @@ struct _auto_cover_buf
 {
 	/* ring buffer handle*/
 	ring_buffer_handle ring;
-	/* ring buffer real size */
-	uint32_t ring_buffer_size;
+	/* ring buffer power number: which is (ring_buffer_size - 1U) */
+	uint32_t ring_buffer_power_number;
 	/* auto_cover_buf lock struct */
 	auto_cover_buf_lock_t buf_lock;
 };
@@ -33,20 +33,20 @@ auto_cover_buf_handle auto_cover_buf_create(__in uint32_t capacity_size,
 	{
 		return NULL;
 	}
-//#ifdef _WIN32
-//#pragma warning(suppress:6386)
-//#endif // _WIN32
+	//#ifdef _WIN32
+	//#pragma warning(suppress:6386)
+	//#endif // _WIN32
 	if (buf_lock_p)
 	{
 		memcpy(&buf_handle->buf_lock, buf_lock_p, sizeof(auto_cover_buf_lock_t));
 	}
-	buf_handle->ring = RingBuffer_create(capacity_size);
+	buf_handle->ring = ring_buffer_create(capacity_size);
 	if (!buf_handle->ring)
 	{
 		free(buf_handle);
 		return NULL;
 	}
-	buf_handle->ring_buffer_size = RingBuffer_real_capacity(buf_handle->ring);
+	buf_handle->ring_buffer_power_number = ring_buffer_real_capacity(buf_handle->ring) - 1U;
 	return buf_handle;
 }
 
@@ -54,7 +54,7 @@ auto_cover_buf_handle auto_cover_buf_create(__in uint32_t capacity_size,
  * read cover buf  start from read_pos
  * @return if return value below 0, that means the data you want to read start from read_pos is already covered.
  */
-static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle, 
+static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle,
 	uint32_t read_pos, void* target, uint32_t request_read_len)
 {
 	ASSERT(buf_handle);
@@ -62,11 +62,11 @@ static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle,
 
 	//default status is the data you want to read is been covered.
 	int real_can_read_len = AUTO_COVER_BUF_ERR_DATA_COVERED;
-	const uint32_t cover_read_off = read_pos & (buf_handle->ring_buffer_size - 1);
-	const uint32_t ring_available_data = RingBuffer_available_read(buf_handle->ring);
-	const uint32_t ring_read_off = RingBuffer_current_read_position(buf_handle->ring) & (buf_handle->ring_buffer_size - 1);
-	const uint32_t ring_write_off = RingBuffer_current_write_position(buf_handle->ring) & (buf_handle->ring_buffer_size - 1);
-	if (ring_write_off - ring_read_off == ring_available_data)
+	const uint32_t cover_read_off = (read_pos & (buf_handle->ring_buffer_power_number));
+	const uint32_t ring_available_data = ring_buffer_available_read(buf_handle->ring);
+	const uint32_t ring_read_off = (ring_buffer_current_read_position(buf_handle->ring) & (buf_handle->ring_buffer_power_number));
+	const uint32_t ring_write_off = (ring_buffer_current_write_position(buf_handle->ring) & (buf_handle->ring_buffer_power_number));
+	if ((ring_write_off - ring_read_off) == ring_available_data)
 	{
 		//current ring read from "out --> in"
 		//so "cover_read_off" should big(or equal) than "ring_read_off", small than "ring_write_off"
@@ -102,13 +102,19 @@ static int auto_cover_buf_internal_read(const auto_cover_buf_handle buf_handle,
 
 	if (target && real_can_read_len >= (int)request_read_len)
 	{
-		//perform discard
-		const uint32_t should_discard_len = ring_available_data - real_can_read_len;
-		if (should_discard_len)
+		// we need skip the data that we don't need at head.
+		const uint32_t should_skip_read_len = ring_available_data - real_can_read_len;
+		// we select peek instead of read for user re-read uncovered data in ring in future.
+#if 1
+		const uint32_t real_read_out_len = ring_buffer_peek_with_offset(buf_handle->ring,
+			should_skip_read_len, target, request_read_len);
+#else
+		if (should_skip_read_len)
 		{
-			RingBuffer_discard(buf_handle->ring, should_discard_len);
+			ring_buffer_discard(buf_handle->ring, should_skip_read_len);
 		}
-		const uint32_t real_read_out_len = RingBuffer_read(buf_handle->ring, target, request_read_len);
+		const uint32_t real_read_out_len = ring_buffer_read(buf_handle->ring, target, request_read_len);
+#endif
 		ASSERT_ABORT(real_read_out_len == request_read_len);
 	}
 
@@ -127,25 +133,31 @@ int auto_cover_buf_read(__in const auto_cover_buf_handle buf_handle,
 {
 	ASSERT(target);
 	ASSERT(req_read_len);
-	const int available_read_data = auto_cover_buf_internal_read(buf_handle, 
+	const int available_read_data = auto_cover_buf_internal_read(buf_handle,
 		read_pos, target, req_read_len);
 	if (available_read_data < 0)
 	{
 		//error: data has been covered. we are return error code.
 		return available_read_data;
 	}
-	int real_read_len;
+	int ret;
 	if (available_read_data < (int)req_read_len)
 	{
 		//error: not enough data, we NOT perform read operation.
-		real_read_len = AUTO_COVER_BUF_ERR_DATA_NOT_ENOUGH;
+		ret = AUTO_COVER_BUF_ERR_DATA_NOT_ENOUGH;
 	}
 	else
 	{
 		//we have enough data to read, and already read it out.
-		real_read_len = req_read_len;
+		ret = req_read_len;
 	}
-	return real_read_len;
+	return ret;
+}
+
+int auto_cover_buf_peek(__in const auto_cover_buf_handle buf_handle,
+	__in uint32_t read_pos, __out void* target, __in uint32_t size)
+{
+	return AUTO_COVER_BUF_ERR_INVALID_PARAM;
 }
 
 int auto_cover_buf_write(__in const auto_cover_buf_handle buf_handle,
@@ -155,12 +167,12 @@ int auto_cover_buf_write(__in const auto_cover_buf_handle buf_handle,
 	ASSERT(source);
 	AUTOCOVER_LOCK(buf_handle);
 
-	const uint32_t ring_available_write = RingBuffer_available_write(buf_handle->ring);
+	const uint32_t ring_available_write = ring_buffer_available_write(buf_handle->ring);
 	if (write_len > ring_available_write)
 	{
-		RingBuffer_discard(buf_handle->ring, write_len - ring_available_write);
+		ring_buffer_discard(buf_handle->ring, write_len - ring_available_write);
 	}
-	const uint32_t real_write_len = RingBuffer_write(buf_handle->ring, source, write_len);
+	const uint32_t real_write_len = ring_buffer_write(buf_handle->ring, source, write_len);
 	ASSERT_ABORT(real_write_len == write_len);
 
 	AUTOCOVER_UNLOCK(buf_handle);
@@ -174,7 +186,7 @@ void auto_cover_buf_destroy(__inout auto_cover_buf_handle* buf_handle_p)
 		return;
 	}
 	auto_cover_buf_handle buf_handle = *buf_handle_p;
-	RingBuffer_destroy(&(buf_handle->ring));
+	ring_buffer_destroy(&(buf_handle->ring));
 	free(buf_handle);
 	*buf_handle_p = NULL;
 }

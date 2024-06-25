@@ -129,7 +129,8 @@ int main(int argc, char* argv[])
 #endif //_WIN32
 
 #if TEST_FILE_LOGGER
-	ASSERT(file_logger_test_begin() == 0);
+	ret = file_logger_test_begin();
+	ASSERT(0 == ret);
 #endif
 	STDOUT2FILE();
 
@@ -150,12 +151,12 @@ int main(int argc, char* argv[])
 		//RUN_TEST(file_util_test);
 		//RUN_TEST(ini_test);
 		//RUN_TEST(basic_test);
-		//RUN_TEST(autocover_buffer_test);
+		RUN_TEST(autocover_buffer_test);
 		//RUN_TEST(mplite_test);
 		//RUN_TEST(thpool_test);
 		//RUN_TEST(string_test);
 		//RUN_TEST(time_util_test);
-		RUN_TEST(posix_thread_test);
+		//RUN_TEST(posix_thread_test);
 		//RUN_TEST(url_encoder_decoder_test);
 		//RUN_TEST(base64_test);
 		//RUN_TEST(str_params_test);
@@ -165,7 +166,8 @@ int main(int argc, char* argv[])
 	} while (0);
 
 #if TEST_FILE_LOGGER
-	ASSERT(file_logger_test_end() == 0);
+	ret = file_logger_test_end();
+	ASSERT(0 == ret);
 #endif
 	BACK2STDOUT();
 

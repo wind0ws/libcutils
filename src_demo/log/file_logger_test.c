@@ -54,7 +54,7 @@ int file_logger_test_end()
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE);
 	//optional: give some time to finish log on file
 	usleep(10000);
-	file_logger_deinit(&g_logger_ctx.logger_hdl);
+	file_logger_destroy(&g_logger_ctx.logger_hdl);
 	
 	LOGI("\"%s\" main log content should as same as \"%s\"", STDOUT_FILE_PATH, FILE_LOGGER_PATH);
 	return 0;

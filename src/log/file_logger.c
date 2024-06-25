@@ -53,15 +53,11 @@ static int handle_log_queue_msg(queue_msg_t* msg_p, void* user_data);
 
 file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 {
-	if (!cfg_p)
+	if (!cfg_p || '\0' == cfg_p->log_folder_path[0] || cfg_p->log_queue_size < 2U)
 	{
 		return NULL;
 	}
 	if (strlen(cfg_p->log_folder_path) < 2U) //log folder path is abnormal
-	{
-		return NULL;
-	}
-	if (cfg_p->log_queue_size < 2U)
 	{
 		return NULL;
 	}
@@ -177,7 +173,7 @@ int file_logger_log(file_logger_handle handle, void* log_msg, size_t msg_size)
 	return (int)status;
 }
 
-int file_logger_deinit(file_logger_handle* handle_p)
+int file_logger_destroy(file_logger_handle* handle_p)
 {
 	if (NULL == handle_p || NULL == *handle_p)
 	{

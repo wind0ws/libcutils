@@ -42,7 +42,7 @@ typedef struct
 typedef struct
 {
 	ini_parser_handler user_handler;
-	void* user_param;
+	void* user_data;
 	section_info_t* p_section_info;
 } ini_foreach_context_t;
 
@@ -204,7 +204,7 @@ static bool iter_foreach_section_key_value(void* data, void* context)
 		return true; // just ignored empty key and continue
 	}
 	return (0 == context_p->user_handler(context_p->p_section_info->section_name,
-		p_kv->key, p_kv->value, context_p->user_param));
+		p_kv->key, p_kv->value, context_p->user_data));
 }
 
 // foreach sections, for get key-value of section
@@ -224,7 +224,7 @@ static bool iter_foreach_section(void* data, void* context)
 	return true;
 }
 
-ini_parser_code_e ini_parser_foreach(ini_parser_handle parser_p, ini_parser_handler handler, void* user)
+ini_parser_code_e ini_parser_foreach(ini_parser_handle parser_p, ini_parser_handler handler, void* user_data)
 {
 	if (!parser_p || !handler)
 	{
@@ -233,7 +233,7 @@ ini_parser_code_e ini_parser_foreach(ini_parser_handle parser_p, ini_parser_hand
 	ini_foreach_context_t context =
 	{
 	  .user_handler = handler,
-	  .user_param = user,
+	  .user_data = user_data,
 	  .p_section_info = NULL,
 	};
 	// foreach all sections 

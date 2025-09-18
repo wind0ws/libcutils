@@ -11,16 +11,16 @@
 #include <sys/types.h>      /* for ssize_t                       */
 
 #if(defined(__linux__) || defined(__ANDROID__))
-#include <sys/cdefs.h>    /* for __BEGIN_DECLS                 */
+#include <sys/cdefs.h>      /* for __BEGIN_DECLS / __END_DECLS   */
 #endif // __linux__ || __ANDROID__
 
 #ifdef __ANDROID__
-#include <android/log.h>  /* for log msg on logcat             */
+#include <android/log.h>    /* for log msg on logcat             */
 #endif // __ANDROID__
 
 #ifdef _WIN32
-#include <crtdbg.h>       /* for _ASSERT_AND_INVOKE_WATSON     */
-#include <sal.h>          /* for annotation: mark parameters   */
+#include <crtdbg.h>         /* for _ASSERT_AND_INVOKE_WATSON     */
+#include <sal.h>            /* for annotation: mark parameters   */
 #ifndef __func__
 #define __func__ __FUNCTION__
 #endif // !__func__
@@ -36,6 +36,12 @@ typedef unsigned char       BYTE;
 typedef unsigned short      WORD;
 typedef float               FLOAT;
 #endif // _WIN32
+
+#ifdef __cplusplus
+#define _THE_NULL nullptr /* NULL keyword for cpp */ 
+#else
+#define _THE_NULL NULL    /* NULL keyword for c   */ 
+#endif // __cplusplus
 
 #ifndef UNUSED
 #define UNUSED(x)           (void)(x)
@@ -158,7 +164,7 @@ typedef intptr_t ssize_t;
 #endif // !__abs
 
 #ifndef FREE
-#define FREE(ptr) do{ if(ptr) { free(ptr); (ptr) = NULL; } }while(0)
+#define FREE(ptr) do{ if(ptr) { free(ptr); (ptr) = _THE_NULL; } }while(0)
 #endif // !FREE
 
 #ifndef ARRAY_LEN
@@ -247,9 +253,9 @@ typedef intptr_t ssize_t;
  // (never in C++ code). 
  // Whenever integers need to be passed as a pointer, use these macros. 
  // for compatible with 64bit OS, suggest use PTR_TO_LONG64 and LONG64_TO_PTR
-#define PTR_TO_UINT(p)    ((uintptr_t) (p)))
+#define PTR_TO_UINT(p)    ((uintptr_t) (p))
 #define UINT_TO_PTR(u)    ((void *) ((uintptr_t) (u)))
-#define PTR_TO_INT(p)     (((intptr_t) (p))
+#define PTR_TO_INT(p)     (((intptr_t) (p)))
 #define INT_TO_PTR(i)     ((void *) ((intptr_t) (i)))
 #define PTR_TO_LONG64(p)  ((long long) ((intptr_t) (p)))
 #define LONG64_TO_PTR(i)  ((void *) ((intptr_t) (i)))
@@ -271,7 +277,7 @@ typedef intptr_t ssize_t;
 
 static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
 {
-	FILE* _ftemp = NULL;
+	FILE* _ftemp = _THE_NULL;
 	fopen_s(&_ftemp, _FileName, _Mode);
 	return _ftemp;
 }
@@ -282,7 +288,7 @@ static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif // _WIN32
-#define fclose(fp) do{if(fp){ fclose(fp); (fp) = NULL; }}while(0)
+#define fclose(fp) do{if(fp){ fclose(fp); (fp) = _THE_NULL; }}while(0)
 
 #ifndef RANDOM
 #define RANDOM_INIT(seed)   srand((seed))
@@ -291,20 +297,19 @@ static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
 
 //================================DECLARE ENUM AND STRINGS================================
 /** how to use:
-
-// def enum and declare enum strings on header
-#define FOREACH_STATES_ITEM(GENERATOR)       \
-             GENERATOR(STATE_START)          \
-             GENERATOR(STATE_STOP)
-DEF_ENUM(STATES, FOREACH_STATES_ITEM);
-DECLARE_ENUM_STRS(STATES);
-
-// def enum string on source file
-DEF_ENUM_STRS(STATES, FOREACH_STATES_ITEM);
-
-// now you can use enum str
-printf("STATES[0]=%s\n", STATES_STR[STATE_START]);
-printf("STATES[%d]=%s\n", (int)STATE_STOP, STATES_STR[STATE_STOP]);
+    // 1. def enum and declare enum strings on header file(*.h)
+    #define FOREACH_STATES_ITEM(GENERATOR)       \
+                 GENERATOR(STATE_START)          \
+                 GENERATOR(STATE_STOP)
+    DEF_ENUM(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def enum STATE_TYPE
+    DECLARE_ENUM_STRS(STATE_TYPE); // <-- declare STATE_TYPE_STRS
+    
+    // 2. def enum string on source file(c/cpp).
+    DEF_ENUM_STRS(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def STATE_TYPE_STRS
+    
+    // 3. ok, now you can use enum string.
+    printf("STATE_TYPE[0]=%s\n", STATE_TYPE_STRS[STATE_START]);
+    printf("STATE_TYPE[%d]=%s\n", (int)STATE_STOP, STATE_TYPE_STRS[STATE_STOP]);
  */
 
 #define _GENERATOR_ENUM_ITEM(item) item,
@@ -313,8 +318,8 @@ printf("STATES[%d]=%s\n", (int)STATE_STOP, STATES_STR[STATE_STOP]);
         typedef enum name##_ {                                            \
            foreach_enum(generator_enum_item)                              \
         } name;
-#define DEF_ENUM(name, foreach_enum) _TEMP_FOR_DEF_ENUM(name, foreach_enum, _GENERATOR_ENUM_ITEM)
-#define DECLARE_ENUM_STRS(name)               extern const char *name##_STRS[]
+#define DEF_ENUM(name, foreach_enum)   _TEMP_FOR_DEF_ENUM(name, foreach_enum, _GENERATOR_ENUM_ITEM)
+#define DECLARE_ENUM_STRS(name)        extern const char *name##_STRS[]
 #define _TEMP_FOR_DEF_ENUM_STRS(name, foreach_enum, generator_enum_str)       \
                const char *name##_STRS[] = { foreach_enum(generator_enum_str) };
 #define DEF_ENUM_STRS(name, foreach_enum)                                     \

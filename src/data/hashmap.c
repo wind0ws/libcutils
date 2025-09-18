@@ -68,14 +68,14 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 	hashmap_lock_t* lock)
 {
 	hashmap_t* map = (hashmap_t*)(malloc(sizeof(hashmap_t)));
-	if (map == NULL)
+	if (NULL == map)
 	{
 		return NULL;
 	}
 	/* Initialize the hashmap object */
 	memset(map, 0, sizeof(*map));
 	/* Copy the lock if it is not NULL */
-	if (lock != NULL)
+	if (NULL != lock)
 	{
 		memcpy(&map->lock, lock, sizeof(map->lock));
 	}
@@ -88,7 +88,7 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 		map->bucketCount <<= 1;
 	}
 	map->buckets = (Entry**)(calloc(map->bucketCount, sizeof(Entry*)));
-	if (map->buckets == NULL)
+	if (NULL == map->buckets)
 	{
 		free(map);
 		return NULL;
@@ -112,7 +112,7 @@ static inline int hashKey(hashmap_t* map, void* key)
 	int h = map->fn_hash(key);
 	// We apply this secondary hashing discovered by Doug Lea to defend
 	// against bad hashes.
-	h += ~(h << 9);
+	h += (~(h << 9));
 	h ^= (((unsigned int)h) >> 14);
 	h += (h << 4);
 	h ^= (((unsigned int)h) >> 10);
@@ -132,19 +132,19 @@ static void expandIfNecessary(hashmap_t* map)
 		return;
 	}
 	// Start off with a 0.33 load factor.
-	size_t newBucketCount = map->bucketCount << 1;
+	size_t newBucketCount = (map->bucketCount << 1);
 	Entry** newBuckets = (Entry**)(calloc(newBucketCount, sizeof(Entry*)));
-	if (newBuckets == NULL)
+	if (NULL == newBuckets)
 	{
 		// Abort expansion.
 		return;
 	}
 	// Move over existing entries.
 	size_t i;
-	for (i = 0; i < map->bucketCount; i++)
+	for (i = 0; i < map->bucketCount; ++i)
 	{
 		Entry* entry = map->buckets[i];
-		while (entry != NULL)
+		while (NULL != entry)
 		{
 			Entry* next = entry->next;
 			size_t index = calculateIndex(newBucketCount, entry->hash);
@@ -162,10 +162,10 @@ static void expandIfNecessary(hashmap_t* map)
 static void hashmap_clear_unsafe(hashmap_t* map)
 {
 	size_t i;
-	for (i = 0; i < map->bucketCount; i++)
+	for (i = 0; i < map->bucketCount; ++i)
 	{
 		Entry* entry = map->buckets[i];
-		while (entry != NULL)
+		while (NULL != entry)
 		{
 			Entry* next = entry->next;
 			if (entry->key && map->fn_key_free)
@@ -177,7 +177,7 @@ static void hashmap_clear_unsafe(hashmap_t* map)
 				map->fn_value_free(entry->value);
 			}
 			free(entry);
-			map->size--;
+			--map->size;
 			entry = next;
 		}
 		map->buckets[i] = NULL;
@@ -256,23 +256,23 @@ void* hashmap_put(hashmap_t* map, void* key, void* value)
 		return NULL;
 	}
 	hashmap_enter(map);
-	int hash = hashKey(map, key);
-	size_t index = calculateIndex(map->bucketCount, hash);
+	const int hash = hashKey(map, key);
+	const size_t index = calculateIndex(map->bucketCount, hash);
 	Entry** p = &(map->buckets[index]);
 	void* ret = NULL;
 	while (true)
 	{
 		Entry* current = *p;
 		// Add a new entry.
-		if (current == NULL)
+		if (NULL == current)
 		{
 			*p = createEntry(key, hash, value);
-			if (*p == NULL)
+			if (NULL == *p)
 			{
 				errno = ENOMEM;
 				break;
 			}
-			map->size++;
+			++map->size;
 			expandIfNecessary(map);
 			break;
 		}
@@ -305,7 +305,7 @@ void* hashmap_get(hashmap_t* map, void* key)
 	size_t index = calculateIndex(map->bucketCount, hash);
 	Entry* entry = map->buckets[index];
 	void* ret = NULL;
-	while (entry != NULL)
+	while (NULL != entry)
 	{
 		if (equalKeys(entry->key, entry->hash, key, hash, map->fn_key_equality))
 		{
@@ -331,7 +331,7 @@ void* hashmap_remove(hashmap_t* map, void* key)
 	Entry** p = &(map->buckets[index]);
 	Entry* current;
 	void* ret = NULL;
-	while ((current = *p) != NULL)
+	while (NULL != (current = *p))
 	{
 		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
@@ -346,7 +346,7 @@ void* hashmap_remove(hashmap_t* map, void* key)
 				map->fn_value_free(current->value);
 			}
 			free(current);
-			map->size--;
+			--map->size;
 			break;
 		}
 		p = &current->next;
@@ -373,10 +373,10 @@ void hashmap_foreach(hashmap_t* map, hashmap_iter_cb callback, void* context) {
 		return;
 	}
 	hashmap_enter(map);
-	for (i = 0; i < map->bucketCount; i++)
+	for (i = 0; i < map->bucketCount; ++i)
 	{
 		Entry* entry = map->buckets[i];
-		while (entry != NULL)
+		while (NULL != entry)
 		{
 			Entry* next = entry->next;
 			if (!callback(entry->key, entry->value, context))

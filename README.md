@@ -46,10 +46,10 @@
     | **linux**   | `chmod +x *.sh && ./deploy_for_linux.sh Release`    | ` chmod +x *.sh && ./make_cross_platform.sh linux m64 Release ` |
     | **android** | `deploy_for_android.bat Release c++_static`         | ` make_android.bat armeabi-v7a Release `                        |
 	
-    > there 3 way to integration pthread on windows：
-    > * 0: implementing the pthread interface using the windows api
-    > * 1: use pthread static library. if you use static library, don't forget dependency pthread lib
-    > * 2: use pthread dynamic library. you should place pthread dll on your project
+    > there 3 way to integration *pthread* on windows：
+    > * 0: implementing the pthread interface by windows api.
+    > * 1: use pthread static library. if you use static library of *lcu*, don't forget add pthread lib on your project.
+    > * 2: use pthread dynamic library. you should place pthread dll on your project.
   
   * ### other platforms (cross-compilation)
     1. #### first, write cmake cross-compilation toolchain file on **tool/cmake/toolchains** folder:
@@ -106,14 +106,14 @@
       ```
 
 ## How to use
-  >  copy header and lib(static or shared) to your project, and link it,
-  or just copy source and header file to your project.
+  > copy header and lib(static or shared) to your project, and link it,
+    or just copy source and header file to your project.
 
 ## Demo
   > see `src_demo` folder, it demonstrate to you simple use case.
 
 ## License
-  > This library is free software; you can redistribute it and or modify it under the terms of the [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
+  > this library is free software; you can redistribute it and or modify it under the terms of the [Apache License 2.0](https://github.com/wind0ws/libcutils/blob/master/LICENSE)
 
 ## Contact me
   > email: <hsjfox@foxmail.com>

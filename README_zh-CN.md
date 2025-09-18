@@ -121,8 +121,8 @@
 ## 更新日志
 
 * **1.8.0**
-  > 1. 新增: 支持hook msg_queue_handler/fix_msg_queue_handler 的线程就绪/即将停止状态信息
-  > 2. 新增: 支持对 LOG_TAG 设置前缀后缀，比如在Android上就可以轻松根据前缀过滤出进程所有的TAG日志
+  > 1. 新增: 支持hook *msg_queue_handler*/*fix_msg_queue_handler* 的线程*就绪/即将停止*状态信息
+  > 2. 新增: 支持对 *LOG_TAG* 设置前缀后缀，比如在Android上就可以轻松根据前缀过滤出进程所有的TAG日志
   > 3. 更新: 编译脚本支持自动查找 cmake/ninja/NDK 等工具的位置，支持批量编译
   > 4. 修复: fix mkdir在unix上没有对其他用户赋予写入权限的问题
 
@@ -150,12 +150,12 @@
 
 * **1.5.3**
   > 1. 新增: logger_facade,  xlog/slog 实现这个log门面.
-  > 2. 特性: 提高xlog 性能: 使用自定义的打印方法名和行数函数.
+  > 2. 特性: 提升 xlog 性能: 使用自定义的打印方法名和行数函数.
   > 3. 修复: windows dll 导出符号问题 (借助cmake功能实现).
 
 * **1.5.2**
-  > 1. 特性: 提高 time_util_get_current_time_str 性能.
-  > 2. 特性: 提高 xlog 性能.
+  > 1. 特性: 提升 time_util_get_current_time_str 性能.
+  > 2. 特性: 提升 xlog 性能.
   > 3. 新增: xlog添加flush模式，支持自动flush（默认）和每次print后flush.
 
 * **1.4.1**

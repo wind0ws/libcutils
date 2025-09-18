@@ -67,14 +67,14 @@ char* lcu_strndup_trace(const char* str, size_t len, const char* file_path, cons
 	{
 		size = len;
 	}
-	size_t real_size = allocation_tracker_resize_for_canary(size + 1);
+	const size_t real_size = allocation_tracker_resize_for_canary(size + 1U);
 	void* ptr = malloc(real_size);
 	if (!ptr)
 	{
 		return NULL;
 	}
 	char* new_string = allocation_tracker_notify_alloc(ALLOCTOR_ID,
-		ptr, size + 1, file_path, func_name, file_line);
+		ptr, size + 1U, file_path, func_name, file_line);
 	if (!new_string)
 	{
 		return NULL;
@@ -91,7 +91,7 @@ char* lcu_strndup(const char* str, size_t len)
 
 void* lcu_malloc_trace(size_t size, const char* file_path, const char* func_name, int file_line)
 {
-	size_t real_size = allocation_tracker_resize_for_canary(size);
+	const size_t real_size = allocation_tracker_resize_for_canary(size);
 	void* ptr = malloc(real_size);
 	if (!ptr)
 	{
@@ -107,8 +107,8 @@ void* lcu_malloc(size_t size)
 
 void* lcu_calloc_trace(size_t item_count, size_t item_size, const char* file_path, const char* func_name, int file_line)
 {
-	size_t request_size = item_count * item_size;
-	size_t real_size = allocation_tracker_resize_for_canary(request_size);
+	const size_t request_size = item_count * item_size;
+	const size_t real_size = allocation_tracker_resize_for_canary(request_size);
 	void* ptr = calloc(1, real_size);
 	if (!ptr)
 	{
@@ -130,9 +130,10 @@ void* lcu_calloc1(size_t size)
 
 void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const char* func_name, int file_line)
 {
+#define _REALLOC_MORE_SIZE (4096U)
 	if (0 == size)
 	{
-		//if 0 == size, free the ptr, return NULL
+		//if (0 == size), free the ptr, return NULL.
 		if (ptr)
 		{
 			lcu_free(ptr);
@@ -143,10 +144,10 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 	if (NULL == ptr)
 	{
 		/* a little trick: give more memory than you need, for maybe reduce realloc times */
-		return lcu_malloc_trace(size + 2048U, file_path, func_name, file_line);
+		return lcu_malloc_trace(size + _REALLOC_MORE_SIZE, file_path, func_name, file_line);
 	}
 
-	size_t cur_ptr_size = allocation_tracker_ptr_size(ALLOCTOR_ID, ptr);
+	const size_t cur_ptr_size = allocation_tracker_ptr_size(ALLOCTOR_ID, ptr);
 	if (cur_ptr_size && size <= cur_ptr_size)
 	{
 		//current size is enough, no need alloc new memory.
@@ -154,7 +155,7 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 	}
 
 	/* a little trick: give more memory than you need, for reduce realloc times */
-	void* new_ptr = lcu_malloc_trace(size + 2048U, file_path, func_name, file_line);
+	void* new_ptr = lcu_malloc_trace(size + _REALLOC_MORE_SIZE, file_path, func_name, file_line);
 	if (!new_ptr)
 	{
 		return NULL;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 
 project(lcu VERSION 1.8.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
@@ -10,12 +10,13 @@ include(macros)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(POSITION_INDEPENDENT_CODE TRUE)
 
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
@@ -29,7 +30,7 @@ IF(WIN32)
 ENDIF(WIN32)
 
 message(STATUS "\n current CMakeLists.txt on => ${CMAKE_CURRENT_LIST_DIR}\n")
-#get prj root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
+#get prj root dir, because CMakeLists.txt is in "tool" dir, not in root dir. we should back to parent folder.
 get_filename_component(PRJ_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
 message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n PRJ_ROOT_DIR => ${PRJ_ROOT_DIR}\n")
 
@@ -234,16 +235,16 @@ IF (BUILD_SHARED_LIBS)
   # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
   #set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
   # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-  if(NOT CYGWIN)
-    # This property causes shared libraries on Linux to have the full version
-    # encoded into their final filename.  We disable this on Cygwin because
-    # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
-    # seems to be the default.
-    #
-    # This has no effect with MSVC, on that platform the version info for
-    # the DLL comes from the resource file win32/zlib1.rc
-    set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
-  endif()
+  #if(NOT CYGWIN)
+  #  # This property causes shared libraries on Linux to have the full version
+  #  # encoded into their final filename.  We disable this on Cygwin because
+  #  # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
+  #  # seems to be the default.
+  #  #
+  #  # This has no effect with MSVC, on that platform the version info for
+  #  # the DLL comes from the resource file win32/zlib1.rc
+  #  set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+  #endif()
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)

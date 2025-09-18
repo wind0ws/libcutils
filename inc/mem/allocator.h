@@ -23,8 +23,8 @@
   */
 
 #pragma once
-#ifndef __LCU_ALLOCATOR_H
-#define __LCU_ALLOCATOR_H
+#ifndef _LCU_ALLOCATOR_H
+#define _LCU_ALLOCATOR_H
 
 #include <stddef.h>
 
@@ -78,4 +78,4 @@ extern "C" {
 }
 #endif
 
-#endif // !__LCU_ALLOCATOR_H
+#endif // !_LCU_ALLOCATOR_H

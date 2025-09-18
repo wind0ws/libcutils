@@ -435,8 +435,8 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	XLOG_LOCK();
 	do 
 	{
-		bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
-		bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
+		const bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
+		const bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
 		if (g_xlog_cfg.trigger_up_level && level < g_xlog_cfg.trigger_up_level)
 		{
 			level = g_xlog_cfg.trigger_up_level;

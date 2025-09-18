@@ -210,7 +210,7 @@ int str_params_add_long(str_params_ptr params, const char* key, long value)
 	char val_str[24];
 	int ret;
 	ret = snprintf(val_str, sizeof(val_str), "%ld", value);
-	if (ret < 0)
+	if (ret < 0 || ret >= (int)sizeof(val_str))
 	{
 		return -EINVAL;
 	}
@@ -227,11 +227,12 @@ int str_params_add_double(str_params_ptr params, const char* key, double value)
 {
 	char val_str[32];
 	int ret;
-	ret = snprintf(val_str, sizeof(val_str), "%.10f", value);
-	if (ret < 0)
+	ret = snprintf(val_str, sizeof(val_str), "%.10f", value);// <-- we keep 10 decimal places to maintain accuracy
+	if (ret < 0 || ret >= (int)sizeof(val_str))
 	{
 		return -EINVAL;
 	}
+	
 	ret = str_params_add_str(params, key, val_str);
 	return ret;
 }
@@ -249,16 +250,17 @@ bool str_params_has_key(str_params_ptr params, const char* key)
 int str_params_get_str(str_params_ptr params, const char* key, char* out_val, size_t out_val_size)
 {
 	char* value = (char*)(hashmap_get(params->map, (void*)key));
-	if (value)
+	if (!value)
 	{
-		if (strlen(value) + 1 > out_val_size)
-		{
-			return -ENOMEM;
-		}
-		strlcpy(out_val, value, out_val_size);
-		return 0;
+		return -ENOENT;
 	}
-	return -ENOENT;
+	
+	if (strlen(value) + 1U > out_val_size)
+	{
+		return -ENOMEM;
+	}
+	strlcpy(out_val, value, out_val_size);
+	return 0;
 }
 
 int str_params_get_long(str_params_ptr params, const char* key, long* out_val)
@@ -282,7 +284,7 @@ int str_params_get_int(str_params_ptr params, const char* key, int* out_val)
 {
 	long long_num;
 	int ret = str_params_get_long(params, key, &long_num);
-	if (ret == 0)
+	if (0 == ret)
 	{
 		*out_val = long_num;
 	}
@@ -322,7 +324,7 @@ typedef struct
 {
 	char* str;
 	str_params_ptr params_ptr;
-}combine_strings_ctx;
+} combine_strings_ctx;
 
 static bool combine_strings(void* key, void* value, void* context)
 {
@@ -342,6 +344,7 @@ static bool combine_strings(void* key, void* value, void* context)
 		combine_ctx->str = new_str;
 		return true;
 	}
+	
 	if (new_str)
 	{
 		free(new_str);

@@ -54,7 +54,7 @@ extern "C" {
 	 * global cleanup lcu
 	 *
 	 * call at ending of your app,
-	 * otherwise maybe some resource not released
+	 * otherwise maybe some resource not released.
 	 */
 	int xlog_global_cleanup();
 
@@ -88,7 +88,7 @@ extern "C" {
 	/**
 	 * timezone_hour used by generate your local log time.
 	 * timezone_hour should between -12 ~ 12. default timezone_hour is 8. 
-	 * example: In china, we are in +8 timezone area, so here set it to 8.
+	 * example: in china, we are in +8 timezone area, so here set it to 8.
 	 */
 	void xlog_set_timezone(int timezone_hour);
 
@@ -107,13 +107,13 @@ extern "C" {
 	/**
 	 * set user callback. when log performed, callback will called.
 	 * you can do your own log logic on callback.
-	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't trigged
+	 * note: log target should include LOG_TARGET_USER_CALLBACK, otherwise callback won't triggered.
 	 */
 	void xlog_set_user_callback(xlog_user_callback_fn user_cb, void* user_data);
 
 	/**
 	 * @brief set log target which you want to output.
-	 * @note  if you output on multi target and not provide lock, printing order can't be ensured.
+	 * @note  we use internal lock to make sure the right printing order.
 	 * 
 	 * @param[in]	target : default on Android is LOG_TARGET_ANDROID, other platform is LOG_TARGET_CONSOLE.
 	 *                       multiple target can be combined. 
@@ -230,17 +230,17 @@ extern "C" {
 // better 'define LOG_TAG "xxx"' before include "xlog.h"
 // if not, we use default TAG, which you called on xlog_set_default_tag
 #ifndef LOG_TAG
-#define LOG_TAG  NULL
+#define LOG_TAG  _LOG_NULL
 #endif // !LOG_TAG
 #ifndef _LOG_TAG
 #define _LOG_TAG LOG_TAG
 #endif // !_LOG_TAG
 
-#define TLOGV(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define TLOGD(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define TLOGI(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_INFO, tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define TLOGW(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define TLOGE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGV(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_VERBOSE, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGD(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_DEBUG, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGI(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_INFO, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGW(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define TLOGE(tag, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
 
 #define LOGV(fmt, ...) TLOGV(_LOG_TAG, fmt, ##__VA_ARGS__)
 #define LOGD(fmt, ...) TLOGD(_LOG_TAG, fmt, ##__VA_ARGS__)

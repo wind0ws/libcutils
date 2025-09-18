@@ -25,11 +25,11 @@
 #define _LOGW_TRACE_IMPL(tag, func_name, line_num, fmt, ...) __xlog_internal_print(LOG_LEVEL_WARN, tag, func_name, line_num, fmt, ##__VA_ARGS__)
 #define _LOGE_TRACE_IMPL(tag, func_name, line_num, fmt, ...) __xlog_internal_print(LOG_LEVEL_ERROR, tag, func_name, line_num, fmt, ##__VA_ARGS__)
 
-#define _LOGV_IMPL(tag, fmt, ...) _LOGV_TRACE_IMPL(tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define _LOGD_IMPL(tag, fmt, ...) _LOGD_TRACE_IMPL(tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define _LOGI_IMPL(tag, fmt, ...) _LOGI_TRACE_IMPL(tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define _LOGW_IMPL(tag, fmt, ...) _LOGW_TRACE_IMPL(tag, NULL, 0, fmt, ##__VA_ARGS__)
-#define _LOGE_IMPL(tag, fmt, ...) _LOGE_TRACE_IMPL(tag, NULL, 0, fmt, ##__VA_ARGS__)
+#define _LOGV_IMPL(tag, fmt, ...) _LOGV_TRACE_IMPL(tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define _LOGD_IMPL(tag, fmt, ...) _LOGD_TRACE_IMPL(tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define _LOGI_IMPL(tag, fmt, ...) _LOGI_TRACE_IMPL(tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define _LOGW_IMPL(tag, fmt, ...) _LOGW_TRACE_IMPL(tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define _LOGE_IMPL(tag, fmt, ...) _LOGE_TRACE_IMPL(tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
 
 #define _LOGV_HEX_IMPL(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_VERBOSE, tag, chars, chars_count)
 #define _LOGD_HEX_IMPL(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_DEBUG, tag, chars, chars_count)

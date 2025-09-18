@@ -4,14 +4,32 @@
 
 #include <ctype.h> /* for tolower/toupper */
 #include <stddef.h>
-#include <stdio.h> /* for snprintf */
+#include <stdarg.h> /* for va_list */
+#include <stdio.h>	/* for snprintf */
 #include <string.h>
 #ifndef _WIN32
-#include <strings.h> //for bcopy/bzero
-#endif // !_WIN32
+#include <strings.h> /* for bcopy/bzero */
+#endif	// !_WIN32
+
+#ifdef __ANDROID__
+#include <android/log.h> /* for log msg on logcat             */
+#define _STRINGS_HEADER_LOG_FOR_PLATFORM(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "DEBUG", fmt, ##__VA_ARGS__)
+#else
+#define _STRINGS_HEADER_LOG_FOR_PLATFORM(fmt, ...)
+#endif // __ANDROID__
+
+// for log strings log message.
+#define _STRINGS_HEADER_LOG(fmt, ...)                         \
+	do                                                        \
+	{                                                         \
+		_STRINGS_HEADER_LOG_FOR_PLATFORM(fmt, ##__VA_ARGS__); \
+		printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);           \
+		fflush(stdout);                                       \
+	} while (0)
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif // __cplusplus
 
 #ifndef bcopy
@@ -22,17 +40,17 @@ extern "C" {
 #endif // !bzero
 
 #ifdef _WIN32
-//to make MSC happy
-#define stricmp(s1, s2)                      _stricmp(s1, s2)
-#define strnicmp(s1, s2, n)                  _strnicmp(s1, s2, n)
+// to make MSC happy
+#define stricmp(s1, s2) _stricmp(s1, s2)
+#define strnicmp(s1, s2, n) _strnicmp(s1, s2, n)
 // stricmp is win32 function. suggest to use strcasecmp for cross platform
-#define strcasecmp(s1, s2)                   stricmp(s1, s2)
-#define strncasecmp(s1, s2, n)               strnicmp(s1, s2, n)
+#define strcasecmp(s1, s2) stricmp(s1, s2)
+#define strncasecmp(s1, s2, n) strnicmp(s1, s2, n)
 #ifndef strdup
-#define strdup(s)                            _strdup(s)
-#endif // !strdup
-#ifndef strndup  //windows not implement strndup, let's do it.
-char* strndup(const char* s, size_t n);
+#define strdup(s) _strdup(s)
+#endif			// !strdup
+#ifndef strndup // windows not implement strndup, let's do it.
+	char *strndup(const char *s, size_t n);
 #endif // !strndup
 
 /**
@@ -41,27 +59,81 @@ char* strndup(const char* s, size_t n);
  * here we assume that "dest" is big enough to storage "src", so we use 'strlen(src) + 1' as destSize.
  * be careful!
  */
-#define strcpy(dest, src)                    strcpy_s((dest), strlen(src) + 1, (src)) 
-#define strncpy(dest, src, cp_count)         strncpy_s((dest), (cp_count), (src), (cp_count) - 1)
-#define strcat(dest, src)                    strcat_s((dest), strlen(dest) + strlen(src) + 1, (src))
-#define strtok_r(str, delimiter, ctx)        strtok_s((str), (delimiter), (ctx))
- //#define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
+#define strcpy(dest, src) strcpy_s((dest), strlen(src) + 1U, (src))
+#define strncpy(dest, src, cp_count) strncpy_s((dest), (cp_count) + 1U, (src), (cp_count))
+#define strcat(dest, src) strcat_s((dest), strlen(dest) + strlen(src) + 1U, (src))
+#define strtok_r(str, delimiter, ctx) strtok_s((str), (delimiter), (ctx))
+	// #define snprintf(buf, buf_size, format, ...)  _snprintf_s(buf, buf_size, (buf_size) - 1, format, ## __VA_ARGS__)
 #else
-//stricmp is windows function. suggest to use strcasecmp for cross platform
-#define stricmp(s1, s2)                      strcasecmp(s1, s2)
-#define strnicmp(s1, s2, n)                  strncasecmp(s1, s2, n)
+// stricmp is windows function. suggest to use strcasecmp for cross platform
+#define stricmp(s1, s2) strcasecmp(s1, s2)
+#define strnicmp(s1, s2, n) strncasecmp(s1, s2, n)
 #endif // _WIN32
 
-#define _STRING_TRANSFORM(s, line, trans_func)  do{  char *cpy_s_##line = (char *)(s); \
-													 for ( ; *cpy_s_##line; ++cpy_s_##line) *cpy_s_##line = trans_func(*cpy_s_##line); \
-	 											  } while(0)
+/* macro for fmt check */
+#if (!defined(__NO_CHK_FMT))
+#if (defined(_MSC_VER))
+#include <sal.h>
+#define PRINTF_FMT_CHK_MSC _Printf_format_string_
+#elif (defined(__GNUC__))
+#define _FMT_CHK_GNUC(func, id_fmt, id_va) __attribute__((format(func, (id_fmt), (id_va))))
+#define PRINTF_FMT_CHK_GNUC(id_fmt, id_va) _FMT_CHK_GNUC(printf, id_fmt, id_va)
+#endif // __GNUC__
+#endif // !__NO_CHK_FMT
+#ifndef PRINTF_FMT_CHK_MSC
+#define PRINTF_FMT_CHK_MSC
+#endif // !PRINTF_FMT_CHK_MSC
+#ifndef PRINTF_FMT_CHK_GNUC
+#define PRINTF_FMT_CHK_GNUC(id_fmt, id_va)
+#endif // !PRINTF_FMT_CHK_GNUC
+
+#define _STRING_TRANSFORM(s, line, trans_func)         \
+	do                                                 \
+	{                                                  \
+		char *cpy_s_##line = (char *)(s);              \
+		for (; *cpy_s_##line; ++cpy_s_##line)          \
+			*cpy_s_##line = trans_func(*cpy_s_##line); \
+	} while (0)
 #ifndef STRING2UPPER
-#define STRING2UPPER(s)                      _STRING_TRANSFORM(s, __LINE__, toupper)
+#define STRING2UPPER(s) _STRING_TRANSFORM(s, __LINE__, toupper)
 #endif // !STRING2UPPER
 #ifndef STRING2LOWER
-#define STRING2LOWER(s)                      _STRING_TRANSFORM(s, __LINE__, tolower)
+#define STRING2LOWER(s) _STRING_TRANSFORM(s, __LINE__, tolower)
 #endif // !STRING2LOWER
 
+	PRINTF_FMT_CHK_GNUC(5, 6)
+	static inline int _snprintf_make_up(const char *function_name, int line_num,
+										char *const _Buffer, size_t const _BufferCount,
+										PRINTF_FMT_CHK_MSC char const *const _Format, ...)
+	{
+		va_list args;
+		va_start(args, _Format);
+		const int ret_of_sn = vsnprintf((_Buffer), (_BufferCount), (_Format), args);
+		va_end(args);
+
+		if (_Buffer && _BufferCount > 0)
+		{
+			if (ret_of_sn < 0)
+			{
+				(_Buffer)[0] = '\0';
+				_STRINGS_HEADER_LOG("(%s:%d)snprintf failed(%d), n: %zu\n",
+									function_name, line_num, ret_of_sn, _BufferCount);
+			}
+			else if (ret_of_sn >= (int)(_BufferCount))
+			{
+				(_Buffer)[_BufferCount - 1] = '\0';
+				_STRINGS_HEADER_LOG("(%s:%d)snprintf truncated(%d), n: %zu\n",
+									function_name, line_num, ret_of_sn, _BufferCount);
+			}
+		}
+		return ret_of_sn;
+	}
+
+#define _SNPRINTF_MAKE_UP1(function_name, line_num, s, n, fmt, ...) \
+	_snprintf_make_up(function_name, line_num, s, n, fmt, ##__VA_ARGS__)
+
+// safe snprintf, and check result of snprintf
+#define _SNPRINTF(s, n, fmt, ...) _SNPRINTF_MAKE_UP1(__func__, __LINE__, s, n, fmt, ##__VA_ARGS__)
 
 #if (defined(__GLIBC__) || defined(_WIN32))
 	/* Declaration of strlcpy() for platforms that don't already have it. */
@@ -73,31 +145,31 @@ char* strndup(const char* s, size_t n);
 	 *
 	 * @return Returns strlen(src); if retval >= size, truncation occurred.
 	 */
-	size_t strlcpy(char* dst, const char* src, size_t size);
+	size_t strlcpy(char *dst, const char *src, size_t size);
 
 	/**
 	 * Appends src to string dst of size "size" (unlike strncat, size is the
 	 * full size of dst, not space left).  At most (size-1) characters
 	 * will be copied.  Always NUL terminates (unless size <= strlen(dst)).
-	 * 
+	 *
 	 * @return Returns strlen(src) + MIN(size, strlen(initial dst)).
 	 *         If retval >= size, truncation occurred.
 	 */
-	size_t strlcat(char* dst, const char* src, size_t size);
+	size_t strlcat(char *dst, const char *src, size_t size);
 
 #endif // __GLIBC__ || _WIN32
 
 	/**
 	 * replace the "pattern" to "replacement" from "original".
 	 * WARN: return string is allocated, need free after use!
-	 * 
+	 *
 	 * @param original: the str to replace
 	 * @param pattern: the replace pattern
 	 * @param replacement: replace pattern to this
 	 * @return replaced string, this memory on heap, need free after use!
 	 */
-	char* strreplace(char const* const original,
-		char const* const pattern, char const* const replacement);
+	char *strreplace(char const *const original,
+					 char const *const pattern, char const *const replacement);
 
 	/**
 	 * split string by delimiter
@@ -107,8 +179,8 @@ char* strndup(const char* s, size_t n);
 	 * @param src_str: the origin str that you want to split
 	 * @param delimiter: the string of delimiter, for example ","
 	 */
-	void strsplit(char* recv_splited_str[], size_t* p_splited_nums,
-		const char* src_str, const char* delimiter);
+	void strsplit(char *recv_splited_str[], size_t *p_splited_nums,
+				  const char *src_str, const char *delimiter);
 
 	/**
 	 * trim string.
@@ -127,7 +199,7 @@ char* strndup(const char* s, size_t n);
 	 * @param s: the string want to trim. this string must editable!!!
 	 * @param cset: the char set want to be removed from s.
 	 */
-	void strtrim(char* s, const char* cset);
+	void strtrim(char *s, const char *cset);
 
 	/**
 	 * count utf8 code points(words, NOT chars), NOT bytes.
@@ -135,14 +207,14 @@ char* strndup(const char* s, size_t n);
 	 * uft8str must end with '\0', or memory will over read(that is dangerous).
 	 * @return how many word in this string.
 	 */
-	size_t strutf8len(const char* utf8str);
+	size_t strutf8len(const char *utf8str);
 
 	/**
 	 * as same as strutf8len.
 	 * but with max_count limitation: when reach '\0' or max_count, word search end.
 	 * @return how many word in this string.
 	 */
-	size_t strnutf8len(const char* utf8str, size_t max_count);
+	size_t strnutf8len(const char *utf8str, size_t max_count);
 
 	/**
 	 * transform char to hex.
@@ -152,8 +224,8 @@ char* strndup(const char* s, size_t n);
 	 * @param chars: the chars you want to transform to hex
 	 * @param chars_count: the count of chars
 	 */
-	size_t str_char2hex(char* out_hex_str, size_t out_hex_str_capacity,
-		const char* chars, size_t chars_count);
+	size_t str_char2hex(char *out_hex_str, size_t out_hex_str_capacity,
+						const char *chars, size_t chars_count);
 
 #ifdef __cplusplus
 };

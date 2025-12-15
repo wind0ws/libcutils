@@ -24,7 +24,7 @@ extern "C" {
 	/**
 	 * @brief callback for foreach ini section-key-value
 	 * 
-	 * @return 0 for continue, otherwise break the chain.
+	 * @return 0 to continue iterating, non-zero to stop iterating.
 	 */
 	typedef int (*ini_parser_handler)(const char* section,
 		const char* key, const char* value, void* user_data);

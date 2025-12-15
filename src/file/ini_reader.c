@@ -171,16 +171,34 @@ int ini_reader_parse_stream(ini_reader reader, void* stream, ini_reader_handler 
         }
 #if INI_ALLOW_MULTILINE
         else if (*prev_name && *start && start > line) {
+            char* sep = ini_find_chars_or_comment(start, "=:");
+            if (*sep == '=' || *sep == ':') {
+                *sep = '\0';
+                name = ini_rstrip(start);
+                value = sep + 1;
 #if INI_ALLOW_INLINE_COMMENTS
-            end = ini_find_chars_or_comment(start, NULL);
-            if (*end)
-                *end = '\0';
-            ini_rstrip(start);
+                end = ini_find_chars_or_comment(value, NULL);
+                if (*end)
+                    *end = '\0';
 #endif
-            /* Non-blank line with leading whitespace, treat as continuation
-               of previous name's value (as per Python configparser). */
-            if (!HANDLER(user, section, prev_name, start) && !error)
-                error = lineno;
+                value = ini_lskip(value);
+                ini_rstrip(value);
+
+                ini_strncpy0(prev_name, name, sizeof(prev_name));
+                if (!HANDLER(user, section, name, value) && !error)
+                    error = lineno;
+            } else {
+#if INI_ALLOW_INLINE_COMMENTS
+                end = ini_find_chars_or_comment(start, NULL);
+                if (*end)
+                    *end = '\0';
+                ini_rstrip(start);
+#endif
+                /* Non-blank line with leading whitespace, treat as continuation
+                   of previous name's value (as per Python configparser). */
+                if (!HANDLER(user, section, prev_name, start) && !error)
+                    error = lineno;
+            }
         }
 #endif
         else if (*start == '[') {
@@ -299,6 +317,5 @@ int ini_reader_parse_string(const char* string, ini_reader_handler handler, void
 
     ctx.ptr = string;
     ctx.num_left = strlen(string);
-    return ini_reader_parse_stream((ini_reader)ini_reader_string, &ctx, handler,
-                            user);
+    return ini_reader_parse_stream((ini_reader)ini_reader_string, &ctx, handler, user);
 }

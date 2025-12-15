@@ -18,7 +18,7 @@ int time_rfc1123(time_t* the_time, char* out_time_str, size_t out_time_str_size)
     gmtime_r(the_time, &gmtime);
 
     strftime(out_time_str, TIME_RFC1123_STR_SIZE, "---, %d --- %Y %H:%M:%S GMT", &gmtime);
-    memcpy(out_time_str, DAY_NAMES[gmtime.tm_wday], 3);
-    memcpy(out_time_str + 8, MONTH_NAMES[gmtime.tm_mon], 3);
+    memcpy(out_time_str, DAY_NAMES[gmtime.tm_wday], 3U);
+    memcpy(out_time_str + 8, MONTH_NAMES[gmtime.tm_mon], 3U);
     return 0;
 }

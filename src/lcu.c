@@ -3,7 +3,7 @@
 #include "time/time_util.h"
 #include "log/xlog.h"
 
-static volatile unsigned int g_init_times = 0;
+static volatile unsigned char g_init_times = 0;
 
 char* lcu_get_version()
 {

@@ -21,7 +21,7 @@
 #ifndef LCU_DLFCN_WINDOWS_H
 #define LCU_DLFCN_WINDOWS_H
 
- //do not include this header directly, you should include "dlfcn_wrapper.h" instead!
+ //do not include this header directly, you should use " #include "dlfcn.h" " instead!
 #ifdef _WIN32
 
 #ifdef __cplusplus

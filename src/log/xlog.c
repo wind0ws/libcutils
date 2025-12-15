@@ -304,9 +304,12 @@ LogFlushMode xlog_get_flush_mode()
 static inline int print_level_tag(char* buffer, const LogLevel level, const char* tag)
 {
 	int fmt_len = 0;
-	buffer[fmt_len++] = ' ';
-	buffer[fmt_len++] = g_map_level_chars[level];
-	buffer[fmt_len++] = '/';
+	buffer[fmt_len] = ' ';
+	++fmt_len;
+	buffer[fmt_len] = g_map_level_chars[level];
+	++fmt_len;
+	buffer[fmt_len] = '/';
+	++fmt_len;
 #if 0
 	const size_t origin_tag_len = strlen(tag);
 #else
@@ -323,7 +326,8 @@ static inline int print_level_tag(char* buffer, const LogLevel level, const char
 	const size_t align_tag_len = (cpy_tag_len < 8U ? 8U : cpy_tag_len);
 	for (size_t i = 0; i < align_tag_len; ++i)
 	{
-		buffer[fmt_len++] = (i < cpy_tag_len ? tag[i] : ' ');
+		buffer[fmt_len] = (i < cpy_tag_len ? tag[i] : ' ');
+		++fmt_len;
 	}
 #else
 	if (cpy_tag_len)
@@ -333,7 +337,8 @@ static inline int print_level_tag(char* buffer, const LogLevel level, const char
 	}
 	while (cpy_tag_len++ < 8U)
 	{
-		buffer[fmt_len++] = ' ';
+		buffer[fmt_len] = ' ';
+		++fmt_len;
 	}
 #endif
 	buffer[fmt_len] = '\0';
@@ -342,56 +347,69 @@ static inline int print_level_tag(char* buffer, const LogLevel level, const char
 
 static inline int print_tid(char* buffer, int tid)
 {
-	if (tid < 0)
+	long long tid_value = tid;
+	if (tid_value < 0)
 	{
-		tid = -tid; //oops, overflow
+		tid_value = -tid_value; // keep formatting consistent for negative ids
 	}
 	buffer[0] = '(';
 	++buffer;
 #define MAX_TID_WIDTH (5)
-	int num_count = MAX_TID_WIDTH;
-	for (; num_count > 0 && tid > 0; --num_count, tid /= 10)
+	char digits[MAX_TID_WIDTH];
+	size_t digit_count = 0U;
+	do
 	{
-		buffer[num_count - 1] = '0' + tid % 10;
-	}
-	if (num_count)
+		if (digit_count < MAX_TID_WIDTH)
+		{
+			digits[digit_count] = (char)('0' + (int)(tid_value % 10LL));
+			++digit_count;
+		}
+		tid_value /= 10LL;
+	} while (tid_value);
+	size_t pad_len = (digit_count < MAX_TID_WIDTH) ? (MAX_TID_WIDTH - digit_count) : 0U;
+	if (pad_len)
 	{
-		memset(buffer, ' ', num_count);
+		memset(buffer, ' ', pad_len);
+		buffer += pad_len;
 	}
-	buffer += MAX_TID_WIDTH;
-	buffer[0] = ')';
-	buffer[1] = '\0';
-	return 7;
+	while (digit_count)
+	{
+		--digit_count;
+		*buffer = digits[digit_count];
+		++buffer;
+	}
+	*buffer = ')';
+	++buffer;
+	*buffer = '\0';
+	return (int)(MAX_TID_WIDTH + 2U);
 }
 
 static inline int my_int2str(int num, char* str)
 {
-	int len_str = 0;
-	if (num < 0)
+	char* cursor = str;
+	long long value = num;
+	if (value < 0)
 	{
-		num = -num;
-		str[len_str++] = '-';
+		*cursor = '-';
+		++cursor;
+		value = -value;
 	}
+	char tmp_digits[16];
+	size_t digit_count = 0U;
 	do
 	{
-		str[len_str++] = num % 10 + '0';
-		num /= 10;
-	} while (num);
-	str[len_str] = '\0';
-
-	int index_swap = 0;
-	if ('-' == str[0])
+		tmp_digits[digit_count] = (char)('0' + (int)(value % 10LL));
+		++digit_count;
+		value /= 10LL;
+	} while (value);
+	while (digit_count)
 	{
-		index_swap = 1;
-		++len_str;
+		--digit_count;
+		*cursor = tmp_digits[digit_count];
+		++cursor;
 	}
-	for (; index_swap < len_str / 2; ++index_swap)
-	{
-		str[index_swap] = str[index_swap] + str[len_str - 1 - index_swap];
-		str[len_str - 1 - index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
-		str[index_swap] = str[index_swap] - str[len_str - 1 - index_swap];
-	}
-	return len_str;
+	*cursor = '\0';
+	return (int)(cursor - str);
 }
 
 // (func:line)  
@@ -469,8 +487,10 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 	        }
 			if (header_len)
 			{
-				buffer_log[header_len++] = ':';
-				buffer_log[header_len++] = ' ';
+				buffer_log[header_len] = ':';
+				++header_len;
+				buffer_log[header_len] = ' ';
+				++header_len;
 				buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
 				//#define XLOG_HEADER_COLON (": ")
 				//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));

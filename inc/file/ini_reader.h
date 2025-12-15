@@ -145,7 +145,7 @@ INI_API int ini_reader_parse_string(const char* string, ini_reader_handler handl
 
 /* Stop parsing on first error (default is to keep parsing). */
 #ifndef INI_STOP_ON_FIRST_ERROR
-#define INI_STOP_ON_FIRST_ERROR 0
+#define INI_STOP_ON_FIRST_ERROR 1
 #endif
 
 /* Nonzero to call the handler at the start of each new section (with

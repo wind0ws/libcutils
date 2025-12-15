@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "ring/ring_buffer.h"
 #include "log/slog.h"
 #include <malloc.h> /* for malloc/free */
@@ -5,19 +6,27 @@
 
 #define _RING_LOG_TAG         "RING_BUF"
 
+#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#ifdef _DEBUG
 #define RING_LOGV(fmt,...)    SLOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGD(fmt,...)    SLOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGI(fmt,...)    SLOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGW(fmt,...)    SLOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#else
+#define RING_LOGV(fmt,...)
+#define RING_LOGD(fmt,...)
+#define RING_LOGI(fmt,...)
+#define RING_LOGW(fmt,...)
+// #define RING_LOGE(fmt,...)
+#endif // _DEBUG
 
 #ifndef TAKE_MIN
 /* take min value of a,b */
 #define TAKE_MIN(a, b) (((a) > (b)) ? (b) : (a))
 #endif // TAKE_MIN
 
-//config try read/write if no enough data or space
-// if enable, maybe you are not full read/write data, be aware of this.
+// config try read/write if no enough data or space
+//  if enable, maybe you are not full read/write data, be aware of this.
 #define RINGBUF_CONFIG_TRY_RW_IF_NOT_ENOUGH (0)
 
 /*

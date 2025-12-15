@@ -26,6 +26,10 @@ typedef enum
 	MSG_Q_CODE_FULL,
 	/* the buffer you provide is not enough to hold(pop) msg, you should make buf bigger */
 	MSG_Q_CODE_BUF_NOT_ENOUGH,
+	/* failed on alloc memory */
+	MSG_Q_CODE_FAILED_ON_ALLOC,
+	/* invalid msg: invalid msg.what or msg.obj_len */
+	MSG_Q_CODE_INVALID_MSG,
 } msg_q_code_e;
 
 #endif // !LCU_MSG_QUEUE_ERRNO_H

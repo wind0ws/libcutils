@@ -65,7 +65,7 @@ extern "C"
 {
 #endif
 
-    // get current tid. you can cast it to pid_t
+    // get current tid. you can cast it to pid_t(normally it is int).
     unsigned long portable_thread_gettid();
 
 	// set name for current thread. suggest use this method instead of pthread_setname_np

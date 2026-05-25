@@ -8,6 +8,8 @@
 #define _LOG_DEINIT_IMPL(params)           do { (void)(params); } while(0)
 #define _LOG_SET_MIN_LEVEL_IMPL(min_level) SLOG_SET_MIN_LEVEL(min_level)
 #define _LOG_GET_MIN_LEVEL_IMPL()          SLOG_GET_MIN_LEVEL()
+#define _LOG_SET_FORMAT_IMPL(format)       do { (void)(format); } while(0)
+#define _LOG_GET_FORMAT_IMPL()             0
 #define _LOG_STD2FILE_IMPL(file_path)      SLOG_STD2FILE(file_path)
 #define _LOG_BACK2STD_IMPL()               SLOG_BACK2STD()   
 

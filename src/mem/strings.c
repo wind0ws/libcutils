@@ -122,12 +122,16 @@ char* strreplace(char const* const original,
 	// allocate memory for the new string
 	size_t const retlen = orilen + patcnt * (replen - patlen);
 	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
-	if (NULL != returned)
+	do
 	{
+		if (NULL == returned)
+		{
+			break;
+		}
 		//memset(returned, '\0', sizeof(char) * (retlen + 1));
 		returned[0] = '\0';
 		// copy the original string, 
-		// replacing all the instances of the pattern
+		// replacing all the instances of the pattern.
 		char* retptr = returned;
 		for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
 		{
@@ -142,8 +146,9 @@ char* strreplace(char const* const original,
 			retptr += replen;
 		}
 		// copy the rest of the string.
-		strcpy(retptr, oriptr);
-	}
+        size_t remaining_len = strlen(oriptr);
+        memcpy(retptr, oriptr, remaining_len + 1U); /* +1 for null terminator */
+	} while (0);
 	return returned;
 }
 

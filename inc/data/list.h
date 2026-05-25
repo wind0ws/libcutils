@@ -105,7 +105,7 @@ void *list_front(const list_t *list);
 void *list_back(const list_t *list);
 
 /**
- * @brief Gets the last node in the list without removing it
+ * @brief Gets the last node(NOT the last element) in the list without removing it.
  * 
  * @param list Pointer to the list (must not be NULL or empty)
  * @return list_node_t* Pointer to the last node
@@ -170,10 +170,10 @@ void list_clear(list_t *list);
  * @brief Iterates through the list and calls callback for each data element
  * 
  * @param list Pointer to the list (must not be NULL)
- * @param callback Function to call for each element (must not be NULL)
+ * @param callback Function to call for each element (must not be NULL).
  * @param context User-defined data passed to callback on each iteration
- * @return list_node_t* Pointer to the last processed element, or NULL if the list is empty
- *                      or all calls to callback returned true
+ * @return list_node_t* Pointer to the last processed element, 
+ *                      or NULL if the list is empty or all calls to callback returned true.
  * @note Iteration continues until callback returns false. If the list is empty, callback
  *       will never be called. It is safe to mutate the list inside the callback. If an
  *       element is added before the node being visited, there will be no callback for the
@@ -195,10 +195,10 @@ list_node_t *list_begin(const list_t *list);
  * @brief Gets an iterator that points past the end of the list
  * 
  * @param list Pointer to the list (must not be NULL)
- * @return list_node_t* Iterator pointing past the end of the list
+ * @return list_node_t* Iterator pointing past the end of the list. generally it is NULL.
  * @note This function returns the value of an invalid iterator for the given list.
- *       When an iterator has the same value as what's returned by this function, you
- *       may no longer call list_next() with the iterator.
+ *       When an iterator has the same value as what's returned by this function, 
+ *       you may no longer call list_next() with the iterator.
  */
 list_node_t* list_end(UNUSED_ATTR const list_t* list);
 

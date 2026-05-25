@@ -53,6 +53,7 @@ void slog_stdout2file(char* file_path)
 	if (!g_slog.fp_out)
 	{
 		fprintf(stderr, "[slog] (%s:%d) Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+		freopen(_STDOUT_NODE, "w", stdout);
 	}
 }
 

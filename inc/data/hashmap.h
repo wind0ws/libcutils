@@ -5,7 +5,7 @@
 
  // Attention: HashMap is NOT thread safe!
  // for concurrency support, you should provide lock/unlock function on hashmap_create. 
- // or protect all operations on hashmap by your self.
+ // OR protect all operations on hashmap by yourself.
 
 #pragma once
 #ifndef LCU_HASHMAP_H
@@ -140,7 +140,7 @@ extern "C" {
 	 * 
 	 * @param map Hashmap to get value from
 	 * @param key Key to look up
-	 * @return Value associated with the key, or NULL if no entry is found
+	 * @return Value associated with the key, or NULL if no entry is found,
 	 *         or if the value itself is NULL
 	 */
 	void* hashmap_get(hashmap_t* map, void* key);
@@ -155,7 +155,7 @@ extern "C" {
 	 * @warning If you set fn_value_free function, we will call it on remove.
 	 *          For example: fn_value_free = free, after this remove function is called,
 	 *          the return value is no longer usable because it has been freed!
-	 *          You can only compare the return value with NULL and nothing else.
+	 *          You can only compare the return value(pointer) with NULL and nothing else.
 	 */
 	void* hashmap_remove(hashmap_t* map, void* key);
 

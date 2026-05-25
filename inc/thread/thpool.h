@@ -1,11 +1,14 @@
 /**********************************
- * @author      Johan Hanssen Seferidis
+ * @author      Johan Hanssen Seferidis (original)
+ * @author      Threshold (complete rewrite)
  * License:     MIT
- * 
- * reference https://github.com/Pithikos/C-Thread-Pool/blob/master/thpool.c   20200709
- * already modified by Threshold:
- *    1. move 'volatile int threads_keepalive' to pool struct
- *    2. if in WIN32, remove pause/resume method
+ *
+ * Improvements:
+ *    1. Fixed all thread safety issues
+ *    2. Added proper error checking for all pthread functions
+ *    3. Fixed resource leaks
+ *    4. Removed signal-based pause/resume (unsafe and non-portable)
+ *    5. Improved cleanup and error handling
  **********************************/
 
 #ifndef _THPOOL_
@@ -53,7 +56,7 @@ threadpool thpool_init(int num_threads);
  * @example
  *
  *    void print_num(int num){
- *       printf("%d\n", num);
+ *       printf("%d\\n", num);
  *    }
  *
  *    int main() {
@@ -66,7 +69,7 @@ threadpool thpool_init(int num_threads);
  * @param  threadpool    threadpool to which the work will be added
  * @param  function_p    pointer to function to add as work
  * @param  arg_p         pointer to an argument
- * @return 0 on success, -1 otherwise.
+ * @return 0 on success, -1 if threadpool or function is NULL, -2 if memory allocation failed
  */
 int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
 
@@ -77,12 +80,6 @@ int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
  * Will wait for all jobs - both queued and currently running to finish.
  * Once the queue is empty and all work has completed, the calling thread
  * (probably the main program) will continue.
- *
- * Smart polling is used in wait. The polling is initially 0 - meaning that
- * there is virtually no polling at all. If after 1 seconds the threads
- * haven't finished, the polling interval starts growing exponentially
- * until it reaches max_secs seconds. Then it jumps down to a maximum polling
- * interval assuming that heavy processing is being used in the threadpool.
  *
  * @example
  *
@@ -100,48 +97,6 @@ int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
  */
 void thpool_wait(threadpool);
 
-#ifndef _WIN32  /* Win32 pthread lib not support pthread_kill(pthread_t, int), so forbid use these api  */
-
-/**
- * @brief Pauses all threads immediately
- *
- * The threads will be paused no matter if they are idle or working.
- * The threads return to their previous states once thpool_resume
- * is called.
- *
- * While the thread is being paused, new work can be added.
- *
- * @example
- *
- *    threadpool thpool = thpool_init(4);
- *    thpool_pause(thpool);
- *    ..
- *    // Add a bunch of work
- *    ..
- *    thpool_resume(thpool); // Let the threads start their magic
- *
- * @param threadpool    the threadpool where the threads should be paused
- * @return nothing
- */
-void thpool_pause(threadpool);
-
-
-/**
- * @brief Unpauses all threads if they are paused
- *
- * @example
- *    ..
- *    thpool_pause(thpool);
- *    sleep(10);              // Delay execution 10 seconds
- *    thpool_resume(thpool);
- *    ..
- *
- * @param threadpool     the threadpool where the threads should be unpaused
- * @return nothing
- */
-void thpool_resume(threadpool);
-
-#endif // !_WIN32
 
 /**
  * @brief Destroy the threadpool
@@ -175,7 +130,7 @@ void thpool_destroy(threadpool);
  *    threadpool thpool1 = thpool_init(2);
  *    threadpool thpool2 = thpool_init(2);
  *    ..
- *    printf("Working threads: %d\n", thpool_num_threads_working(thpool1));
+ *    printf("Working threads: %d\\n", thpool_num_threads_working(thpool1));
  *    ..
  *    return 0;
  * }

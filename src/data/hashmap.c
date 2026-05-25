@@ -21,10 +21,11 @@
 #include <malloc.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
- //we define alloc function to lcu_alloc, 
- //so here we should undef it to avoid Recursive call. 
-#ifdef _USE_LCU_MEM_CHECK 
+// we define alloc function to lcu_alloc,
+// so here we should undef it to avoid Recursive call.
+#ifdef _USE_LCU_MEM_CHECK
 #undef malloc
 #undef free
 #undef calloc
@@ -36,14 +37,15 @@
 typedef struct Entry Entry;
 struct Entry
 {
-	void* key;
+	void *key;
 	int hash;
-	void* value;
-	Entry* next;
+	void *value;
+	Entry *next;
 };
+
 struct Hashmap
 {
-	Entry** buckets;
+	Entry **buckets;
 	size_t bucketCount;
 	hash_key_fn fn_hash;
 	key_free_fn fn_key_free;
@@ -53,21 +55,32 @@ struct Hashmap
 	size_t size;
 };
 
-#define hashmap_enter(handle)    if((handle != NULL) &&        \
-        ((handle)->lock.acquire != NULL))                      \
-        { (handle)->lock.acquire((handle)->lock.arg); }
-#define hashmap_leave(handle)    if((handle != NULL) &&        \
-        ((handle)->lock.release != NULL))                      \
-        { (handle)->lock.release((handle)->lock.arg); }
+#define hashmap_enter(handle)                       \
+	if ((handle != NULL) &&                         \
+		((handle)->lock.acquire != NULL))           \
+	{                                               \
+		(handle)->lock.acquire((handle)->lock.arg); \
+	}
+#define hashmap_leave(handle)                       \
+	if ((handle != NULL) &&                         \
+		((handle)->lock.release != NULL))           \
+	{                                               \
+		(handle)->lock.release((handle)->lock.arg); \
+	}
 
-hashmap_t* hashmap_create(size_t initial_capacity,
-	hash_key_fn fn_hash,
-	key_free_fn fn_key_free,
-	value_free_fn fn_value_free,
-	key_equality_fn fn_key_equality,
-	hashmap_lock_t* lock)
+hashmap_t *hashmap_create(size_t initial_capacity,
+						  hash_key_fn fn_hash,
+						  key_free_fn fn_key_free,
+						  value_free_fn fn_value_free,
+						  key_equality_fn fn_key_equality,
+						  hashmap_lock_t *lock)
 {
-	hashmap_t* map = (hashmap_t*)(malloc(sizeof(hashmap_t)));
+	// 0.75 load factor. Check for overflow
+	if (initial_capacity > (SIZE_MAX / 4))
+	{
+		return NULL;
+	}
+	hashmap_t *map = (hashmap_t *)(malloc(sizeof(hashmap_t)));
 	if (NULL == map)
 	{
 		return NULL;
@@ -79,15 +92,20 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 	{
 		memcpy(&map->lock, lock, sizeof(map->lock));
 	}
-	// 0.75 load factor.
-	size_t minimumBucketCount = initial_capacity * 4 / 3;
+	
+	const size_t minimumBucketCount = initial_capacity * 4 / 3;
 	map->bucketCount = 1;
 	while (map->bucketCount <= minimumBucketCount)
 	{
-		// Bucket count must be power of 2.
+		// Bucket count must be power of 2. Check for overflow
+		if (map->bucketCount > (SIZE_MAX / 2))
+		{
+			free(map);
+			return NULL;
+		}
 		map->bucketCount <<= 1;
 	}
-	map->buckets = (Entry**)(calloc(map->bucketCount, sizeof(Entry*)));
+	map->buckets = (Entry **)(calloc(map->bucketCount, sizeof(Entry *)));
 	if (NULL == map->buckets)
 	{
 		free(map);
@@ -102,29 +120,26 @@ hashmap_t* hashmap_create(size_t initial_capacity,
 }
 
 /**
- * Hashes the given key.
+ * Hashes the given key using unsigned arithmetic to avoid undefined behavior.
  */
-#ifdef __clang__
-__attribute__((no_sanitize("integer")))
-#endif //__clang__
-static inline int hashKey(hashmap_t* map, void* key)
+static inline int private_hash_key(hashmap_t *map, void *key)
 {
 	int h = map->fn_hash(key);
-	// We apply this secondary hashing discovered by Doug Lea to defend
-	// against bad hashes.
-	h += (~(h << 9));
-	h ^= (((unsigned int)h) >> 14);
-	h += (h << 4);
-	h ^= (((unsigned int)h) >> 10);
-	return h;
+	/* Apply secondary hashing using unsigned arithmetic */
+	uint32_t uh = (uint32_t)h;
+	uh += (~(uh << 9));
+	uh ^= (uh >> 14);
+	uh += (uh << 4);
+	uh ^= (uh >> 10);
+	return (int)uh;
 }
 
-static inline size_t calculateIndex(size_t bucketCount, int hash)
+static inline size_t private_calculate_index(size_t bucketCount, int hash)
 {
 	return ((size_t)hash) & (bucketCount - 1);
 }
 
-static void expandIfNecessary(hashmap_t* map)
+static void private_expand_if_necessary(hashmap_t *map)
 {
 	// If the load factor exceeds 0.75...
 	if (map->size <= (map->bucketCount * 3 / 4))
@@ -133,7 +148,7 @@ static void expandIfNecessary(hashmap_t* map)
 	}
 	// Start off with a 0.33 load factor.
 	size_t newBucketCount = (map->bucketCount << 1);
-	Entry** newBuckets = (Entry**)(calloc(newBucketCount, sizeof(Entry*)));
+	Entry **newBuckets = (Entry **)(calloc(newBucketCount, sizeof(Entry *)));
 	if (NULL == newBuckets)
 	{
 		// Abort expansion.
@@ -143,11 +158,11 @@ static void expandIfNecessary(hashmap_t* map)
 	size_t i;
 	for (i = 0; i < map->bucketCount; ++i)
 	{
-		Entry* entry = map->buckets[i];
+		Entry *entry = map->buckets[i];
 		while (NULL != entry)
 		{
-			Entry* next = entry->next;
-			size_t index = calculateIndex(newBucketCount, entry->hash);
+			Entry *next = entry->next;
+			size_t index = private_calculate_index(newBucketCount, entry->hash);
 			entry->next = newBuckets[index];
 			newBuckets[index] = entry;
 			entry = next;
@@ -159,15 +174,15 @@ static void expandIfNecessary(hashmap_t* map)
 	map->bucketCount = newBucketCount;
 }
 
-static void hashmap_clear_unsafe(hashmap_t* map)
+static void hashmap_clear_unsafe(hashmap_t *map)
 {
 	size_t i;
 	for (i = 0; i < map->bucketCount; ++i)
 	{
-		Entry* entry = map->buckets[i];
+		Entry *entry = map->buckets[i];
 		while (NULL != entry)
 		{
-			Entry* next = entry->next;
+			Entry *next = entry->next;
 			if (entry->key && map->fn_key_free)
 			{
 				map->fn_key_free(entry->key);
@@ -184,7 +199,7 @@ static void hashmap_clear_unsafe(hashmap_t* map)
 	}
 }
 
-void hashmap_free(hashmap_t* map)
+void hashmap_free(hashmap_t *map)
 {
 	if (!map || !map->buckets)
 	{
@@ -199,26 +214,24 @@ void hashmap_free(hashmap_t* map)
 	free(map);
 }
 
-#ifdef __clang__
-__attribute__((no_sanitize("integer")))
-#endif
-/* FIXME: relies on signed integer overflow, which is undefined behavior */
-int hashmap_hash(void* key, size_t keySize)
+/* Safe hash function using unsigned arithmetic to avoid undefined behavior */
+int hashmap_hash(void *key, size_t keySize)
 {
-	int h = (int)keySize;
-	char* data = (char*)key;
+	uint32_t h = (uint32_t)keySize;
+	unsigned char *data = (unsigned char *)key;
 	size_t i;
 	for (i = 0; i < keySize; i++)
 	{
-		h = h * 31 + *data;
+		h = h * 31U + *data;
 		data++;
 	}
-	return h;
+	/* Convert to signed int for return, this is well-defined */
+	return (int)h;
 }
 
-static Entry* createEntry(void* key, int hash, void* value)
+static Entry *private_create_entry(void *key, int hash, void *value)
 {
-	Entry* entry = (Entry*)(malloc(sizeof(Entry)));
+	Entry *entry = (Entry *)(malloc(sizeof(Entry)));
 	if (entry == NULL)
 	{
 		return NULL;
@@ -230,8 +243,7 @@ static Entry* createEntry(void* key, int hash, void* value)
 	return entry;
 }
 
-static inline bool equalKeys(void* keyA, int hashA, void* keyB, int hashB,
-	key_equality_fn fn_equals)
+static inline bool private_equal_keys(void *keyA, int hashA, void *keyB, int hashB, key_equality_fn fn_equals)
 {
 	if (keyA == keyB)
 	{
@@ -244,47 +256,48 @@ static inline bool equalKeys(void* keyA, int hashA, void* keyB, int hashB,
 	return fn_equals(keyA, keyB);
 }
 
-size_t hashmap_size(hashmap_t* map)
+size_t hashmap_size(hashmap_t *map)
 {
 	return map->size;
 }
 
-void* hashmap_put(hashmap_t* map, void* key, void* value)
+void *hashmap_put(hashmap_t *map, void *key, void *value)
 {
 	if (!map)
 	{
 		return NULL;
 	}
 	hashmap_enter(map);
-	const int hash = hashKey(map, key);
-	const size_t index = calculateIndex(map->bucketCount, hash);
-	Entry** p = &(map->buckets[index]);
-	void* ret = NULL;
+	const int hash = private_hash_key(map, key);
+	const size_t index = private_calculate_index(map->bucketCount, hash);
+	Entry **p = &(map->buckets[index]);
+	void *ret = NULL;
 	while (true)
 	{
-		Entry* current = *p;
+		Entry *current = *p;
 		// Add a new entry.
 		if (NULL == current)
 		{
-			*p = createEntry(key, hash, value);
+			*p = private_create_entry(key, hash, value);
 			if (NULL == *p)
 			{
 				errno = ENOMEM;
 				break;
 			}
 			++map->size;
-			expandIfNecessary(map);
+			private_expand_if_necessary(map);
 			break;
 		}
 		// Replace existing entry.
-		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality))
+		if (private_equal_keys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
-			ret = current->value;
+			ret = current->value; // return the old value.
+			current->value = value;
+			/* Free the old value after updating */
 			if (ret && map->fn_value_free)
 			{
 				map->fn_value_free(ret);
 			}
-			current->value = value;
 			break;
 		}
 		// Move to next entry.
@@ -294,20 +307,20 @@ void* hashmap_put(hashmap_t* map, void* key, void* value)
 	return ret;
 }
 
-void* hashmap_get(hashmap_t* map, void* key)
+void *hashmap_get(hashmap_t *map, void *key)
 {
 	if (!map)
 	{
 		return NULL;
 	}
 	hashmap_enter(map);
-	int hash = hashKey(map, key);
-	size_t index = calculateIndex(map->bucketCount, hash);
-	Entry* entry = map->buckets[index];
-	void* ret = NULL;
+	int hash = private_hash_key(map, key);
+	size_t index = private_calculate_index(map->bucketCount, hash);
+	Entry *entry = map->buckets[index];
+	void *ret = NULL;
 	while (NULL != entry)
 	{
-		if (equalKeys(entry->key, entry->hash, key, hash, map->fn_key_equality))
+		if (private_equal_keys(entry->key, entry->hash, key, hash, map->fn_key_equality))
 		{
 			ret = entry->value;
 			break;
@@ -318,25 +331,25 @@ void* hashmap_get(hashmap_t* map, void* key)
 	return ret;
 }
 
-void* hashmap_remove(hashmap_t* map, void* key)
+void *hashmap_remove(hashmap_t *map, void *key)
 {
 	if (!map)
 	{
 		return NULL;
 	}
 	hashmap_enter(map);
-	int hash = hashKey(map, key);
-	size_t index = calculateIndex(map->bucketCount, hash);
+	int hash = private_hash_key(map, key);
+	size_t index = private_calculate_index(map->bucketCount, hash);
 	// Pointer to the current entry.
-	Entry** p = &(map->buckets[index]);
-	Entry* current;
-	void* ret = NULL;
+	Entry **p = &(map->buckets[index]);
+	Entry *current;
+	void *ret = NULL;
 	while (NULL != (current = *p))
 	{
-		if (equalKeys(current->key, current->hash, key, hash, map->fn_key_equality))
+		if (private_equal_keys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
-			ret = current->value;
-			*p = current->next;
+			ret = current->value; // return the old value.
+			*p = current->next;	  // remove the current entry.
 			if (current->key && map->fn_key_free)
 			{
 				map->fn_key_free(current->key);
@@ -355,7 +368,7 @@ void* hashmap_remove(hashmap_t* map, void* key)
 	return ret;
 }
 
-void hashmap_clear(hashmap_t* map)
+void hashmap_clear(hashmap_t *map)
 {
 	if (!map)
 	{
@@ -366,7 +379,8 @@ void hashmap_clear(hashmap_t* map)
 	hashmap_leave(map);
 }
 
-void hashmap_foreach(hashmap_t* map, hashmap_iter_cb callback, void* context) {
+void hashmap_foreach(hashmap_t *map, hashmap_iter_cb callback, void *context)
+{
 	size_t i;
 	if (!map)
 	{
@@ -375,10 +389,10 @@ void hashmap_foreach(hashmap_t* map, hashmap_iter_cb callback, void* context) {
 	hashmap_enter(map);
 	for (i = 0; i < map->bucketCount; ++i)
 	{
-		Entry* entry = map->buckets[i];
+		Entry *entry = map->buckets[i];
 		while (NULL != entry)
 		{
-			Entry* next = entry->next;
+			Entry *next = entry->next;
 			if (!callback(entry->key, entry->value, context))
 			{
 				break;

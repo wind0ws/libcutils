@@ -281,14 +281,26 @@ static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
 	fopen_s(&_ftemp, _FileName, _Mode);
 	return _ftemp;
 }
+#define FOPEN(file_name, mode) _fopen_safe(file_name, mode)
 //to make MSC happy
-#define fopen(file_name, mode) _fopen_safe(file_name, mode)
+#define fopen(file_name, mode) FOPEN(file_name, mode)
 #else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif // _WIN32
-#define fclose(fp) do{if(fp){ fclose(fp); (fp) = _THE_NULL; }}while(0)
+static inline int _fclose_safe(FILE** fp_p)
+{
+     int return_value = EOF;
+     if (fp_p && *(fp_p))
+     {
+          return_value = fclose(*(fp_p));
+          *fp_p = _THE_NULL;
+     }
+     return return_value;
+}
+#define FCLOSE(fp) _fclose_safe(&fp)
+#define fclose(fp) FCLOSE(fp)
 
 #ifndef RANDOM
 #define RANDOM_INIT(seed)   srand((seed))
@@ -301,13 +313,13 @@ static inline FILE* _fopen_safe(char const* _FileName, char const* _Mode)
     #define FOREACH_STATES_ITEM(GENERATOR)       \
                  GENERATOR(STATE_START)          \
                  GENERATOR(STATE_STOP)
-    DEF_ENUM(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def enum STATE_TYPE
-    DECLARE_ENUM_STRS(STATE_TYPE); // <-- declare STATE_TYPE_STRS
+    DEF_ENUM(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def enum STATE_TYPE: STATE_START, STATE_STOP
+    DECLARE_ENUM_STRS(STATE_TYPE); // <-- declare STATE_TYPE_STRS, NOT define it.
     
     // 2. def enum string on source file(c/cpp).
-    DEF_ENUM_STRS(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def STATE_TYPE_STRS
+    DEF_ENUM_STRS(STATE_TYPE, FOREACH_STATES_ITEM); // <-- def STATE_TYPE_STRS.
     
-    // 3. ok, now you can use enum string.
+    // 3. ok, now you can use enum state and strings on your code.
     printf("STATE_TYPE[0]=%s\n", STATE_TYPE_STRS[STATE_START]);
     printf("STATE_TYPE[%d]=%s\n", (int)STATE_STOP, STATE_TYPE_STRS[STATE_STOP]);
  */

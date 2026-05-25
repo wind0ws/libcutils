@@ -107,6 +107,11 @@ void* lcu_malloc(size_t size)
 
 void* lcu_calloc_trace(size_t item_count, size_t item_size, const char* file_path, const char* func_name, int file_line)
 {
+	/* Check for multiplication overflow */
+	if (item_count != 0 && item_size > SIZE_MAX / item_count)
+	{
+		return NULL; /* Overflow would occur */
+	}
 	const size_t request_size = item_count * item_size;
 	const size_t real_size = allocation_tracker_resize_for_canary(request_size);
 	void* ptr = calloc(1, real_size);

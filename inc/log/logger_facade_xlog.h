@@ -10,6 +10,8 @@
                                                  xlog_set_min_level((LogLevel)(min_level)); \
                                             } while (0)
 #define _LOG_GET_MIN_LEVEL_IMPL()           xlog_get_min_level()
+#define _LOG_SET_FORMAT_IMPL(format)        xlog_set_format(format)
+#define _LOG_GET_FORMAT_IMPL()              xlog_get_format()
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #define _LOG_STD2FILE_IMPL(file_path)       xlog_stdout2file(file_path)

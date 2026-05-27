@@ -13,15 +13,15 @@ extern "C" {
 
 	void slog_set_min_level(LogLevel min_level);
 
-	LogLevel slog_get_min_level();
+	LogLevel slog_get_min_level(void);
 
-#if(!defined(_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT)
-	void slog_stdout2file(char* file_path);
+#if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
+	void slog_stdout2file(const char* file_path);
 
 	void slog_back2stdout();
-#endif // !_LCU_LOGGER_UNSUPPORT_PRINTF_REDIRECT
+#endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
-	void __slog_internal_hex_print(int level, const char* tag, const char* chars, size_t chars_count);
+	void _slog_internal_hex_print(int level, const char* tag, const char* chars, size_t chars_count);
 	
 #ifdef __cplusplus
 }
@@ -104,11 +104,11 @@ extern "C" {
 #define SLOGW_TRACE(tag, fmt, ...)    _SLOGW_TRACE_IMPL(tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define SLOGE_TRACE(tag, fmt, ...)    _SLOGE_TRACE_IMPL(tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#define SLOGV_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_VERBOSE) __slog_internal_hex_print(LOG_LEVEL_VERBOSE, (const char *)tag, (const char *)chars, chars_count); } while(0) 
-#define SLOGD_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_DEBUG) __slog_internal_hex_print(LOG_LEVEL_DEBUG, (const char *)tag, (const char *)chars, chars_count); } while(0) 
-#define SLOGI_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO) __slog_internal_hex_print(LOG_LEVEL_INFO, (const char *)tag, (const char *)chars, chars_count); } while(0) 
-#define SLOGW_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN) __slog_internal_hex_print(LOG_LEVEL_WARN, (const char *)tag, (const char *)chars, chars_count); } while(0) 
-#define SLOGE_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR) __slog_internal_hex_print(LOG_LEVEL_ERROR, (const char *)tag, (const char *)chars, chars_count); } while(0) 
+#define SLOGV_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_VERBOSE) _slog_internal_hex_print(LOG_LEVEL_VERBOSE, (const char *)tag, (const char *)chars, chars_count); } while(0) 
+#define SLOGD_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_DEBUG) _slog_internal_hex_print(LOG_LEVEL_DEBUG, (const char *)tag, (const char *)chars, chars_count); } while(0) 
+#define SLOGI_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO) _slog_internal_hex_print(LOG_LEVEL_INFO, (const char *)tag, (const char *)chars, chars_count); } while(0) 
+#define SLOGW_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN) _slog_internal_hex_print(LOG_LEVEL_WARN, (const char *)tag, (const char *)chars, chars_count); } while(0) 
+#define SLOGE_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR) _slog_internal_hex_print(LOG_LEVEL_ERROR, (const char *)tag, (const char *)chars, chars_count); } while(0) 
 
 //===================================================================================================
 

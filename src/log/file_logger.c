@@ -391,9 +391,14 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	size_t log_folder_path_len = strlen(cfg_p->log_folder_path);
 	if (cfg_p->log_folder_path[log_folder_path_len - 1] != '/')
 	{
-		size_t slash_location = (log_folder_path_len + 1) < MAX_LOG_FOLDER_PATH_SIZE ? log_folder_path_len : (log_folder_path_len - 1);
-		cfg_p->log_folder_path[slash_location] = '/';
-		cfg_p->log_folder_path[slash_location + 1] = '\0';
+		if (log_folder_path_len + 2 > MAX_LOG_FOLDER_PATH_SIZE) // 路径已满，无法追加 '/'
+		{
+			free(msg);
+			free(handle);
+			return NULL;
+		}
+		cfg_p->log_folder_path[log_folder_path_len] = '/';
+		cfg_p->log_folder_path[log_folder_path_len + 1] = '\0';
 	}
 	if (cfg_p->one_piece_file_max_len && cfg_p->one_piece_file_max_len < 64U) // file piece too small
 	{

@@ -245,3 +245,6 @@ int time_util_test()
 
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(time_util_test, "test time op");

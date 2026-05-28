@@ -167,3 +167,79 @@
   > 这里没有记录详细日志, 详情请见提交日志. BTW: 建议使用最新版本
   >    示例: 1.4.0 版本的URL是 https://github.com/wind0ws/libcutils/commits/1.4.0
   
+
+---
+
+## Demo 测试入口（v1.9.0+）
+
+`lcu_demo` 是 libcutils 的演示与冒烟测试入口，支持 CLI 选用例 + JUnit 输出 + CTest 集成。
+
+### 用法
+
+```bash
+./lcu_demo                          # tty: 5s 倒计时菜单 / 非tty: smoke (time_util_test)
+./lcu_demo --list                   # 列出所有注册用例（stdout）
+./lcu_demo --help                   # 帮助
+./lcu_demo --all                    # 跑全部默认用例（不含 opt-in）
+./lcu_demo ini_test thpool_test     # 按名字选择
+./lcu_demo --filter 'thread*'       # glob 模式过滤（注意 shell 引号）
+./lcu_demo --fail-fast --all        # 首失败即停
+./lcu_demo --junit out.xml --all    # 输出 JUnit XML
+./lcu_demo memleak_test             # opt-in 用例需显式调用
+```
+
+> 注：纯数字索引（如 `./lcu_demo 0 5 8`）已**不再支持**（v1.9.0 起），请使用名字。
+
+### 添加新测试用例（完整 checklist）
+
+**必须满足 4 条要求**（缺一不可）：
+
+1. **函数签名带 void**：`int my_test(void)`（C 标准要求，避免 MSVC `/W4` 警告）
+2. **第一行 include**：`#include "mem/mem_debug.h"` 必须在文件首行（项目规则）
+3. **注册宏在函数定义之后**：文件末尾追加
+   ```c
+   #include "lcu_test_registry.h"
+   LCU_TEST_REGISTER(my_test, "描述");
+   ```
+4. **重新 configure**：新增文件后必须 `cd tool && cmake .` 重 configure（CMake 3.10 限制）
+
+**示例**（`src_demo/data/my_test.c`）：
+
+```c
+#include "mem/mem_debug.h"
+#include <stdio.h>
+
+int my_test(void)
+{
+    printf("my test\n");
+    return 0;
+}
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(my_test, "my custom test");
+```
+
+然后 `cd tool && cmake . && cmake --build build` 重 configure + 编译。
+
+### opt-in 用例
+
+`memleak_test` 等故意 leak 的用例用 `LCU_TEST_REGISTER_OPTIONAL` 注册，**不会被 `--all` 包含**，必须显式按名字调用：
+```c
+LCU_TEST_REGISTER_OPTIONAL(my_leak_test, "intentionally leaks");
+```
+
+### CTest 集成
+
+```bash
+cd tool && cmake -B build -S . && cmake --build build -j
+cd build && ctest -L "^lcu$" --output-on-failure -j 4    # 只跑默认用例
+ctest -L lcu_optional --output-on-failure                # 跑 opt-in 用例
+```
+
+详见 [.ai/kb/ci.md](.ai/kb/ci.md)。
+
+### 失败处理语义
+
+- 测试函数 `return != 0` → 记入 stat、继续后续用例。
+- 测试函数内部 `ASSERT_ABORT` → **整进程死**，summary 不会打印（CTest 视为该 case 失败）。
+- `--fail-fast` 开关 → 首次失败立即停。

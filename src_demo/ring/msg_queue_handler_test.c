@@ -174,7 +174,7 @@ static int run_case_draining_on_error()
 	return 0;
 }
 
-int msg_queue_handler_test()
+int msg_queue_handler_test(void)
 {
 	LOGI("---- run msg_queue_handler tests ----");
 	int ret = 0;
@@ -184,3 +184,6 @@ int msg_queue_handler_test()
 	LOGI("---- all tests done (ret=%d) ----", ret);
 	return ret;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(msg_queue_handler_test, "test msg queue handler");

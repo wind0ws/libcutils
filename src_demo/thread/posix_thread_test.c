@@ -204,7 +204,7 @@ static void test_log()
 	LOGI("LOG test finished!!!");
 }
 
-int posix_thread_test()
+int posix_thread_test(void)
 {
 	LOGD("Hello World, thread id: %d", (int)GETTID());
 	test_log();
@@ -213,3 +213,6 @@ int posix_thread_test()
 
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(posix_thread_test, "test posix_thread_test and xlog");

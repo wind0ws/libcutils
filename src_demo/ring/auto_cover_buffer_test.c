@@ -96,7 +96,7 @@ static void* thread_producer(void* param)
 	return NULL;
 }
 
-int autocover_buffer_test()
+int autocover_buffer_test(void)
 {
 	LOGD("--> now test autocover_buffer!");
 	cover_case_data_t case_data = { 0 };
@@ -130,3 +130,5 @@ int autocover_buffer_test()
 	LOGD("<-- autocover_buffer test finished.");
 	return 0;
 }
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(autocover_buffer_test, "test auto-cover buffer");

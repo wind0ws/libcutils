@@ -8,7 +8,7 @@
 //static const char* test_str = "foo=bar;abc=123;bad_key;def=123.456;";
 static const char* test_str = "foo=bar,abc=123,bad_key,def=123.456,";
 
-int str_params_test()
+int str_params_test(void)
 {
 	str_params_ptr params = str_params_create_str(",", test_str);
 	if (!params)
@@ -61,3 +61,6 @@ int str_params_test()
 	str_params_destroy(params);
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(str_params_test, "test string params");

@@ -209,6 +209,46 @@ static void test_ini_parser_error_paths(void)
 	ini_parser_destroy(&parser);
 }
 
+static void test_ini_parser_key_trim_dedup(void)
+{
+	char buf[64] = {0};
+
+	/* 场景1: put_string API 传入带空格的 key，应与 trim 后的 key 去重 */
+	ini_parser_handle parser = ini_parser_create();
+	ASSERT(parser);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "key1", "v1"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", " key1 ", "v2"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "key1", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "v2") == 0);
+
+	/* 场景2: 大小写不敏感去重 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "MyKey", "aaa"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "mykey", "bbb"));
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "MyKey", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "bbb") == 0);
+	/* 场景3: section 的 trim 去重 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, " sec ", "skey", "s1"));
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "skey", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "s1") == 0);
+
+	/* 场景4: get/delete 时传入带空格的 key 也能命中 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_has_section_key(parser, " sec ", " key1 "));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_delete_by_section_key(parser, " sec ", " key1 "));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_has_section_key(parser, "sec", "key1"));
+	ini_parser_destroy(&parser);
+
+	/* 场景5: 通过 INI 字符串解析，相同 key 不同空格写法应去重 */
+	static const char* trim_ini = "[section]\r\nname = first\r\n name = second\r\n";
+	ini_parser_handle parser2 = ini_parser_parse_str(trim_ini);
+	ASSERT(parser2);
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser2, "section", "name", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "second") == 0);
+	ini_parser_destroy(&parser2);
+}
+
 /**
  * ini parse callback
  *   return true continue,
@@ -267,6 +307,8 @@ static int ini_parser_test()
 	test_ini_parser_save_and_parse_file();
 	LOGD("  -> run ini_parser_error_paths tests");
 	test_ini_parser_error_paths();
+	LOGD("  -> run ini_parser_key_trim_dedup tests");
+	test_ini_parser_key_trim_dedup();
 	return 0;
 }
 
@@ -287,3 +329,6 @@ int ini_test()
 	LOGD("  <-- ini_parser_test result: %d", ret);
 	return ret;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(ini_test, "test ini");

@@ -13,7 +13,7 @@ static void report_leak_memory(void* ptr, size_t size,
 		NULLABLE_STRING(leak_func), NULLABLE_STRING(leak_file), leak_line, ptr, size);
 }
 
-int allocator_test()
+int allocator_test(void)
 {
 	char* str1 = (char *)malloc(16);
 	strcpy(str1, "This is str1.");
@@ -36,3 +36,5 @@ int allocator_test()
 
 	return 0;
 }
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(allocator_test, "test allocator");

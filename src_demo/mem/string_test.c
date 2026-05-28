@@ -117,7 +117,7 @@ static int strhex_test()
 	return 0;
 }
 
-int string_test()
+int string_test(void)
 {
 	LOGD("--> test strhex_test");
 	strhex_test();
@@ -157,3 +157,6 @@ int string_test()
 
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(string_test, "test string op");

@@ -7,7 +7,7 @@
 
 static int pri_handle_file_info(file_info_t* p_info, void* user_data);
 
-int file_util_test()
+int file_util_test(void)
 {
 	char log_path[64] = { 0 };
 
@@ -55,3 +55,6 @@ static int pri_handle_file_info(file_info_t* p_info, void* user_data)
 	}
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(file_util_test, "test file util");

@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.10)
 project(lcu VERSION 1.8.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
+# C2 修复: enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
+enable_testing()
+
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains)
 include(CheckSymbolExists)
@@ -252,10 +255,12 @@ IF (BUILD_SHARED_LIBS)
   list(APPEND target_names ${target_prj_shared})
 ENDIF (BUILD_SHARED_LIBS)
 
-IF (BUILD_DEMO)	
+IF (BUILD_DEMO)
   add_executable(${target_prj_demo}
-  
+
                  ${PRJ_DEMO_SRCS})
+  # demo 内部头（lcu_test_registry.h / lcu_test_args.h / lcu_test_console.h / lcu_test_glob.h）
+  target_include_directories(${target_prj_demo} PRIVATE ${PRJ_DEMO_SRC_DIR})
   list(APPEND target_names ${target_prj_demo})
 ENDIF (BUILD_DEMO)
 
@@ -437,10 +442,10 @@ IF (BUILD_DEMO)
     set(demo_link_lib ${target_prj_static})
   else()
     set(demo_link_lib ${target_prj_shared})
-  endif (BUILD_STATIC_LIBS)  
+  endif (BUILD_STATIC_LIBS)
   target_link_libraries( # Specifies the target library.
           ${target_prj_demo}
-  
+
           ${demo_link_lib}
           #${target_prj_static}
           #${pthread-lib}
@@ -448,3 +453,77 @@ IF (BUILD_DEMO)
           )
 ENDIF (BUILD_DEMO)
 #================SETUP dependencies of build target END==================
+
+#========================== CTest 集成 BEGIN ==========================
+if(BUILD_DEMO)
+    # 扫描 src_demo 下所有源文件，提取 LCU_TEST_REGISTER(name, ...) / LCU_TEST_REGISTER_OPTIONAL(name, ...)
+    file(GLOB_RECURSE _test_srcs "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp")
+    set(_lcu_tests "")
+    set(_lcu_tests_optional "")
+
+    foreach(_file ${_test_srcs})
+        # C3: 只匹配未注释的注册宏（行首允许空白，但不允许 //）
+        file(STRINGS "${_file}" _lines REGEX "^[ \t]*LCU_TEST_REGISTER(_OPTIONAL)?[ \t]*\\(")
+        foreach(_line ${_lines})
+            if(_line MATCHES "LCU_TEST_REGISTER_OPTIONAL[ \t]*\\(([A-Za-z_][A-Za-z0-9_]*)")
+                list(APPEND _lcu_tests_optional "${CMAKE_MATCH_1}")
+            elseif(_line MATCHES "LCU_TEST_REGISTER[ \t]*\\(([A-Za-z_][A-Za-z0-9_]*)")
+                list(APPEND _lcu_tests "${CMAKE_MATCH_1}")
+            endif()
+        endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES _lcu_tests)
+    list(REMOVE_DUPLICATES _lcu_tests_optional)
+
+    # C6: 工作目录设为 deploy，解决 DLL 路径 + 相对路径问题
+    if(CMAKE_CONFIGURATION_TYPES)
+        set(_work_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}")
+    else()
+        set(_work_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    endif()
+    if(NOT _work_dir)
+        set(_work_dir "${CMAKE_BINARY_DIR}")
+    endif()
+
+    # 默认用例：进 ctest 默认运行集
+    foreach(_name ${_lcu_tests})
+        add_test(NAME lcu.${_name} COMMAND ${target_prj_demo} ${_name})
+        set_tests_properties(lcu.${_name} PROPERTIES
+            LABELS "lcu"
+            TIMEOUT 120
+            WORKING_DIRECTORY "${_work_dir}")
+    endforeach()
+
+    # opt-in 用例：用单独 LABELS 区分，默认 ctest 不跑
+    foreach(_name ${_lcu_tests_optional})
+        add_test(NAME lcu.optional.${_name} COMMAND ${target_prj_demo} ${_name})
+        set_tests_properties(lcu.optional.${_name} PROPERTIES
+            LABELS "lcu_optional"
+            TIMEOUT 60
+            WORKING_DIRECTORY "${_work_dir}")
+    endforeach()
+
+    # 慢用例单独加长 timeout
+    foreach(_slow time_util_test file_logger_test)
+        if("${_slow}" IN_LIST _lcu_tests)
+            set_tests_properties(lcu.${_slow} PROPERTIES TIMEOUT 300)
+        endif()
+    endforeach()
+
+    # 写共享文件/目录的用例：加 RESOURCE_LOCK 防止并行冲突
+    if("file_logger_test" IN_LIST _lcu_tests)
+        set_tests_properties(lcu.file_logger_test PROPERTIES RESOURCE_LOCK "log_dir")
+    endif()
+
+    # 多线程/共享 logger 的用例：RUN_SERIAL 串行化
+    foreach(_serial posix_thread_test thpool_test msg_queue_handler_test)
+        if("${_serial}" IN_LIST _lcu_tests)
+            set_tests_properties(lcu.${_serial} PROPERTIES RUN_SERIAL TRUE)
+        endif()
+    endforeach()
+
+    list(LENGTH _lcu_tests _n_default)
+    list(LENGTH _lcu_tests_optional _n_optional)
+    message(STATUS "CTest: ${_n_default} default tests + ${_n_optional} optional tests registered (LABEL=lcu / lcu_optional)")
+endif()
+#========================== CTest 集成 END ==========================

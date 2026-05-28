@@ -8,9 +8,12 @@
 #include "log/logger.h"
 
 
-int thpool_test()
+int thpool_test(void)
 {
 
 
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(thpool_test, "test thread pool");

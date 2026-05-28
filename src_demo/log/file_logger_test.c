@@ -42,14 +42,14 @@ static void set_file_time(const char *full_path, time_t modified_time);
 static uint64_t sum_log_files_size(void);
 
 #ifdef _WIN32
-#define FILE_LOGGER_PATH ("D:/temp/log") 
-#define STDOUT_FILE_PATH ("D:/stdout2file.log")
+#define FILE_LOGGER_PATH ("./log")
+#define STDOUT_FILE_PATH ("./stdout2file.log")
 #else
 #define FILE_LOGGER_PATH ("./log/") 
 #define STDOUT_FILE_PATH ("stdout2file.log")
 #endif // _WIN32
 
-int file_logger_test_begin()
+int file_logger_test_begin(void)
 {
 	memset(&g_logger_ctx, 0, sizeof(logger_context_t));
 	g_logger_ctx.logger_cfg.log_queue_size = 128U;
@@ -76,7 +76,7 @@ int file_logger_test_begin()
 	return 0;
 }
 
-int file_logger_test_end()
+int file_logger_test_end(void)
 {
 	LOG_BACK2STD();
 	LOGI("Now back to stdout");

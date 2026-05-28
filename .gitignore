@@ -32,7 +32,7 @@ out/
 tool/backup/
 tool/output/
 tool/out/
-tool/build/
+tool/build*/
 tool/temp/
 tool/deploy/*.pcm
 tool/deploy/audio/
@@ -49,3 +49,15 @@ tool/deploy/temp*/
 tool/deploy/res/*
 # ignore generated license file.
 device_license.dat
+
+# 本地工具链配置文件（按需启用，不进版本库）
+tool/cmake/toolchains/*.cmake
+tool/cmake/toolchains/*.sh
+
+# 测试运行时生成的产物
+basic_test.txt
+memleak.log
+mylog.log
+stdout2file.log
+tool/deploy/**/log/
+tool/deploy/**/*.log

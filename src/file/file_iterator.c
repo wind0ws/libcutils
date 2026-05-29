@@ -64,7 +64,13 @@ int file_iterator_foreach(char *dir, file_iterator_handle_file_info_fn handler, 
 				continue;
 			}
 		}
-		snprintf(path_buf, sizeof(path_buf) - 1U, "%s/%s", dir, direntp->d_name);
+		/* P2-9: 检查 snprintf 截断. 路径超长时拼接结果不完整,
+		 * 继续 stat 会作用在错误路径上(可能误删/误判), 截断则跳过本项. */
+		int path_len = snprintf(path_buf, sizeof(path_buf), "%s/%s", dir, direntp->d_name);
+		if (path_len < 0 || (size_t)path_len >= sizeof(path_buf))
+		{
+			continue;
+		}
 		stats = pri_get_file_stat(path_buf, &statbuf);
 		if (-1 == stats)
 		{

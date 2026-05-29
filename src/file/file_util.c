@@ -2,6 +2,7 @@
 #include "file/file_util.h"
 #include "mem/strings.h"
 #include <sys/stat.h>
+#include <limits.h> /* P2-4: for INT_MAX */
 
 #ifdef _WIN32
 #include <io.h>
@@ -46,12 +47,17 @@ int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in con
 	const char slash_char = (NULL != strstr(folder_path, "\\")) ? '\\' : '/';
 	if (folder_path[path_len - 1] == slash_char)
 	{
+		// 已经以分隔符结尾,可能是 trim 末尾空格之后的位置,需要把 NUL 放到正确位置
+		folder_path[path_len] = '\0';
 		return 0;
 	}
-	const size_t slash_location = (path_len + 1) < folder_path_size ?
-		path_len : (path_len - 1);
-	folder_path[slash_location] = slash_char;
-	folder_path[slash_location + 1] = '\0';
+	// 缓冲不足以追加斜杠 + NUL: 不破坏原数据,返回 -3 让调用方处理
+	if (path_len + 2 > folder_path_size)
+	{
+		return -3;
+	}
+	folder_path[path_len] = slash_char;
+	folder_path[path_len + 1] = '\0';
 	return 0;
 }
 
@@ -219,11 +225,28 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 	FILE* fp = fopen(file_path, "rb");
 	if (!fp)
 	{
-		//LOGE("failed on fopen \"%s\"", file_path);
 		return -2;
 	}
-	fseek(fp, 0, SEEK_END);
+	/* P2-4 内部加固 (保留 API 兼容): 检查 fseek/ftell 失败 + INT_MAX 截断风险.
+	 * 不改签名为 size_t 是为了保留 ABI 兼容. */
+	if (0 != fseek(fp, 0, SEEK_END))
+	{
+		fclose(fp);
+		return -2;
+	}
 	const long file_size = ftell(fp);
+	if (file_size < 0)
+	{
+		/* ftell 失败 (管道/特殊文件) */
+		fclose(fp);
+		return -2;
+	}
+	if (file_size > INT_MAX - 1)
+	{
+		/* 文件过大,无法用 int 表达长度 */
+		fclose(fp);
+		return -6;
+	}
 	*out_file_byte_len = (int)file_size;
 	do
 	{
@@ -232,7 +255,11 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 			ret = -3;
 			break;
 		}
-		fseek(fp, 0, SEEK_SET);
+		if (0 != fseek(fp, 0, SEEK_SET))
+		{
+			ret = -2;
+			break;
+		}
 		char* mem = malloc((size_t)file_size + 1);
 		if (!mem)
 		{
@@ -240,7 +267,7 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 			break;
 		}
 		mem[file_size] = '\0'; // place '\0' for string file
-		if (file_size != fread(mem, 1, file_size, fp))
+		if ((size_t)file_size != fread(mem, 1, (size_t)file_size, fp))
 		{
 			free(mem);
 			ret = -5;

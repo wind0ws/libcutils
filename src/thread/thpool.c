@@ -97,7 +97,7 @@ static int   bsem_init(struct bsem *bsem_p, int value);
 static void  bsem_reset(struct bsem *bsem_p);
 static void  bsem_post(struct bsem *bsem_p);
 static void  bsem_post_all(struct bsem *bsem_p);
-static void  bsem_wait(struct bsem *bsem_p);
+static void  bsem_wait(struct bsem *bsem_p, volatile int* keepalive_p);
 static void  bsem_destroy(struct bsem *bsem_p);
 
 
@@ -219,45 +219,41 @@ void thpool_wait(thpool_* thpool_p){
 }
 
 
-/* Destroy the threadpool */
+/* Destroy the threadpool.
+ * P0-2/P0-3 修订:
+ * 1. 改 joinable + pthread_join 收尸 (避免原 detach 模式下 worker 在 pthread_mutex_unlock
+ *    内部时 destroy 销毁 mutex 导致 UB);
+ * 2. 销毁循环上界用 num_threads (已 pthread_create 成功的所有线程, 与 threads[] 槽位一一对应),
+ *    而非 num_threads_alive (alive 是动态计数, 在 destroy 主流程中即使为 0, 线程结构体仍需 free);
+ * 3. bsem_wait 已加 sticky shutdown, 一次 bsem_post_all 唤醒所有 worker, 不再 1 秒忙循环. */
 void thpool_destroy(thpool_* thpool_p){
-	/* No need to destroy if it's NULL */
-	if (thpool_p == NULL) return ;
+	if (thpool_p == NULL) return;
 
-	volatile int threads_total = thpool_p->num_threads_alive;
-
-	/* End each thread's infinite loop */
+	/* End each thread's infinite loop. 在 bsem_post_all 之前置 keepalive=0,
+	 * 这样 bsem_wait 能感知 shutdown 信号. */
 	thpool_p->threads_keepalive = 0;
 
-	/* Give one second to kill idle threads */
-	double TIMEOUT = 1.0;
-	time_t start, end;
-	double tpassed = 0.0;
-	time (&start);
-	while (tpassed < TIMEOUT && thpool_p->num_threads_alive){
-		bsem_post_all(thpool_p->jobqueue.has_jobs);
-		time (&end);
-		tpassed = difftime(end,start);
-	}
+	/* 一次 broadcast 唤醒全部 worker (依赖 bsem_wait 的 sticky shutdown 改造) */
+	bsem_post_all(thpool_p->jobqueue.has_jobs);
 
-	/* Poll remaining threads */
-	while (thpool_p->num_threads_alive){
-		bsem_post_all(thpool_p->jobqueue.has_jobs);
-		usleep(10000); /* 10ms */
+	/* Join all threads. 用 num_threads (创建总数) 而非 num_threads_alive (动态计数).
+	 * 注意: 若某次 thread_init 失败回滚, num_threads 在 thpool_init:166 已被改为
+	 * 失败时的 n, threads[0..n-1] 都是 pthread_create 成功的, 可安全 join. */
+	for (int n = 0; n < thpool_p->num_threads; n++) {
+		if (thpool_p->threads[n]) {
+			pthread_join(thpool_p->threads[n]->pthread, NULL);
+			thread_destroy(thpool_p->threads[n]);
+			thpool_p->threads[n] = NULL;
+		}
 	}
 
 	/* Job queue cleanup */
 	jobqueue_destroy(&thpool_p->jobqueue);
 
-	/* Destroy condition variable and mutex */
+	/* Destroy condition variable and mutex (此时已无 worker 持有它们) */
 	pthread_cond_destroy(&thpool_p->threads_all_idle);
 	pthread_mutex_destroy(&thpool_p->thcount_lock);
 
-	/* Deallocs */
-	int n;
-	for (n=0; n < threads_total; n++){
-		thread_destroy(thpool_p->threads[n]);
-	}
 	free(thpool_p->threads);
 	free(thpool_p);
 }
@@ -272,7 +268,8 @@ int thpool_num_threads_working(thpool_* thpool_p){
 
 /* ============================ THREAD ============================== */
 
-/* Initialize a thread in the thread pool */
+/* Initialize a thread in the thread pool.
+ * P0-2 修订: 不再 pthread_detach, 由 thpool_destroy 负责 pthread_join 收尸. */
 static int thread_init (thpool_* thpool_p, struct thread** thread_p, int id){
 
 	*thread_p = (struct thread*)malloc(sizeof(struct thread));
@@ -291,7 +288,7 @@ static int thread_init (thpool_* thpool_p, struct thread** thread_p, int id){
 		*thread_p = NULL;
 		return -1;
 	}
-	pthread_detach((*thread_p)->pthread);
+	/* P0-2 修订: 移除 pthread_detach. 改为 joinable, 由 thpool_destroy 负责 join. */
 	return 0;
 }
 
@@ -322,7 +319,7 @@ static void* thread_do(struct thread* thread_p){
 
 	while(thpool_p->threads_keepalive){
 
-		bsem_wait(thpool_p->jobqueue.has_jobs);
+		bsem_wait(thpool_p->jobqueue.has_jobs, &thpool_p->threads_keepalive);
 
 		if (!thpool_p->threads_keepalive){
 			break;
@@ -521,13 +518,26 @@ static void bsem_post_all(bsem *bsem_p) {
 }
 
 
-/* Wait on semaphore until semaphore has value 0 */
-static void bsem_wait(bsem* bsem_p) {
+/* Wait on semaphore until semaphore has value 1.
+ * P0-2/P0-3 修订: 加 keepalive_p 参数实现 sticky shutdown.
+ * 当 *keepalive_p == 0 (shutdown 模式), bsem_post_all 一次广播即可唤醒所有 worker,
+ * 不消费 v=1, 避免 N 轮 broadcast 才能唤醒 N 个 worker (从 O(N) 降到 O(1)).
+ *
+ * keepalive_p 可为 NULL, 此时退化为原始 bsem_wait 语义 (用于不感知 thpool 的场景). */
+static void bsem_wait(bsem* bsem_p, volatile int* keepalive_p) {
 	pthread_mutex_lock(&bsem_p->mutex);
 	while (bsem_p->v != 1) {
+		if (keepalive_p != NULL && *keepalive_p == 0) {
+			/* shutdown 模式: 直接退出, 不等 v=1, 不消费 */
+			pthread_mutex_unlock(&bsem_p->mutex);
+			return;
+		}
 		pthread_cond_wait(&bsem_p->cond, &bsem_p->mutex);
 	}
-	bsem_p->v = 0;
+	/* 工作模式才消费 v=1, shutdown 模式 v 保持 1 让其他 worker 也能直接退出 */
+	if (keepalive_p == NULL || *keepalive_p != 0) {
+		bsem_p->v = 0;
+	}
 	pthread_mutex_unlock(&bsem_p->mutex);
 }
 

@@ -37,6 +37,9 @@ int lcu_url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 			}
 			else
 			{
+				/* P1-10: buffer 不足以容纳 %XX, 写 NUL 终止后返回错误,
+				 * 保证 out_buf 始终是合法 C 字符串 (调用方常按 C 串使用). */
+				out_buf_encoded[output_index] = '\0';
 				return -2;
 			}
 		}
@@ -44,11 +47,13 @@ int lcu_url_encode(char* out_buf_encoded, const size_t out_buf_encoded_size,
 
 	if (input_index == 0)
 	{
+		out_buf_encoded[0] = '\0';
 		return 0;
 	}
+	/* P1-10: 无论成功 (input 全消费) 还是 buffer 提前满 (-3), 都先写 NUL 终止. */
+	out_buf_encoded[output_index] = '\0';
 	if (input_index == src_buf_plain_strlen)
 	{
-		out_buf_encoded[output_index] = '\0';
 		return (int)output_index;
 	}
 	return -3;

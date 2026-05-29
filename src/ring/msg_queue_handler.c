@@ -239,6 +239,9 @@ msg_queue_handler msg_queue_handler_create(__in uint32_t queue_buf_size,
 		0 != portable_thread_create(&(handler->thread_handler), NULL, thread_worker_handle_msg, handler))
 	{
 		Q_LOGE("error on create thread or queue! expect queue_buf_size=%u", queue_buf_size);
+		/* P1-6: portable_thread_create 失败时 thread_handler 状态未定义(POSIX/Win 实现相关),
+		 * 显式置 0, 避免 destroy 路径 if(thread_handler) join 垃圾句柄导致 UB. */
+		handler->thread_handler = 0;
 		msg_queue_handler_destroy(&handler, MSG_Q_HANDLER_DESTROY_FLAGS_NORMALLY);
 		handler = NULL;
 	}
@@ -336,9 +339,15 @@ void msg_queue_handler_destroy(__inout msg_queue_handler *handler_p, __in int fl
 	msg_queue_handler handler = *handler_p;
 	handler->flag2exit = true;
 	handler->flag_destroy_gracefully = (0 != (flags & MSG_Q_HANDLER_DESTROY_FLAGS_GRACEFULLY)) ? true : false;
+	/* P2-8: 循环 post 信号量, 覆盖 worker 在 AGAIN 路径(usleep 1ms + continue)的临界窗口.
+	 * 修复前: 单次 post 在某些时序下被 worker 重试循环消费, 后续 sem_wait 永久阻塞 -> destroy join 卡死.
+	 * 多次 post 是安全的: 信号量计数累加,不会有副作用. */
 	if (handler->semaphore)
-	{ // send a signal to make sure worker thread is not stuck at sem_wait()
-		portable_sem_post(&(handler->semaphore));
+	{
+		for (int i = 0; i < 8; ++i)
+		{
+			portable_sem_post(&(handler->semaphore));
+		}
 	}
 	if (handler->thread_handler && 0 != portable_thread_join(handler->thread_handler, NULL))
 	{

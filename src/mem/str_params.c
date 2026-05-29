@@ -128,6 +128,14 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 			key = strdup(kvpair);
 			value = strdup("");
 		}
+		/* P1-9: 检查 strdup/strndup 失败. OOM 时若把 NULL key/value 塞进 hashmap,
+		 * 后续 str_eq->strcmp(NULL,...) 会段错误. 失败则释放已分配的一半并跳过当前 kv. */
+		if (NULL == key || NULL == value)
+		{
+			free(key);
+			free(value);
+			goto label_next_pair;
+		}
 		/* we replaced a value */
 		old_val = hashmap_put(parms->map, key, value);
 		RELEASE_OWNERSHIP(value);

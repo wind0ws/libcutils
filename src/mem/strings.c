@@ -174,6 +174,12 @@ void strtrim(char *s, const char *cset)
 	char* start, * end, * sp, * ep;
 	size_t len;
 
+	/* P2-11: 空串/NULL 保护. 修复前 s+strlen(s)-1 在空串时下溢为 s-1 (指针越界 UB). */
+	if (NULL == s || '\0' == s[0])
+	{
+		return;
+	}
+
 	sp = start = s;
 	ep = end = s + strlen(s) - 1;
 	while (sp <= end && strchr(cset, *sp)) sp++;
@@ -206,6 +212,13 @@ size_t str_char2hex(char* out_hex_str, size_t out_hex_str_capacity,
 {
 #define ONE_HEX_STR_SIZE (3U)
 	size_t len_hex_str = 0U;
+	/* P1-8: 入口校验 capacity 下限.
+	 * 修复前: capacity==0 时 out_hex_str[0]='\0' 越界写;
+	 *         capacity ∈ {1,2} 时 capacity/3-1U 下溢为 SIZE_MAX, for 循环失控越界写. */
+	if (NULL == out_hex_str || out_hex_str_capacity < (ONE_HEX_STR_SIZE + 1U))
+	{
+		return 0U;
+	}
 	out_hex_str[0] = '\0';
 
 	if (chars_count * ONE_HEX_STR_SIZE >= out_hex_str_capacity)

@@ -335,6 +335,10 @@ static int log_file_entry_compare(const void *lhs, const void *rhs)
 
 file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 {
+	queue_msg_t *msg = NULL;
+	file_logger_handle handle = NULL;
+	char *log_folder_path_formatted = NULL;
+
 	if (!cfg_p || '\0' == cfg_p->log_folder_path[0] || cfg_p->log_queue_size < 2U)
 	{
 		return NULL;
@@ -344,20 +348,59 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 		return NULL;
 	}
 	const size_t cur_msg_size = 2048U;
-	queue_msg_t *msg = (queue_msg_t *)calloc(1, sizeof(queue_msg_t) + cur_msg_size);
+	msg = (queue_msg_t *)calloc(1, sizeof(queue_msg_t) + cur_msg_size);
 	if (!msg)
 	{
-		return NULL;
+		goto cleanup_on_error;
 	}
-	file_logger_handle handle = (file_logger_handle)calloc(1, sizeof(file_logger_t));
+	handle = (file_logger_handle)calloc(1, sizeof(file_logger_t));
 	if (!handle)
 	{
-		free(msg);
-		return NULL;
+		goto cleanup_on_error;
 	}
+	/* P0-1 修订: msg 所有权转移到 handle->msg_cache_p, 立即置 NULL 防双重 free.
+	 * 注意: 从此处到 msg_queue_handler_create 之间不允许新增失败点;
+	 *       否则 cleanup_on_error 必须考虑 msg_cache_p 是否要保留. */
 	handle->msg_cache_p = msg;
 	handle->cur_msg_obj_capacity = cur_msg_size;
-	uint32_t log_queue_mem_size = (uint32_t)cfg_p->log_queue_size * 1024U;
+	msg = NULL;
+
+	/* cfg 前置赋值: worker 启动前 handle 字段必须完整, 否则 cleanup 路径触发
+	 * msg_queue_handler_destroy 唤醒 worker 时, worker 可能访问未初始化字段. */
+	handle->timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
+	handle->cfg = *cfg_p;
+	handle->cur_file_path[0] = '\0';
+	handle->last_cleanup_ms = 0U;
+
+	/* 路径规范化: 将反斜杠替换为正斜杠, 写入 handle 内部副本(不污染调用方 cfg_p). */
+	log_folder_path_formatted = strreplace(handle->cfg.log_folder_path, "\\", "/");
+	if (!log_folder_path_formatted)
+	{
+		goto cleanup_on_error;
+	}
+	strlcpy(handle->cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
+	free(log_folder_path_formatted);
+	log_folder_path_formatted = NULL;
+
+	size_t log_folder_path_len = strlen(handle->cfg.log_folder_path);
+	if (handle->cfg.log_folder_path[log_folder_path_len - 1] != '/')
+	{
+		if (log_folder_path_len + 2 > MAX_LOG_FOLDER_PATH_SIZE) // 路径已满，无法追加 '/'
+		{
+			goto cleanup_on_error;
+		}
+		handle->cfg.log_folder_path[log_folder_path_len] = '/';
+		handle->cfg.log_folder_path[log_folder_path_len + 1] = '\0';
+	}
+	if (handle->cfg.one_piece_file_max_len && handle->cfg.one_piece_file_max_len < 64U)
+	{
+		MY_LOGE("one_piece_file_max_len=%zu too small, reset it to 0, which won't cut piece",
+				handle->cfg.one_piece_file_max_len);
+		handle->cfg.one_piece_file_max_len = 0U;
+	}
+
+	/* 此时 cfg 已完全规范化, 可以启动 worker */
+	uint32_t log_queue_mem_size = (uint32_t)handle->cfg.log_queue_size * 1024U;
 	msg_queue_handler_init_param_t msg_q_init_param =
 		{
 			.callback =
@@ -374,48 +417,38 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 	handle->msg_queue = msg_queue_handler_create(log_queue_mem_size, &msg_q_init_param);
 	if (NULL == handle->msg_queue)
 	{
-		free(msg);
-		free(handle);
-		handle = NULL;
-		return NULL;
+		goto cleanup_on_error;
 	}
-	char *log_folder_path_formatted = strreplace(cfg_p->log_folder_path, "\\", "/");
-	if (!log_folder_path_formatted)
-	{
-		free(msg);
-		free(handle);
-		return NULL;
-	}
-	strlcpy(cfg_p->log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
-	free(log_folder_path_formatted);
-	size_t log_folder_path_len = strlen(cfg_p->log_folder_path);
-	if (cfg_p->log_folder_path[log_folder_path_len - 1] != '/')
-	{
-		if (log_folder_path_len + 2 > MAX_LOG_FOLDER_PATH_SIZE) // 路径已满，无法追加 '/'
-		{
-			free(msg);
-			free(handle);
-			return NULL;
-		}
-		cfg_p->log_folder_path[log_folder_path_len] = '/';
-		cfg_p->log_folder_path[log_folder_path_len + 1] = '\0';
-	}
-	if (cfg_p->one_piece_file_max_len && cfg_p->one_piece_file_max_len < 64U) // file piece too small
-	{
-		MY_LOGE("one_piece_file_max_len=%zu too small, reset it to 0, which won't cut piece", cfg_p->one_piece_file_max_len);
-		cfg_p->one_piece_file_max_len = 0U; // 0 that means won't create new log file automatically.
-	}
-	if (cfg_p->log_queue_size < 2U)
-	{
-		MY_LOGE("too small log_queue_size=%zu. reset it to 64", cfg_p->log_queue_size);
-		cfg_p->log_queue_size = 64U;
-	}
-	handle->timezone_hour = time_util_zone_offset_seconds_to_utc() / 3600;
-	handle->cfg = *cfg_p;
-	handle->cur_file_path[0] = '\0';
-	handle->last_cleanup_ms = 0U;
+
 	file_logger_try_cleanup(handle, true);
 	return handle;
+
+cleanup_on_error:
+	/* 统一清理路径. 注意分支处理:
+	 * - msg 不为 NULL <=> handle 尚未持有 msg_cache_p 所有权(handle 可能是 NULL 或刚 calloc)
+	 * - msg 为 NULL && handle 不为 NULL <=> handle->msg_cache_p == 之前的 msg, 由 free(handle->msg_cache_p) 释放
+	 * - 局部 log_folder_path_formatted 不为 NULL 时单独 free */
+	if (log_folder_path_formatted)
+	{
+		free(log_folder_path_formatted);
+	}
+	if (handle)
+	{
+		if (handle->msg_queue)
+		{
+			msg_queue_handler_destroy(&(handle->msg_queue), MSG_Q_HANDLER_DESTROY_FLAGS_NORMALLY);
+		}
+		if (handle->msg_cache_p)
+		{
+			free(handle->msg_cache_p);
+		}
+		free(handle);
+	}
+	else if (msg)
+	{
+		free(msg);
+	}
+	return NULL;
 }
 
 int file_logger_run_cleanup_now(file_logger_handle handle)
@@ -430,7 +463,18 @@ int file_logger_run_cleanup_now(file_logger_handle handle)
 
 int file_logger_log(file_logger_handle handle, void *log_msg, size_t msg_size)
 {
-#define MAX_RETRY_LOG_TIMES_IF_FAIL (2)
+	/* P1-3 修订: retry sleep 平台分支.
+	 * Linux/POSIX: usleep(200us) × 10 = ~2ms (粒度细, 响应快)
+	 * Windows: usleep 在 inc/thread/posix_thread.h:23 定义为 Sleep(us/1000),
+	 *          故 200us 会退化为 Sleep(0) 仅做线程让步, 反而忙等持锁.
+	 *          Windows 维持 Sleep(1) × 2 = ~2-30ms (与原行为等价). */
+#ifdef _WIN32
+#define _LCU_LOG_RETRY_SLEEP_US (1500)
+#define _LCU_LOG_RETRY_MAX_TIMES (2)
+#else
+#define _LCU_LOG_RETRY_SLEEP_US (200)
+#define _LCU_LOG_RETRY_MAX_TIMES (10)
+#endif
 	if (!handle || !log_msg || 0U == msg_size)
 	{
 		return -1;
@@ -461,24 +505,33 @@ int file_logger_log(file_logger_handle handle, void *log_msg, size_t msg_size)
 		{
 			break; // everything all right, sending completed
 		}
-		// MY_LOGE("failed(%d) on send log to queue at this time. queue is full?", status);
 		if (false == handle->cfg.is_try_my_best_to_keep_log)
 		{
 			break; // caution: here we must be lost this log message!
 		}
-		// MY_LOGE("try put it again later...");
-		usleep(1500); // 1.5ms
-	} while (MSG_Q_CODE_SUCCESS != status && ++retry_counter < MAX_RETRY_LOG_TIMES_IF_FAIL);
+		usleep(_LCU_LOG_RETRY_SLEEP_US);
+	} while (MSG_Q_CODE_SUCCESS != status && ++retry_counter < _LCU_LOG_RETRY_MAX_TIMES);
 
-	// final safety
-	if (MSG_Q_CODE_SUCCESS != status && handle->cfg.is_try_my_best_to_keep_log)
+	/* P1-3 修订: lost.log 路径准备(在持锁状态下生成路径字符串, 与 cfg 字段访问需要锁保护),
+	 * 但实际的 fopen+fprintf+fclose 移到 unlock 之后, 避免持锁同步磁盘 IO 阻塞其他 producer. */
+	bool need_write_lost_log = (MSG_Q_CODE_SUCCESS != status && handle->cfg.is_try_my_best_to_keep_log);
+	char lost_path_buffer[MAX_FULL_PATH_SIZE];
+	if (need_write_lost_log)
 	{
-		char path_buffer[MAX_FULL_PATH_SIZE];
-		path_buffer[MAX_FULL_PATH_SIZE - 1] = '\0';
-		snprintf(path_buffer, sizeof(path_buffer) - 1, "%s%s_lost.log",
+		lost_path_buffer[MAX_FULL_PATH_SIZE - 1] = '\0';
+		snprintf(lost_path_buffer, sizeof(lost_path_buffer) - 1, "%s%s_lost.log",
 				 handle->cfg.log_folder_path, handle->cfg.log_file_name_prefix);
+	}
+
+	FILE_LOGGER_UNLOCK(handle);
+
+	/* 解锁后再写 lost.log, fclose 触发的 fsync 不再阻塞其他 producer.
+	 * 注意: lost.log 路径上的写入相对其他 producer 失去严格 FIFO,
+	 * 但 lost.log 本身就是兜底场景, 这个 trade-off 可接受. */
+	if (need_write_lost_log)
+	{
 		MY_LOGE(" warning: lost log, you can see it on *_lost.log");
-		FILE *f_lost = fopen(path_buffer, "a");
+		FILE *f_lost = fopen(lost_path_buffer, "a");
 		if (f_lost)
 		{
 			fprintf(f_lost, "%.*s\n\n", (int)msg_size, (char *)log_msg);
@@ -486,8 +539,9 @@ int file_logger_log(file_logger_handle handle, void *log_msg, size_t msg_size)
 		}
 	}
 
-	FILE_LOGGER_UNLOCK(handle);
 	return (int)status;
+#undef _LCU_LOG_RETRY_SLEEP_US
+#undef _LCU_LOG_RETRY_MAX_TIMES
 }
 
 int file_logger_destroy(file_logger_handle *handle_p)

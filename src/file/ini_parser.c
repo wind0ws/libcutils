@@ -630,7 +630,25 @@ ini_parser_code_e ini_parser_save(ini_parser_handle parser_p, const char *file_p
 	{
 		return INI_PARSER_CODE_INVALID_PARAM;
 	}
-	FILE *fp = fopen(file_path, "wb");
+	/* P2-2: 原子写 — 先写到 .tmp, 全部成功后 rename 替换原文件.
+	 * 修复前: fopen("wb") 直接截断目标, 写中途崩溃/掉电会留下空文件或半份配置. */
+	char tmp_path[1024];
+	int tmp_len = snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", file_path);
+	if (tmp_len < 0 || (size_t)tmp_len >= sizeof(tmp_path))
+	{
+		/* 路径过长 fallback 到非原子路径,保持旧行为 */
+		FILE *fp_legacy = fopen(file_path, "wb");
+		if (!fp_legacy) return INI_PARSER_CODE_INVALID_PARAM;
+		char *str_legacy = ini_parser_dump(parser_p);
+		if (!str_legacy || '\0' == str_legacy[0]) { if (str_legacy) free(str_legacy); fclose(fp_legacy); return INI_PARSER_CODE_FAILED; }
+		size_t legacy_len = strlen(str_legacy);
+		size_t legacy_w = fwrite(str_legacy, 1, legacy_len, fp_legacy);
+		free(str_legacy);
+		fclose(fp_legacy);
+		return (legacy_w == legacy_len) ? INI_PARSER_CODE_SUCCEED : INI_PARSER_CODE_FAILED;
+	}
+
+	FILE *fp = fopen(tmp_path, "wb");
 	if (!fp)
 	{
 		return INI_PARSER_CODE_INVALID_PARAM;
@@ -642,12 +660,26 @@ ini_parser_code_e ini_parser_save(ini_parser_handle parser_p, const char *file_p
 		{
 			free(ini_str);
 		}
+		fclose(fp);
+		remove(tmp_path);
 		return INI_PARSER_CODE_FAILED;
 	}
 	size_t ini_str_len = strlen(ini_str);
-	fwrite(ini_str, 1, ini_str_len, fp);
+	size_t written = fwrite(ini_str, 1, ini_str_len, fp);
 	free(ini_str);
-	fclose(fp);
+	int close_ret = fclose(fp);
+	if (written != ini_str_len || 0 != close_ret)
+	{
+		remove(tmp_path);
+		return INI_PARSER_CODE_FAILED;
+	}
+	/* Windows: rename 不能覆盖已存在文件, 需先 remove 目标. */
+	(void)remove(file_path);
+	if (0 != rename(tmp_path, file_path))
+	{
+		remove(tmp_path);
+		return INI_PARSER_CODE_FAILED;
+	}
 	return INI_PARSER_CODE_SUCCEED;
 }
 
@@ -758,24 +790,25 @@ static ini_parser_code_e ini_parser_get_value(ini_parser_handle parser_p,
 	{
 	case INI_VALUE_TYPE_BOOL:
 	{
-		bool result = (0 == strncasecmp(str_value, "true", 4));
+		/* P2-1: 改前缀匹配为全等匹配, 避免 "trueblahblah"->true / "northwest"->false. */
+		bool result = (0 == strcasecmp(str_value, "true"));
 		do
 		{
 			if (result)
 			{
 				break;
 			}
-			if (0 == strncasecmp(str_value, "false", 5))
+			if (0 == strcasecmp(str_value, "false"))
 			{
 				result = false;
 				break;
 			}
-			if (0 == strncasecmp(str_value, "yes", 3))
+			if (0 == strcasecmp(str_value, "yes"))
 			{
 				result = true;
 				break;
 			}
-			if (0 == strncasecmp(str_value, "no", 2))
+			if (0 == strcasecmp(str_value, "no"))
 			{
 				result = false;
 				break;

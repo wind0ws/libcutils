@@ -11,8 +11,11 @@ extern "C" {
 	/**
 	 * append slash("/" or "\\") if "folder_path" NOT end with slash("/" or "\\")
 	 * Note: "folder_path" must be readable and writable.
-	 * 
-	 * @return 0 for success, otherwise fail
+	 *
+	 * @return 0 for success;
+	 *         -1 for invalid arguments (NULL/empty/too small buffer);
+	 *         -2 for path consists of only spaces;
+	 *         -3 for buffer too small to append slash (original data preserved).
 	 */
 	int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size);
 

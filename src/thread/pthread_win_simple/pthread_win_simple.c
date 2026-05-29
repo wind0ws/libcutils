@@ -154,9 +154,16 @@ int pthread_mutex_unlock(pthread_mutex_t* mutex)
 	{
 		return EINVAL;
 	}
-	if (PTHREAD_MUTEX_INITIALIZER == *mutex)
+	// 识别所有静态初始化器(与 pthread_mutex_lock 第 128 行对齐):
+	// PTHREAD_MUTEX_INITIALIZER = (size_t)-1
+	// PTHREAD_RECURSIVE_MUTEX_INITIALIZER = (size_t)-2
+	// PTHREAD_ERRORCHECK_MUTEX_INITIALIZER = (size_t)-3
+	// 在 size_t 无符号比较下,-3 是最小值,>=-3 即覆盖三者.
+	// 静态初始化器从未被 pthread_mutex_lock 触碰过(lock 是第一次访问时 lazy-init),
+	// 此时 unlock 等价于 "未曾 lock 的 unlock",按 POSIX 通常返回 0(忽略).
+	if (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
 	{
-		return 0;//ignore this unlock operation
+		return 0; // 未初始化的 mutex 上调 unlock,空操作
 	}
 	pthread_mutex_t mx = *mutex;
 	LeaveCriticalSection(&(mx->mHandle));

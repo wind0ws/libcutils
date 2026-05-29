@@ -16,6 +16,8 @@ local.properties
 .kotlin/
 .temp/
 .tmp/
+.ai/review/
+*.local.md
 __pycache__/
 /build
 /captures

@@ -44,6 +44,13 @@ extern "C" {
 	 * @param out_buf_plain: output decode buf
 	 * @param src_buf_encoded: the base64 encoded buf
 	 * @return decoded byte size.
+	 *
+	 * @warning src_buf_encoded MUST be NUL-terminated, and there MUST be no
+	 *          non-base64 byte before the NUL. The decoder scans until it hits
+	 *          a non-base64 character (NUL qualifies); passing a non-terminated
+	 *          buffer (e.g. raw bytes straight from a socket/file) causes
+	 *          out-of-bounds read. Ensure out_buf_plain is at least
+	 *          lcu_base64_decode_buf_size(strlen(src_buf_encoded)) bytes.
 	 */
 	int lcu_base64_decode(char* out_buf_plain, const char* src_buf_encoded);
 

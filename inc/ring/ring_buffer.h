@@ -53,6 +53,10 @@ extern "C" {
 	 * @param[in] buf_size RingBuffer size, must be pow of 2.
 	 *                     if not, will change size to previous pow of it automatically.
 	 *
+	 * @warning P2-7: `buf` MUST be aligned to at least alignof(uint32_t) (typically 4 bytes).
+	 *          The struct stored at the start of `buf` contains atomic uint32_t fields;
+	 *          unaligned access on strict-alignment architectures (ARMv7 etc.) triggers SIGBUS.
+	 *
 	 * @return RingBuffer pointer
 	 */
 	ring_buffer_handle ring_buffer_create_with_mem(__in void* buf, __in uint32_t buf_size);

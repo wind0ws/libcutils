@@ -32,7 +32,18 @@ extern "C"
 		char log_folder_path[MAX_LOG_FOLDER_PATH_SIZE];
 		char log_file_name_prefix[MAX_LOG_FILE_NAME_PREFIX_SIZE]; /* log file name prefix */
 		size_t one_piece_file_max_len;							  /* the max len of one piece log file */
-		size_t log_queue_size;									  /* how many 1024 byte */
+		/**
+		 * @brief Log queue size in KB (1024 bytes per unit)
+		 * @note For high-frequency logging scenarios, recommend 64+ KB to reduce retry overhead.
+		 *       Smaller queues may cause producers to block when consumer is slow.
+		 */
+		size_t log_queue_size;
+		/**
+		 * @brief Whether to retry when queue is full
+		 * @note When true, producers will hold the lock and retry with short sleeps (200us granularity).
+		 *       This ensures FIFO ordering but may block other producers during retry.
+		 *       When false, failed logs are immediately discarded or written to *_lost.log.
+		 */
 		bool is_try_my_best_to_keep_log;
 		uint32_t max_log_retention_days;	/* auto delete files older than N days, 0 disables */
 		size_t max_total_log_storage_bytes; /* delete oldest files if total size exceeds limit, 0 disables */
@@ -42,8 +53,42 @@ extern "C"
 
 	int file_logger_run_cleanup_now(file_logger_handle handle);
 
+	/**
+	 * @brief Write log message to queue
+	 *
+	 * @param handle File logger handle
+	 * @param log_msg Log message buffer
+	 * @param msg_size Message size in bytes
+	 * @return 0 on success, negative error code on failure
+	 *
+	 * @note FIFO Ordering Guarantee:
+	 *       When multiple threads call this function concurrently, the log entry order
+	 *       in the output file matches the order in which threads acquire the lock.
+	 *       This is achieved by holding the lock during retry (when is_try_my_best_to_keep_log=true).
+	 *
+	 * @warning Performance Trade-off:
+	 *       To maintain FIFO ordering, producers hold the lock during retry sleeps (~200us per attempt).
+	 *       In high-contention scenarios, this may cause other producers to wait.
+	 *       If strict ordering is not required, set is_try_my_best_to_keep_log=false.
+	 *
+	 * @warning Concurrent Safety:
+	 *       If cfg.lock is not provided, caller must ensure no concurrent calls to this function.
+	 */
 	int file_logger_log(file_logger_handle handle, void *log_msg, size_t msg_size);
 
+	/**
+	 * @brief Destroy file logger and release resources
+	 *
+	 * @param handle_p Pointer to file logger handle
+	 * @return 0 on success, negative error code on failure
+	 *
+	 * @warning Call Order:
+	 *       Before calling this function, ensure all logging threads have stopped calling
+	 *       file_logger_log(). Otherwise, use-after-free may occur.
+	 *       Recommended shutdown sequence:
+	 *       1. Stop all log producers (set shutdown flag, join threads, etc.)
+	 *       2. Call file_logger_destroy()
+	 */
 	int file_logger_destroy(file_logger_handle *handle_p);
 
 #ifdef __cplusplus

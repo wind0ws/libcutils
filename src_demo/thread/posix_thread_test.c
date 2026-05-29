@@ -204,12 +204,70 @@ static void test_log()
 	LOGI("LOG test finished!!!");
 }
 
+#ifdef LCU_XLOG_H
+/* P2-6: 并发 init 测试辅助 — N 个线程同时调 xlog_global_init */
+#define XLOG_CONC_THREADS (16)
+static void* pri_xlog_init_worker(void* arg)
+{
+	(void)arg;
+	for (int i = 0; i < 100; ++i)
+	{
+		xlog_global_init(); /* 幂等, 多线程并发安全 */
+	}
+	return NULL;
+}
+static void pri_xlog_concurrent_init_test(void)
+{
+	portable_thread_t threads[XLOG_CONC_THREADS];
+	for (int i = 0; i < XLOG_CONC_THREADS; ++i)
+	{
+		portable_thread_create(&threads[i], NULL, pri_xlog_init_worker, NULL);
+	}
+	for (int i = 0; i < XLOG_CONC_THREADS; ++i)
+	{
+		portable_thread_join(threads[i], NULL);
+	}
+	/* 并发 init 后日志仍能正常输出 => mutex 有效, 无竞态损坏 */
+	LOGI("P2-6 concurrent xlog_global_init OK (%d threads x100)", XLOG_CONC_THREADS);
+}
+#endif // LCU_XLOG_H
+
 int posix_thread_test(void)
 {
 	LOGD("Hello World, thread id: %d", (int)GETTID());
 	test_log();
 
 	sem_test();
+
+	/* P0-5 回归测试: 验证 pthread_mutex_unlock 识别全部三个静态初始化器,不崩溃.
+	 * 仅在 Windows + SIMPLE 模式下有意义,其他平台 pthread_mutex_unlock 是系统实现. */
+#if defined(_WIN32) && defined(_LCU_CFG_WIN_PTHREAD_MODE) && \
+    (_LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
+	{
+		pthread_mutex_t mu_normal     = PTHREAD_MUTEX_INITIALIZER;
+		pthread_mutex_t mu_recursive  = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+		pthread_mutex_t mu_errcheck   = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER;
+		/* 修复前: 后两者会进入 LeaveCriticalSection(&魔法值->mHandle) 段错误. */
+		int r1 = pthread_mutex_unlock(&mu_normal);
+		int r2 = pthread_mutex_unlock(&mu_recursive);
+		int r3 = pthread_mutex_unlock(&mu_errcheck);
+		if (r1 != 0 || r2 != 0 || r3 != 0)
+		{
+			LOGE("P0-5 unlock on static initializer failed: r1=%d r2=%d r3=%d", r1, r2, r3);
+			return -1;
+		}
+		LOGI("P0-5 pthread_mutex_unlock static initializers OK");
+	}
+#endif
+
+	/* P2-6 回归测试: 并发调用 xlog_global_init 不崩溃/不死锁 (once 守护锁保护).
+	 * 修复前: check-then-act 竞态会创建多份 mutex 并泄漏.
+	 * 这里 N 个线程同时狂调 init (幂等操作), 最后验证日志仍可正常输出. */
+#ifdef LCU_XLOG_H
+	{
+		pri_xlog_concurrent_init_test();
+	}
+#endif
 
 	return 0;
 }

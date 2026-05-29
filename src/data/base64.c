@@ -24,20 +24,30 @@ int lcu_base64_encode(char* out_buf_encoded, const char* src_buf_plain, const si
 {
 	size_t i;
 	char* p;
-    if (src_buf_len < 2)
-    {
-        return -1;
-    }
+	/* P2-5: 接受合法的 1 字节/2 字节输入 (base64 标准支持: "A"->"QQ==").
+	 * 修复前 src_buf_len<2 直接返回 -1 拒绝 1 字节. */
+	if (src_buf_len < 1 || NULL == out_buf_encoded || NULL == src_buf_plain)
+	{
+		return -1;
+	}
 
 	p = out_buf_encoded;
-	for (i = 0; i < src_buf_len - 2; i += 3)
+	/* P2-5: 主循环只在 src_buf_len >= 3 时进入,避免 src_buf_len-2 在 size_t 下溢. */
+	if (src_buf_len >= 3)
 	{
-		*p++ = basis_64[(src_buf_plain[i] >> 2) & 0x3F];
-		*p++ = basis_64[((src_buf_plain[i] & 0x3) << 4) |
-			((int)(src_buf_plain[i + 1] & 0xF0) >> 4)];
-		*p++ = basis_64[((src_buf_plain[i + 1] & 0xF) << 2) |
-			((int)(src_buf_plain[i + 2] & 0xC0) >> 6)];
-		*p++ = basis_64[src_buf_plain[i + 2] & 0x3F];
+		for (i = 0; i < src_buf_len - 2; i += 3)
+		{
+			*p++ = basis_64[(src_buf_plain[i] >> 2) & 0x3F];
+			*p++ = basis_64[((src_buf_plain[i] & 0x3) << 4) |
+				((int)(src_buf_plain[i + 1] & 0xF0) >> 4)];
+			*p++ = basis_64[((src_buf_plain[i + 1] & 0xF) << 2) |
+				((int)(src_buf_plain[i + 2] & 0xC0) >> 6)];
+			*p++ = basis_64[src_buf_plain[i + 2] & 0x3F];
+		}
+	}
+	else
+	{
+		i = 0; /* 直接进入尾部 padding 处理 */
 	}
 	if (i < src_buf_len)
 	{

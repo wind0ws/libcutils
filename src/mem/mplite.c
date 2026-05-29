@@ -171,12 +171,16 @@ MPLITE_API void* mplite_realloc(mplite_t* handle,
 		return NULL;
 	}
 
+	/* P2-10: 整体在临界区内读 nOld + alloc + memcpy + free, 消除 TOCTOU.
+	 * 修复前: nOld 在 lock 外读, 另一线程在 buddy 合并/拆分后 aCtrl[i] 的 LOGSIZE 已变,
+	 *         memcpy(p, pPrior, nOld) 可能拷贝过多字节越界读相邻控制结构. */
+	mplite_enter(handle);
 	nOld = mplite_size(handle, pPrior);
 	if (nBytes <= nOld)
 	{
+		mplite_leave(handle);
 		return (void*)pPrior;
 	}
-	mplite_enter(handle);
 	p = mplite_malloc_unsafe(handle, nBytes);
 	if (p)
 	{

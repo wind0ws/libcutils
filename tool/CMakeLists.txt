@@ -9,7 +9,15 @@ enable_testing()
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains)
 include(CheckSymbolExists)
+include(CheckIncludeFile)
 include(macros)
+
+# P2-6: 探测 C11 <threads.h> 可用性 (cross-compile 下 musl/uclibc 可能缺失).
+# 源码侧用 LCU_HAVE_C11_THREADS_H + __has_include 双保险.
+check_include_file("threads.h" LCU_HAVE_C11_THREADS_H)
+if(LCU_HAVE_C11_THREADS_H)
+    add_compile_definitions(LCU_HAVE_C11_THREADS_H=1)
+endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_COLOR_MAKEFILE ON)

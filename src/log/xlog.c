@@ -101,6 +101,92 @@ static portable_mutex_t g_xlog_mutex = NULL;
 #define XLOG_LOCK()     do { if (g_xlog_mutex) { portable_mutex_lock(&g_xlog_mutex);} } while (0)
 #define XLOG_UNLOCK()   do { if (g_xlog_mutex) { portable_mutex_unlock(&g_xlog_mutex);} } while (0)
 
+/* ===================== P2-6: xlog_global_init 线程安全 =====================
+ * 问题: 原 xlog_global_init 是 check-then-act (if(mutex)return; init), 多线程并发
+ *       (例如 logger_facade_xlog.h 的 _LOG_INIT_IMPL 宏可能绕过 lcu_global_init 直接调用)
+ *       会创建多份 mutex 并泄漏.
+ * 方案: 用平台 once 机制初始化一个"守护锁" g_xlog_guard (创建一次, 进程生命周期内不销毁),
+ *       守护锁保护真正的 g_xlog_mutex 的 init/cleanup. 这样:
+ *         1. 消除 init 竞态 (once 保证守护锁只建一次);
+ *         2. 保留 init→cleanup→init 的 reinit 能力 (g_xlog_mutex 可反复创建/销毁);
+ *         3. 优先用轻量 call_once / InitOnceExecuteOnce (fast-path 近乎零开销),
+ *            pthread_once 仅作 POSIX 兜底.
+ * 三层 fallback 顺序: C11 call_once > Win32 InitOnceExecuteOnce > POSIX pthread_once. */
+
+#if !defined(_WIN32) && \
+    ((defined(LCU_HAVE_C11_THREADS_H) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
+     (defined(__has_include) && __has_include(<threads.h>)))
+    /* Tier 1: C11 threads.h call_once */
+    #include <threads.h>
+    static portable_mutex_t g_xlog_guard = NULL;
+    static once_flag g_xlog_guard_once = ONCE_FLAG_INIT;
+    static void pri_xlog_guard_init(void) { portable_mutex_init(&g_xlog_guard, NULL); }
+    static void pri_xlog_ensure_guard(void) { call_once(&g_xlog_guard_once, pri_xlog_guard_init); }
+
+#elif defined(_WIN32)
+    /* Tier 2: Win32 InitOnceExecuteOnce */
+    #include <synchapi.h>
+    static portable_mutex_t g_xlog_guard = NULL;
+    static INIT_ONCE g_xlog_guard_once = INIT_ONCE_STATIC_INIT;
+    static BOOL CALLBACK pri_xlog_guard_init(PINIT_ONCE i, PVOID p, PVOID* c)
+    {
+        (void)i; (void)p; (void)c;
+        portable_mutex_init(&g_xlog_guard, NULL);
+        return TRUE;
+    }
+    static void pri_xlog_ensure_guard(void) { InitOnceExecuteOnce(&g_xlog_guard_once, pri_xlog_guard_init, NULL, NULL); }
+
+#else
+    /* Tier 3: POSIX pthread_once 兜底 (uclibc/musl/老 NDK) */
+    #include <pthread.h>
+    static portable_mutex_t g_xlog_guard = NULL;
+    static pthread_once_t g_xlog_guard_once = PTHREAD_ONCE_INIT;
+    static void pri_xlog_guard_init(void) { portable_mutex_init(&g_xlog_guard, NULL); }
+    static void pri_xlog_ensure_guard(void) { pthread_once(&g_xlog_guard_once, pri_xlog_guard_init); }
+#endif
+
+int xlog_global_init()
+{
+	pri_xlog_ensure_guard();
+	if (NULL == g_xlog_guard)
+	{
+		/* 守护锁创建失败 (OOM 等极端情况), 退化为原行为, 尽力而为 */
+		if (g_xlog_mutex) { return 1; }
+		portable_mutex_init(&g_xlog_mutex, NULL);
+		return 0;
+	}
+	portable_mutex_lock(&g_xlog_guard);
+	int ret = 1; /* 1: 已初始化(幂等) */
+	if (NULL == g_xlog_mutex)
+	{
+		portable_mutex_init(&g_xlog_mutex, NULL);
+		ret = 0;
+	}
+	portable_mutex_unlock(&g_xlog_guard);
+	return ret;
+}
+
+int xlog_global_cleanup()
+{
+	if (NULL == g_xlog_guard)
+	{
+		if (NULL == g_xlog_mutex) { return 1; }
+		portable_mutex_destroy(&g_xlog_mutex);
+		g_xlog_mutex = NULL;
+		return 0;
+	}
+	portable_mutex_lock(&g_xlog_guard);
+	int ret = 1;
+	if (g_xlog_mutex)
+	{
+		portable_mutex_destroy(&g_xlog_mutex);
+		g_xlog_mutex = NULL;
+		ret = 0;
+	}
+	portable_mutex_unlock(&g_xlog_guard);
+	return ret;
+}
+
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
 #define XLOG_IS_ANDROID_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
@@ -114,27 +200,6 @@ static const char g_map_level_chars[] = { '0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL
 static const int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
 			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR };
 #endif // __ANDROID__
-
-int xlog_global_init()
-{
-	if (g_xlog_mutex)
-	{
-		return 1;
-	}
-	portable_mutex_init(&g_xlog_mutex, NULL);
-	return 0;
-}
-
-int xlog_global_cleanup()
-{
-	if (NULL == g_xlog_mutex)
-	{
-		return 1;
-	}
-	portable_mutex_destroy(&g_xlog_mutex);
-	g_xlog_mutex = NULL;
-	return 0;
-}
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #ifdef _WIN32
@@ -413,12 +478,25 @@ static inline int my_int2str(int num, char* str)
 }
 
 // (func:line)  
-static inline int print_func_line(char* buffer, const char* func, int line_num)
+/* P2-12: 接受 remaining_size 参数, 截断超长 func 名 (例如 C++ __PRETTY_FUNCTION__
+ * 展开后可能上百字节). 修复前: 仅在调用方判断剩余空间 > 32, func 超长时栈溢出. */
+static inline int print_func_line(char* buffer, size_t remaining_size, const char* func, int line_num)
 {
+	/* 至少需要: '(' + 至少 1 字节 func + ':' + digits(<=11) + ')' + ' ' + '\0' = 6 + digits */
+	if (remaining_size < 16U) /* 太小直接放弃 */
+	{
+		return 0;
+	}
 	char *str = buffer;
 	str[0] = '(';
 	++str;
+	remaining_size -= 1;
 	size_t len_func = strlen(func);
+	/* 至少给 ':d) \0' 留 16 字节余量 */
+	if (len_func > remaining_size - 16U)
+	{
+		len_func = remaining_size - 16U;
+	}
 	memcpy(str, func, len_func);
 	str += len_func;
 	str[0] = ':';
@@ -504,7 +582,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
 #else
-			buffer_strlen += print_func_line(buffer_log + buffer_strlen, func_name, file_line);
+			buffer_strlen += print_func_line(buffer_log + buffer_strlen, default_buffer_remaining_size, func_name, file_line);
 #endif // USE_SNPRINTF_HEADER
 	    }
 

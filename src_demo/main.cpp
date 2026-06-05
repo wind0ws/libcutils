@@ -294,6 +294,17 @@ EXTERN_C
 int main(int argc, char *argv[])
 {
     int ret = 0;
+#if defined(_WIN32) && defined(_DEBUG)
+    /* Route CRT assertion failures to stderr instead of a modal dialog box,
+     * so automated/CTest runs do not hang waiting for a manual "OK" click.
+     * Affects this test harness only, not the library. */
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+#endif
     MEM_CHECK_INIT();
     lcu_global_init();
     lcu_console_setup();

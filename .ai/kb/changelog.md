@@ -78,5 +78,24 @@
      - **P2-6 ARM64**：16 线程 ×100 并发 xlog_global_init 通过（POSIX pthread_once 路径）。
      - **跨平台覆盖小结**：Windows MSVC x64 / Linux GCC 5.4 m64+m32 / Linux ASan / **Linux ARMv8 Cortex-A55 真机** 全绿。
 
+3. **hashmap/array 内存追踪盲区修复（allocation_tracker 递归根治）** — 2026-06-04
+   - **背景**：多角度对抗评审（含 Codex）发现 `hashmap.c`/`array.c` 直接用 libc `malloc/calloc/free`，绕过 `allocation_tracker`，导致这些容器的分配不被泄漏检测覆盖（追踪盲区）。但 `hashmap.c` 的 `#undef` 绕过是**有意为之**——`allocation_tracker` 内部用 hashmap 存分配记录，若 hashmap 走 `lcu_*alloc` 会无限递归 + 自死锁。
+   - **根因链（症状 → 各层）**：盲区症状 ← data 层容器直连 libc ← 为规避 tracker 内部 map 的递归而一刀切关掉追踪（连用户 map 一起排除）。根治落点：**按实例注入 allocator**，区分"被追踪"与"raw"两类分配器。
+   - **修复（6 commit）**：
+     - `fix(allocator)`：新增 `allocator_calloc_raw`/`allocator_malloc_raw`，定义在 `#undef` 作用域内走 libc，不经 tracker（断递归基础）。
+     - `fix(hashmap)`：新增 `hashmap_create_ex(..., const allocator_t*)`，`hashmap_create` 转调它传 `&allocator_calloc`（**ABI 逐字节不变**）。覆盖**三条分配路径**：struct Hashmap / buckets(init+rehash) / Entry，全走 `allocator->alloc`；buckets **显式 `memset(0)`** 不依赖分配器清零语义；`private_create_entry` 改签名带 allocator。
+     - `fix(allocation_tracker)`：内部 map 改用 `hashmap_create_ex(..., &allocator_calloc_raw)` 断递归，加 CRITICAL 注释固化约束。
+     - `fix(array)`：首行加 `mem/mem_debug.h`，删冗余 `<malloc.h>`，纳入追踪（array 不在 tracker 依赖链，无递归风险）。
+     - `docs`：在 `thpool.c`/`ring_buffer.c`/`list.c`/`hashmap.c` 误判位置加注释固化"已正确实现"事实，防止重复误判（HIGH-3 jobqueue 已有独立 rwmutex、HIGH-6 ring_buffer_clear 头文件已有契约、CRITICAL-1 foreach 已全程持锁、HIGH-7 rehash OOM 已优雅降级、list 已用 allocator 抽象被追踪）。
+     - `test(harness)`：`main.cpp` 加 `_CrtSetReportMode` 把 CRT assert 重定向到 stderr（仅 Win+Debug），防止 ASSERT 失败弹模态对话框卡死 CTest/CI。
+   - **验证（全量回归）**：
+     - **Clean build 双配置零警告**：Debug（含 mem_check 递归路径）+ Release（ABI/常规路径）从零重建，0 error 0 warning。
+     - **CTest 19/19 全绿**：Debug 135s / Release 83s，两配置均 100% pass 0 fail。
+     - **递归安全实证**：`allocator_test`/`basic_test`/`mplite_test`/`memleak_test` 全过 → `lcu_malloc → tracker → hashmap_put → raw(断开)` 无栈溢出/死锁；连续 3 轮 mem 测试稳定无偶发。
+     - **追踪有效性**：`memleak_test`（故意制造泄漏）能检出 → 盲区已消除。
+     - **ABI 兼容**：现有 `hashmap_create` 调用方（`str_params.c` 等）未改却编译链接通过。
+     - **baseline 对照**：`file_logger_test` 的 2 处清理 assert（test.c:108/122，日志 retention 未删旧文件）经 git stash 还原改动后**完全一致地复现**，确认是 **pre-existing bug，与本次改动无关**。
+   - **Open issue（非本次范围）**：file_logger 日志清理（retention/size）未正确删除旧文件，独立追踪；P1 待办（foreach 回调 debug 守卫、put 返回值四段式文档、hashmap/ring_buffer 标注规范 pilot）。
+
 
 

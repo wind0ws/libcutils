@@ -421,7 +421,7 @@ void hashmap_clear(hashmap_t *map)
 void hashmap_foreach(hashmap_t *map, hashmap_iter_cb callback, void *context)
 {
 	size_t i;
-	if (!map)
+	if (!map || !callback)
 	{
 		return;
 	}

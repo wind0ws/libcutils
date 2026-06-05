@@ -18,8 +18,8 @@
  *
  ******************************************************************************/
 
+#include "mem/mem_debug.h"
 #include "data/array.h"
-#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include "common_macro.h"

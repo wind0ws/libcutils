@@ -6,6 +6,12 @@
 #include "mem/allocator.h"
 #include "data/list.h"
 
+/* Verified: Memory tracking is active via the allocator abstraction.
+ * All allocations route through allocator_t->alloc (e.g. lcu_calloc1) and
+ * allocator.c includes mem_debug.h, so list allocations ARE tracked by the
+ * debug system. The original "bypasses mem_debug.h -> tracking blind spot"
+ * finding does NOT apply to list.c (it never calls libc malloc/free directly). */
+
 struct list_node_t 
 {
 	struct list_node_t* next;

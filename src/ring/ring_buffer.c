@@ -189,6 +189,9 @@ extern inline bool ring_buffer_is_full(__in ring_buffer_handle ring_handle)
 	return 0 == pri_avail_write_safe(ring_handle);
 }
 
+/* Verified: Thread-safety contract documented in inc/ring/ring_buffer.h:211-213
+ * ("WARN: this method is NOT thread safe!!!"). Caller must ensure no concurrent
+ * read/write during clear. The original "missing thread-safety doc" finding is moot. */
 extern inline void ring_buffer_clear(__in ring_buffer_handle ring_handle)
 {
 	if (NULL == ring_handle)

@@ -44,6 +44,16 @@ extern "C" {
 	extern const allocator_t allocator_malloc;
 	extern const allocator_t allocator_calloc;
 
+	// Raw allocators that bypass allocation tracking (route straight to libc).
+	// CRITICAL: these exist to break the recursion that would otherwise occur
+	// when a tracked allocator is used by allocation_tracker's own internal
+	// storage: lcu_*alloc -> allocation_tracker_notify_alloc -> hashmap_put
+	// -> lcu_*alloc. Any hashmap/container that backs the tracker MUST be
+	// created with a raw allocator. Do NOT use these for normal allocations,
+	// as they are invisible to leak/canary checks.
+	extern const allocator_t allocator_malloc_raw;
+	extern const allocator_t allocator_calloc_raw;
+
 	char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_name, int file_line);
 	char* lcu_strdup(const char* str);
 

@@ -36,6 +36,25 @@
 
 #define ALLOCTOR_ID  99
 
+// Raw allocation functions: route straight to libc, bypass allocation tracking.
+// After the #undef block above, malloc/calloc/free are always the libc symbols
+// (whether or not _USE_LCU_MEM_CHECK is defined), so these never re-enter the
+// tracker. Used by allocation_tracker's internal hashmap to break recursion.
+static void* raw_malloc(size_t size)
+{
+	return malloc(size);
+}
+
+static void* raw_calloc(size_t size)
+{
+	return calloc(1, size);
+}
+
+static void raw_free(void* ptr)
+{
+	free(ptr);
+}
+
 char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_name, int file_line)
 {
 	size_t size = strlen(str) + 1;  // + 1 for the null terminator
@@ -208,4 +227,16 @@ const allocator_t allocator_malloc =
 {
   lcu_malloc,
   lcu_free
+};
+
+const allocator_t allocator_calloc_raw =
+{
+  raw_calloc,
+  raw_free
+};
+
+const allocator_t allocator_malloc_raw =
+{
+  raw_malloc,
+  raw_free
 };

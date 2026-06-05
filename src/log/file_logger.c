@@ -306,6 +306,14 @@ static bool file_logger_remove_file(file_logger_t *handle, const char *path)
 		MY_LOGI("cleanup removed log file: \"%s\"", path);
 		return true;
 	}
+	/* TOCTOU race: file may have been deleted by external process between
+	 * gather_entries scan and this remove call. Treat ENOENT as success
+	 * (file is gone, which is the desired outcome). */
+	if (errno == ENOENT)
+	{
+		MY_LOGI("cleanup: log file already removed by external process: \"%s\"", path);
+		return true;
+	}
 	MY_LOGW("cleanup failed to remove log file: \"%s\" (errno=%d)", path, errno);
 	return false;
 }

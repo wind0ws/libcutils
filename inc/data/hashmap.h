@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include "mem/allocator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,41 @@ extern "C" {
 		value_free_fn fn_value_free,
 		key_equality_fn fn_key_equality,
 		hashmap_lock_t* lock);
+
+	/**
+	 * @brief Creates a new hash map with a custom allocator
+	 *
+	 * Same as hashmap_create, but lets the caller control how the map's
+	 * internal memory (the map struct, the bucket array, and each entry) is
+	 * allocated. hashmap_create is equivalent to calling this with
+	 * &allocator_calloc.
+	 *
+	 * @param initial_capacity Number of expected entries
+	 * @param fn_hash Function which hashes keys
+	 * @param fn_key_free Function which free keys when remove
+	 * @param fn_value_free Function which free values when remove
+	 * @param fn_key_equality Function which compares keys for equality
+	 * @param lock Provide lock/unlock function for concurrency support
+	 * @param allocator Allocator used for all internal allocations. Must not
+	 *        be NULL and must outlive the map.
+	 *
+	 * @return Hashmap pointer, or NULL if memory allocation fails.
+	 *         You should call hashmap_free after use!
+	 *
+	 * @pre The allocator may return uninitialized memory (malloc-like). This
+	 *      implementation explicitly zeroes the map struct and the bucket
+	 *      array, so a non-zeroing allocator (e.g. &allocator_malloc) is safe.
+	 * @note Pass &allocator_calloc_raw when the map must NOT be tracked by the
+	 *       allocation tracker (e.g. tracker-internal storage), to avoid
+	 *       recursion. See allocator.h.
+	 */
+	hashmap_t* hashmap_create_ex(size_t initial_capacity,
+		hash_key_fn fn_hash,
+		key_free_fn fn_key_free,
+		value_free_fn fn_value_free,
+		key_equality_fn fn_key_equality,
+		hashmap_lock_t* lock,
+		const allocator_t* allocator);
 
 	/**
 	 * @brief Frees the hash map

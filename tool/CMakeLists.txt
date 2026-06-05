@@ -328,6 +328,17 @@ else()
   #add _GNU_SOURCE for pthread_setname_np
   add_definitions(-D_GNU_SOURCE)
 endif()
+
+# Android 16KB 页对齐: Android 15 起部分 64 位设备改用 16KB 内存页,
+# 链接时需将 max/common-page-size 设为 16384, 否则在 16KB 设备上无法加载 .so.
+# 旧版 NDK(如 r16b) 默认 4KB 需手动指定; NDK r28+ 已默认开启此对齐.
+# 静态库是归档文件无需页对齐, 故只追加到 EXE/SHARED 链接标志.
+if(ANDROID)
+  set(_ANDROID_16K_ALIGN_FLAGS "-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
+  string(APPEND COMMON_EXE_LINKER_FLAGS " ${_ANDROID_16K_ALIGN_FLAGS}")
+  string(APPEND COMMON_SHARED_LINKER_FLAGS " ${_ANDROID_16K_ALIGN_FLAGS}")
+endif()
+
 string(APPEND CMAKE_C_FLAGS   "${COMMON_C_FLGAS}")
 string(APPEND CMAKE_CXX_FLAGS "${COMMON_C_FLGAS} ${COMMON_CXX_FLGAS}")
 string(APPEND CMAKE_EXE_LINKER_FLAGS " ${COMMON_EXE_LINKER_FLAGS}")

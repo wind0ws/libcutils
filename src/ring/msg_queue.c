@@ -124,7 +124,10 @@ uint32_t msg_queue_available_push_bytes(__in msg_queue msg_queue_p)
 
 void msg_queue_destroy(__inout msg_queue* msg_queue_pp)
 {
-	if (!msg_queue_pp || !((*msg_queue_pp)->ring_handle))
+	/* Guard against NULL outer pointer and NULL inner handle.
+	 * Must check !*msg_queue_pp before dereferencing to access ring_handle,
+	 * matching the pattern used by all other destroy functions in the codebase. */
+	if (!msg_queue_pp || !*msg_queue_pp || !((*msg_queue_pp)->ring_handle))
 	{
 		return;
 	}

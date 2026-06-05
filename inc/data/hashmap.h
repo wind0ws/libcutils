@@ -157,17 +157,40 @@ extern "C" {
 
 	/**
 	 * @brief Puts value for the given key in the map
-	 * 
+	 *
+	 * Inserts a new key-value pair or updates an existing entry. If the key already
+	 * exists, the old value is replaced and returned to the caller.
+	 *
 	 * @param map Hashmap to put value into
-	 * @param key Key to associate with value
-	 * @param value Value to store in the map
-	 * @return Pre-existing value if any, or NULL if no previous value existed
-	 * 
-	 * @warning The return value may no longer be usable if you set value_free_fn.
-	 *          For more details, see hashmap_remove warnings.
-	 * 
-	 * @note If memory allocation fails, this function returns NULL,
-	 *       the map's size does not increase, and errno is set to ENOMEM.
+	 * @param key Key to associate with value (ownership transferred to map if new entry)
+	 * @param value Value to store in the map (ownership transferred to map)
+	 *
+	 * @return Four possible outcomes:
+	 *   1. **New entry created successfully**: Returns NULL (no previous value existed).
+	 *   2. **Existing entry updated**: Returns the old value that was replaced.
+	 *      Caller is responsible for freeing this old value if needed (the map has
+	 *      already released ownership and will NOT call value_free_fn on it).
+	 *   3. **Memory allocation failure**: Returns NULL and errno is set to ENOMEM.
+	 *      Map size unchanged, key/value ownership NOT transferred (caller must free).
+	 *   4. **NULL map parameter**: Returns NULL immediately (no-op).
+	 *
+	 * @warning Ambiguity: NULL return can mean "new entry" or "allocation failure".
+	 *          Check errno == ENOMEM to distinguish. Alternatively, check map size
+	 *          before/after: if size increased, insertion succeeded.
+	 *
+	 * @warning If value_free_fn is set and an existing entry is updated, the OLD value
+	 *          is returned to the caller AFTER the map releases ownership. The caller
+	 *          must NOT assume the map will free it later. If the returned value is
+	 *          NULL, it could be a legitimately stored NULL value (not an error).
+	 *
+	 * @note This function may trigger rehash (when load factor exceeds 0.75), which
+	 *       can fail due to OOM. In that case the map gracefully degrades (no rehash)
+	 *       and the put operation still succeeds if the entry fits in the current buckets.
+	 *
+	 * @note Thread-safety: If a lock was provided to hashmap_create/hashmap_create_ex,
+	 *       this function is thread-safe. Concurrent put/remove/get are serialized.
+	 *       DO NOT call put from within a hashmap_foreach callback on the same map
+	 *       (Debug builds assert this; Release builds may deadlock or crash).
 	 */
 	void* hashmap_put(hashmap_t* map, void* key, void* value);
 

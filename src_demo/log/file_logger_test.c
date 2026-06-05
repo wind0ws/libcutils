@@ -42,10 +42,10 @@ static void set_file_time(const char *full_path, time_t modified_time);
 static uint64_t sum_log_files_size(void);
 
 #ifdef _WIN32
-#define FILE_LOGGER_PATH ("./log")
+#define FILE_LOGGER_PATH ("./log/")
 #define STDOUT_FILE_PATH ("./stdout2file.log")
 #else
-#define FILE_LOGGER_PATH ("./log/") 
+#define FILE_LOGGER_PATH ("./log/")
 #define STDOUT_FILE_PATH ("stdout2file.log")
 #endif // _WIN32
 

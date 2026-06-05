@@ -178,9 +178,13 @@ extern "C"
 	 *                        this value will rewrite to real split numbers after return.
 	 * @param src_str: the origin str that you want to split
 	 * @param delimiter: the string of delimiter, for example ","
+	 *
+	 * @note src_str MUST be writable. This function modifies src_str by replacing
+	 *       delimiter bytes with NUL (strtok_r behavior). Do NOT pass string literals
+	 *       or const buffers. Returned token pointers alias into src_str.
 	 */
 	void strsplit(char *recv_splited_str[], size_t *p_splited_nums,
-				  const char *src_str, const char *delimiter);
+				  char *src_str, const char *delimiter);
 
 	/**
 	 * trim string.

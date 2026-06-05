@@ -17,6 +17,7 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
+#include "common_macro.h"
 #include "data/hashmap.h"
 #include <string.h>
 #include <errno.h>
@@ -43,6 +44,11 @@ struct Hashmap
 	hashmap_lock_t lock;
 	size_t size;
 	const allocator_t *allocator;
+#ifdef _DEBUG
+	/* Debug guard: set to true during hashmap_foreach iteration.
+	 * Detects illegal concurrent modification (put/remove/rehash in callback). */
+	bool debug_iterating;
+#endif
 };
 
 #define hashmap_enter(handle)                       \
@@ -152,6 +158,10 @@ static inline size_t private_calculate_index(size_t bucketCount, int hash)
 
 static void private_expand_if_necessary(hashmap_t *map)
 {
+#ifdef _DEBUG
+	/* Redundant with put's check, but explicit: rehash during iteration is fatal. */
+	ASSERT(!map->debug_iterating);
+#endif
 	// If the load factor exceeds 0.75...
 	if (map->size <= (map->bucketCount * 3 / 4))
 	{
@@ -284,6 +294,11 @@ void *hashmap_put(hashmap_t *map, void *key, void *value)
 		return NULL;
 	}
 	hashmap_enter(map);
+#ifdef _DEBUG
+	/* Fail-fast if put is called during hashmap_foreach iteration.
+	 * Modifying the map during iteration invalidates iterators. */
+	ASSERT(!map->debug_iterating);
+#endif
 	const int hash = private_hash_key(map, key);
 	const size_t index = private_calculate_index(map->bucketCount, hash);
 	Entry **p = &(map->buckets[index]);
@@ -354,6 +369,11 @@ void *hashmap_remove(hashmap_t *map, void *key)
 		return NULL;
 	}
 	hashmap_enter(map);
+#ifdef _DEBUG
+	/* Fail-fast if remove is called during hashmap_foreach iteration.
+	 * Modifying the map during iteration invalidates iterators. */
+	ASSERT(!map->debug_iterating);
+#endif
 	int hash = private_hash_key(map, key);
 	size_t index = private_calculate_index(map->bucketCount, hash);
 	// Pointer to the current entry.
@@ -406,6 +426,9 @@ void hashmap_foreach(hashmap_t *map, hashmap_iter_cb callback, void *context)
 		return;
 	}
 	hashmap_enter(map);
+#ifdef _DEBUG
+	map->debug_iterating = true;
+#endif
 	for (i = 0; i < map->bucketCount; ++i)
 	{
 		Entry *entry = map->buckets[i];
@@ -419,5 +442,8 @@ void hashmap_foreach(hashmap_t *map, hashmap_iter_cb callback, void *context)
 			entry = next;
 		}
 	}
+#ifdef _DEBUG
+	map->debug_iterating = false;
+#endif
 	hashmap_leave(map);
 }

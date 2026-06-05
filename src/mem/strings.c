@@ -1,5 +1,6 @@
 #include "mem/strings.h"
 #include <malloc.h>
+#include <stdint.h>  /* for SIZE_MAX */
 
 #ifdef _WIN32
 char* strndup(const char* s, size_t n)
@@ -105,6 +106,14 @@ size_t strlcat(char* dst, const char* src, size_t size)
 char* strreplace(char const* const original,
 	char const* const pattern, char const* const replacement)
 {
+	/* Input validation: prevent NULL dereference and empty pattern infinite loop.
+	 * Empty pattern causes strstr to always return the haystack without advancing,
+	 * leading to infinite patcnt loop and subsequent undersized allocation. */
+	if (!original || !pattern || !replacement || !pattern[0])
+	{
+		return NULL;
+	}
+
 	size_t const replen = strlen(replacement);
 	size_t const patlen = strlen(pattern);
 	size_t const orilen = strlen(original);
@@ -119,8 +128,26 @@ char* strreplace(char const* const original,
 		++patcnt;
 	}
 
+	/* Overflow check: when replen > patlen, the expansion patcnt * (replen - patlen)
+	 * can overflow size_t on 32-bit platforms with large inputs, resulting in malloc
+	 * allocating an undersized buffer followed by memcpy heap overflow. */
+	size_t retlen;
+	if (replen > patlen)
+	{
+		size_t const expand_per = replen - patlen;
+		if (patcnt > SIZE_MAX / expand_per || orilen > SIZE_MAX - patcnt * expand_per)
+		{
+			return NULL;  // Would overflow
+		}
+		retlen = orilen + patcnt * expand_per;
+	}
+	else
+	{
+		// replen <= patlen: shrinking or equal, no overflow risk
+		retlen = orilen + patcnt * (replen - patlen);
+	}
+
 	// allocate memory for the new string
-	size_t const retlen = orilen + patcnt * (replen - patlen);
 	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
 	do
 	{
@@ -152,14 +179,17 @@ char* strreplace(char const* const original,
 	return returned;
 }
 
-void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_str, const char* delimiter)
+/* strsplit mutates src_str by replacing delimiter bytes with NUL (strtok_r behavior).
+ * The parameter is now truthfully declared as non-const. Callers must pass writable buffers.
+ * Returned token pointers alias into src_str; src_str must remain valid for token lifetime. */
+void strsplit(char* recv_splited_str[], size_t* p_splited_nums, char *src_str, const char* delimiter)
 {
 	char* token = NULL;
 	char* token_ctx = NULL;
 	size_t recv_ptrs_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
-	token = strtok_r((char *)src_str, delimiter, &token_ctx);
+	token = strtok_r(src_str, delimiter, &token_ctx);
 	while (token && *p_splited_nums < recv_ptrs_size)
 	{
 		recv_splited_str[*p_splited_nums] = token;

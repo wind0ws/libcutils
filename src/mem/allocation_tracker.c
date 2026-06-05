@@ -98,8 +98,14 @@ void allocation_tracker_init(void)
        .acquire = (int(*)(void*))pthread_mutex_lock, //lock_allocations_map,
        .release = (int(*)(void*))pthread_mutex_unlock, //unlock_allocations_map,
 	};
-	allocations = hashmap_create(ALLOCATION_MAP_INIT_CAPACITY,
-		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock);
+	/* CRITICAL: the tracker's internal map MUST use the raw (untracked)
+	 * allocator. If it used a tracked allocator, every allocation here would
+	 * recurse: lcu_*alloc -> allocation_tracker_notify_alloc -> hashmap_put
+	 * -> lcu_*alloc -> ... (and would also self-deadlock on allocations_lock).
+	 * Do NOT change &allocator_calloc_raw to a tracked allocator. */
+	allocations = hashmap_create_ex(ALLOCATION_MAP_INIT_CAPACITY,
+		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock,
+		&allocator_calloc_raw);
 }
 
 // Test function only. Do not call in the normal course of operations.

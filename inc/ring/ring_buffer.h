@@ -32,6 +32,23 @@
 extern "C" {
 #endif
 
+	/**
+	 * @file ring_buffer.h
+	 * @brief Lock-free single-producer single-consumer (SPSC) ring buffer
+	 *
+	 * @warning Thread Safety Contract:
+	 *   - **Single Producer, Single Consumer ONLY**: One thread may call write
+	 *     operations (ring_buffer_write), and one (possibly different) thread
+	 *     may call read operations (ring_buffer_read, ring_buffer_peek, etc.).
+	 *   - **Multiple producers or multiple consumers are NOT SUPPORTED**: Concurrent
+	 *     writes or concurrent reads will cause data corruption and race conditions.
+	 *   - **ring_buffer_clear is NOT thread-safe**: Call only when no read/write
+	 *     operations are in progress (e.g., during init or after synchronized stop).
+	 *
+	 * @note For multi-producer or multi-consumer scenarios, use msg_queue or
+	 *       msg_queue_handler which provide internal locking.
+	 */
+
 	typedef struct _ring_buffer_t* ring_buffer_handle;
 
 	/**

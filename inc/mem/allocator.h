@@ -44,13 +44,33 @@ extern "C" {
 	extern const allocator_t allocator_malloc;
 	extern const allocator_t allocator_calloc;
 
-	// Raw allocators that bypass allocation tracking (route straight to libc).
-	// CRITICAL: these exist to break the recursion that would otherwise occur
-	// when a tracked allocator is used by allocation_tracker's own internal
-	// storage: lcu_*alloc -> allocation_tracker_notify_alloc -> hashmap_put
-	// -> lcu_*alloc. Any hashmap/container that backs the tracker MUST be
-	// created with a raw allocator. Do NOT use these for normal allocations,
-	// as they are invisible to leak/canary checks.
+	/**
+	 * @brief Raw allocators that bypass allocation tracking.
+	 *
+	 * These allocators route directly to libc malloc/calloc, bypassing the
+	 * allocation_tracker system entirely.
+	 *
+	 * @warning **CRITICAL RECURSION BREAKER**: These exist ONLY to break the
+	 * recursion loop that occurs when allocation_tracker's internal storage
+	 * (hashmap, array) uses tracked allocators:
+	 *
+	 *   lcu_*alloc → allocation_tracker_notify_alloc → hashmap_put → lcu_*alloc → ...
+	 *
+	 * **When to use**:
+	 * - ONLY when creating hashmap/array/container instances that back the
+	 *   allocation_tracker itself (see allocation_tracker.c init functions).
+	 * - Pass to hashmap_create_ex / array_new_ex as the allocator parameter.
+	 *
+	 * **When NOT to use**:
+	 * - DO NOT use for normal application allocations.
+	 * - These allocations are **invisible** to leak detection, canary checks,
+	 *   and memory profiling tools.
+	 *
+	 * **Verification**: See P0 fix commits (89f0db9, f466916, dccc409) for the
+	 * three-path recursion fix (struct/buckets/Entry) that necessitated these.
+	 *
+	 * @see allocation_tracker.c lines 89-142 for correct usage examples
+	 */
 	extern const allocator_t allocator_malloc_raw;
 	extern const allocator_t allocator_calloc_raw;
 

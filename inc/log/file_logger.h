@@ -49,6 +49,18 @@ extern "C"
 		size_t max_total_log_storage_bytes; /* delete oldest files if total size exceeds limit, 0 disables */
 	} file_logger_cfg;
 
+	/**
+	 * @brief Initialize file logger with given configuration
+	 *
+	 * @param cfg_p Pointer to configuration struct
+	 * @return File logger handle on success, NULL on failure
+	 *
+	 * @warning Thread Safety: This function is NOT thread-safe.
+	 *          Do NOT call concurrently from multiple threads.
+	 *          Recommended: call once during application startup, before spawning worker threads.
+	 *
+	 * @note Ownership: The returned handle must be freed with file_logger_destroy().
+	 */
 	file_logger_handle file_logger_init(file_logger_cfg *cfg_p);
 
 	int file_logger_run_cleanup_now(file_logger_handle handle);
@@ -81,6 +93,9 @@ extern "C"
 	 *
 	 * @param handle_p Pointer to file logger handle
 	 * @return 0 on success, negative error code on failure
+	 *
+	 * @warning Thread Safety: This function is NOT thread-safe.
+	 *          Do NOT call concurrently with other file_logger_* functions on the same handle.
 	 *
 	 * @warning Call Order:
 	 *       Before calling this function, ensure all logging threads have stopped calling

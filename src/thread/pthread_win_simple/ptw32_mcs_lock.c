@@ -1,3 +1,8 @@
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows API.
+ * ptw32_mcs_lock.c implements MCS (Mellor-Crummey Scott) spinlocks for pthread emulation
+ * on Windows. This low-level synchronization primitive uses atomic operations and kernel
+ * APIs that must not be intercepted by our memory tracking layer. */
+
 #include "thread/pthread_win_simple/ptw32_mcs_lock.h"
 
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)

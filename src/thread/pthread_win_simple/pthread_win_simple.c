@@ -1,3 +1,10 @@
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows threading API.
+ * pthread_win_simple.c implements pthread emulation on Windows using native Win32 APIs
+ * (CreateThread, CreateMutex, CreateEvent, etc.). These system APIs manage internal memory
+ * (thread stacks, kernel objects, synchronization structures) that must not be tracked.
+ * Including mem_debug.h would intercept malloc/free in this layer, breaking the boundary
+ * between our memory tracking and Windows kernel object management. */
+
 #include "thread/pthread_win_simple/pthread_win_simple.h"
 
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
@@ -174,6 +181,16 @@ int pthread_mutex_unlock(pthread_mutex_t* mutex)
 
 int pthread_cond_init(pthread_cond_t* cond, const pthread_condattr_t* attr)
 {
+	/* CRITICAL: zero-initialize counters before they are observed by waiters/signalers.
+	 * struct pthread_cond_t is typically embedded in caller-allocated memory (often via
+	 * malloc, not calloc). Without explicit zeroing here, mWaiting/mWake/mGeneration hold
+	 * indeterminate values, which causes pthread_cond_signal/broadcast to make wrong
+	 * decisions ("if (cond->mWaiting > cond->mWake)") and produces lost-wakeup deadlocks
+	 * — sporadic in Debug (heap fill 0xCD makes counters equal so the check is harmless),
+	 * frequent in Release (raw heap garbage). */
+	cond->mWaiting = 0;
+	cond->mWake = 0;
+	cond->mGeneration = 0;
 	cond->mSemaphore = CreateSemaphoreW(NULL, 0, 0x7FFFFFFF, NULL);
 	pthread_mutex_init(&cond->mLock, NULL);
 	return 0;

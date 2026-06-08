@@ -97,5 +97,79 @@
      - **baseline 对照**：`file_logger_test` 的 2 处清理 assert（test.c:108/122，日志 retention 未删旧文件）经 git stash 还原改动后**完全一致地复现**，确认是 **pre-existing bug，与本次改动无关**。
    - **Open issue（非本次范围）**：file_logger 日志清理（retention/size）未正确删除旧文件，独立追踪；P1 待办（foreach 回调 debug 守卫、put 返回值四段式文档、hashmap/ring_buffer 标注规范 pilot）。
 
+7. **pthread_win_simple `pthread_cond_init` 计数器未初始化（Release 50% 死锁修复）** — 2026-06-08
+   - **症状**：`thpool_test` 在 Release/x64 下偶发挂死（30 次冷启动测约 50% 命中），同测试 Debug 下 0/20 死锁。挂死现场 100% 集中在 `thpool_wait`（5/6 样本）或 `thpool_destroy`（1/6 样本），表现为 worker 线程未被 `pthread_cond_signal` / `pthread_cond_broadcast` 唤醒。
+   - **根因**：`src/thread/pthread_win_simple/pthread_win_simple.c::pthread_cond_init` 仅初始化 `mSemaphore` 与 `mLock`，未初始化 `mWaiting` / `mWake` / `mGeneration` 三个 size_t 计数器。`thpool.c::jobqueue_init` 用 `malloc`（非 `calloc`）分配 `bsem`，其内嵌 `pthread_cond_t` 三计数器为未初始化值。
+     - **Release 行为**：MSVC `/MT` Release 堆分配返回真实垃圾内容，`mWaiting` 任意值 → `pthread_cond_signal/broadcast` 中 `if (cond->mWaiting > cond->mWake)` 决策错误（要么发不该发的信号、要么不发该发的信号），50% 概率出现 lost wakeup 死锁。
+     - **Debug 行为**：MS CRT Debug 堆把新分配填 `0xCDCDCDCD`，三个 size_t 相等，`mWaiting > mWake` 永远 false，`pthread_cond_*` 不会做错决策（虽然语义已破，但巧合不挂死）。
+   - **修复**：`pthread_cond_init` 显式置零三个计数器（`src/thread/pthread_win_simple/pthread_win_simple.c:182`）。该 API 的 POSIX 契约是「初始化条件变量到可用状态」——之前的实现未达成契约，是真 bug，不是 caller 责任。
+   - **验证**：
+     - 修复后 Release `thpool_test` 直接执行 50/50 通过（修复前 50% 挂死）；
+     - `ctest -C Debug` 20/20 PASS（87s）、`ctest -C Release` 20/20 PASS（83s），零回归；
+     - `hashmap_test` / `posix_thread_test` / `file_logger_test` / `msg_queue_handler_test` 各连续 10 次 Release 跑 0 挂 0 fail。
+   - **影响面**：所有依赖 `pthread_cond_t` 且分配方式非 `calloc`/`memset` 清零的调用链（`thpool` 的 bsem、`fixed_msg_queue`、`msg_queue` 等）。本修复在初始化层根治，无需逐处加防御性 memset。
+   - **测试覆盖建议**（未在本次提交）：在 thpool_test 中显式触发多次 init/destroy 循环，提升对此类 lost wakeup 的捕获率。
 
+8. **0527~0608 全量改动深度验证测试** — 2026-06-08
+   - **目的**：针对 0527 以来全部功能改动（19 commits）做深度边界/压力/并发测试，验证接口输入输出符合预期。
+   - **环境**：Windows 11 / MSVC 19.44 (VS 2022 Enterprise) / Debug x64 / PRJ_WIN_PTHREAD_MODE=0。
+   - **新增测试文件**：
+     - `src_demo/deep_validation_test.c` — 16 个子测试覆盖：
+       - allocation_tracker 递归安全（1000 alloc/free 无栈溢出、50 realloc canary 完整、strdup/strndup 追踪正确）
+       - hashmap allocator 注入（raw allocator 3 路径、10000 条目压力 + 全量 rehash、foreach NULL guard、early-exit 行为、NULL map/allocator 防御）
+       - file_logger 路径溢出保护（MAX_LOG_FOLDER_PATH_SIZE-1 拒绝、无效配置拒绝、正常生命周期）
+       - strings 边界（strlcpy 截断/零 size、strlcat 截断、strreplace 多次替换/空 pattern 返回 NULL/反斜杠替换）
+       - calloc 乘法溢出保护
+     - `src_demo/deep_validation2_test.c` — 11 个子测试覆盖：
+       - thpool 多轮创建销毁（5 轮 ×200 jobs，sticky shutdown <500ms）、8 线程 ×1000 jobs 并发、空池 wait 即时返回
+       - ring_buffer 基本读写、满/环绕 wrap-around 数据完整性、peek + discard 不移动读指针
+       - ring_buffer SPSC 并发（5000 items，producer/consumer 双线程，严格顺序验证 P1-5 原子可见性）
+       - ring_buffer create_with_mem 外部内存模式
+       - list 空操作防御（NULL front/back/remove/foreach）、1000 元素压力 + 连续 remove front
+   - **验证结果**：
+     - `ctest -C Debug -L lcu`：**22/22 全部通过**，0 failed，耗时 150s
+     - 全部 27 个深度子测试 PASS，零 assertion 警告
+     - 既有 20 个原始测试零退化
+   - **发现并修复的实际 bug**：
+     - `hashmap_foreach` 提前退出失效：回调返回 false 时只退出内层 while(当前 bucket 链)，外层 for 继续扫后续 bucket。修复：`break` → `goto foreach_done` 真正退出双层循环。验证：修复前 visited=93(stop_after=5)，修复后 visited=5(精确)。
+
+9. **跨边界所有权转交内存契约修复（strreplace / file_util_read_all / asprintf / str_params_to_str）** — 2026-06-08
+   - **背景**：深度验证中发现 strreplace 返回堆指针给调用方，文档约定"need free"，但内部用 `lcu_malloc_trace` 分配 → 当 allocation_tracker 开启时，返回值是 canary 偏移 + 追踪的特殊指针，外部集成方用标准 `free()` 释放 → **堆损坏崩溃 + 误报泄漏**。
+   - **全面排查**：系统排查所有"分配后把所有权转交给调用方"的公共 API，确认隐患面：
+     - `strreplace` (strings.c) — 显式 `lcu_malloc_trace`，文档说"need free"
+     - `file_util_read_all` (file_util.c) — `malloc` 被 mem_debug.h 改写成 `lcu_malloc_trace`，via out_alloced_file_data 转交所有权
+     - **`asprintf`/`vasprintf` (asprintf.c)** — **标准 POSIX 函数名**，全世界都知道"用 libc free"，但 Windows 实现里 `malloc` 被改写，**最危险的案例**
+     - `str_params_to_str` (str_params.c) — 返回 asprintf buffer（后续改为 raw）OR `strdup("")`（追踪），**同一返回值两套释放语义**
+   - **统一契约决策**：用户选择**方案 Y（统一裸 libc malloc）**：
+     - 理由 1：asprintf 是标准名，强制裸 malloc，不如三者统一
+     - 理由 2：习惯性 `free()` 恒正确，不留地雷（方案 B 的配对释放器无法阻止错误的 free 调用）
+     - 代价：转交出去的 buffer 失去追踪（可接受——所有权已交出，该是调用方工具去管）
+   - **修复（4 API + 8 内部调用点 + 2 测试）**：
+     1. **基础设施**：新增 `lcu_malloc_raw` / `lcu_free_raw` (allocator.h/.c) — 显式裸 libc malloc/free，供跨边界内存的内部分配/释放点使用。
+     2. **strreplace** (strings.c:156 + strings.h 契约)：改回裸 `malloc`（本就不含 mem_debug.h）；内部调用点 file_logger.c:390/441 → `lcu_free_raw`，加 allocator.h include。
+     3. **asprintf** (asprintf.c)：整个文件就是 asprintf 实现，加 `#undef malloc` / `#undef free` 块（与 allocator.c 同模式）恢复为 libc；内部调用点 str_params.c:348/358 → `lcu_free_raw`；`str_params_to_str` 的空路径从 `strdup("")`（追踪）改 `lcu_malloc_raw` 统一契约；str_params_test.c:58 → `lcu_free_raw`；str_params.h 更新契约文档。
+     4. **file_util_read_all** (file_util.c:263)：`malloc` → `lcu_malloc_raw`，错误路径 :272 → `lcu_free_raw`；file_util.h 更新契约文档；内部调用点 ini_parser.c:225 → `lcu_free_raw`，加 allocator.h include。
+     5. **遗漏调用点补完**（回归测试抓出）：flag build (tracker ON) 初次全量跑出 2 个失败 — string_test.c:46 和 deep_validation_test.c 5 处 strreplace 结果用 `free`（=lcu_free）释放 raw 指针 → 崩溃。说明初审遗漏了两个测试文件。补修后全绿。
+   - **回归测试（关键验证）**：
+     - 新增 `src_demo/integration/ownership_contract_test.c` — **不含 mem_debug.h**（模拟外部 SDK 集成方，`malloc`/`free`=libc），4 个子测试各循环 50~100 次分配 + libc free。
+     - 测试策略：tracker 状态由构建宏控制（不手动翻转，避免内部分配/释放状态错位）。两个构建分别验证：
+       - 普通构建 (build_win64, tracker OFF)：23/23 PASS — 基础正确性
+       - **Flag 构建 (tool/build, -D_LCU_MEM_CHECK_FEATURE_ENABLE=1, tracker ON 全局)：23/23 PASS** — **原 bug 触发条件，核心验证**
+     - **反向验证**：临时把 strreplace 改回 `lcu_malloc_trace`，flag 构建立即崩在 `_CrtIsValidHeapPointer` assertion（libc free 作用在 canary 偏移指针）→ 证明测试真能抓到原 bug。
+   - **影响面**：所有返回堆所有权给调用方的公共 API，现在统一约定"raw libc malloc + 文档明确 libc free 契约"。内部 lcu 代码（含 mem_debug.h）释放这些 buffer 时必须用 `lcu_free_raw`。
+   - **最终验证**：两个构建配置 × 全量 CTest 23/23 = **100% PASS，零回归**。
+
+
+       - ring_buffer 基本读写、满/环绕 wrap-around 数据完整性、peek + discard 不移动读指针
+       - ring_buffer SPSC 并发（5000 items，producer/consumer 双线程，严格顺序验证 P1-5 原子可见性）
+       - ring_buffer create_with_mem 外部内存模式
+       - list 空操作防御（NULL front/back/remove/foreach）、1000 元素压力 + 连续 remove front
+   - **验证结果**：
+     - `ctest -C Debug -L lcu`：**22/22 全部通过**，0 failed，耗时 150s
+     - 全部 27 个深度子测试 PASS，零 assertion 警告
+     - 既有 20 个原始测试零退化
+   - **发现的行为特征（非 bug，已在测试中记录）**：
+     - `hashmap_foreach` 回调返回 false 仅中断当前 bucket 的 while 循环，外层 for 继续遍历后续 bucket → visited >= stop_after（非精确等于）
+     - `strreplace` 对空 pattern 返回 NULL（防无限循环，正确防护行为）
+     - `ring_buffer_create_with_mem(256)` 内部结构头占用后实际可用 128 字节（文档已标注 round-down）
 

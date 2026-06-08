@@ -56,7 +56,7 @@ str_params_ptr str_params_create(const char* delimiter)
 {
 	str_params_ptr s = (str_params_ptr)calloc(1, sizeof(struct str_params));
 	if (!s) return NULL;
-	s->map = hashmap_create(16, str_hash_fn, free, free, str_eq, NULL);
+	s->map = hashmap_create(16, str_hash_fn, lcu_free, lcu_free, str_eq, NULL);
 	if (!s->map)
 	{
 		free(s);
@@ -343,19 +343,23 @@ static bool combine_strings(void* key, void* value, void* context)
 		combine_ctx->str ? combine_ctx->params_ptr->delimiter : "",
 		(char*)key,
 		(char*)value);
+	/* new_str / combine_ctx->str come from asprintf, which returns a raw-libc
+	 * buffer (ownership transfer contract). This file includes mem_debug.h, so a
+	 * bare free() is lcu_free() and would abort on the untracked pointer; use
+	 * lcu_free_raw() to match asprintf's raw libc allocation. */
 	if (combine_ctx->str)
 	{
-		free(combine_ctx->str);
+		lcu_free_raw(combine_ctx->str);
 	}
 	if (ret >= 0)
 	{
 		combine_ctx->str = new_str;
 		return true;
 	}
-	
+
 	if (new_str)
 	{
-		free(new_str);
+		lcu_free_raw(new_str);
 		new_str = NULL;
 	}
 	combine_ctx->str = NULL;
@@ -370,7 +374,32 @@ char* str_params_to_str(str_params_ptr params)
 	   .params_ptr = params,
 	};
 	hashmap_foreach(params->map, combine_strings, &ctx);
-	return (ctx.str != NULL) ? ctx.str : strdup("");
+	if (ctx.str != NULL)
+	{
+		return ctx.str; /* raw-libc buffer from asprintf */
+	}
+	/* ====================================================================
+	 * OWNERSHIP TRANSFER - DO NOT TRACK (empty-map branch)
+	 * ====================================================================
+	 * str_params_to_str must have ONE UNIFORM contract: caller releases
+	 * the returned buffer with libc free(), regardless of which code path
+	 * produced it. The non-empty path returns an asprintf buffer (raw libc,
+	 * after our fix). This empty-map path must ALSO return raw libc.
+	 *
+	 * DO NOT use strdup("") here: it routes to lcu_strdup_trace (tracked)
+	 * and would give the caller a tracked pointer on this branch only,
+	 * SPLITTING the contract (non-empty=raw, empty=tracked). The caller's
+	 * free() would crash on the tracked pointer when the allocation tracker
+	 * is active.
+	 *
+	 * KEEP THIS AS lcu_malloc_raw() PERMANENTLY. See ownership_contract_test.c.
+	 * ==================================================================== */
+	char* empty = (char*)lcu_malloc_raw(1U);
+	if (empty)
+	{
+		empty[0] = '\0';
+	}
+	return empty;
 }
 
 static bool dump_entry(void* key, void* value, void* context)

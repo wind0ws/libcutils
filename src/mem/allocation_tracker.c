@@ -16,6 +16,12 @@
  *
  ******************************************************************************/
 
+/* CRITICAL: This file does NOT include mem_debug.h to avoid infinite recursion.
+ * The allocation tracker itself cannot be tracked, as every allocation here would
+ * trigger allocation_tracker_notify_alloc -> hashmap_put -> allocator -> tracker again.
+ * The tracker's internal hashmap uses allocator_calloc_raw (defined in allocator.c)
+ * which bypasses tracking. See hashmap_create_ex call and the CRITICAL comment there. */
+
 #include "mem/allocation_tracker.h"
 #include "thread/posix_thread.h"
 #include <stdbool.h>

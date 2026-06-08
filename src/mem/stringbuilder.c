@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "mem/stringbuilder.h"
 #include "common_macro.h"
 #include <stdlib.h>

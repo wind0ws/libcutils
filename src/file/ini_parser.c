@@ -5,6 +5,7 @@
 #include "file/file_util.h"
 #include "data/list.h"
 #include "mem/strings.h" /* for strcmp */
+#include "mem/allocator.h" /* for lcu_free_raw (file_util_read_all ownership) */
 #include "mem/stringbuilder.h"
 #define LOG_TAG "INI_PARSER"
 #include "log/slog.h"
@@ -222,7 +223,9 @@ ini_parser_handle ini_parser_parse_file(const char *ini_file)
 	} while (0);
 	if (ini_content)
 	{
-		free(ini_content);
+		/* file_util_read_all returns a raw-libc buffer; this file includes mem_debug.h
+		 * so bare free()==lcu_free() would abort on the untracked pointer. */
+		lcu_free_raw(ini_content);
 	}
 	return parser;
 }

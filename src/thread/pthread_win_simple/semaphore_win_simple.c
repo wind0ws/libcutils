@@ -15,6 +15,11 @@
 	limitations under the License.
 */
 
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows API.
+ * semaphore_win_simple.c implements POSIX semaphore emulation on Windows using CreateSemaphore
+ * and other Win32 synchronization APIs. These system functions manage kernel objects with
+ * internal memory that must not be tracked by our allocation layer. */
+
 /*
 	Simple Windows replacement for POSIX semaphores
 	Modified by Daniel Tillett from libpthread <http://github.com/songdongsheng/libpthread>

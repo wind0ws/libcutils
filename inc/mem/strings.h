@@ -166,7 +166,12 @@ extern "C"
 	 * @param original: the str to replace
 	 * @param pattern: the replace pattern
 	 * @param replacement: replace pattern to this
-	 * @return replaced string, this memory on heap, need free after use!
+	 * @return replaced string, or NULL on failure / empty pattern / overflow.
+	 *
+	 * @note Ownership is transferred to the caller. The buffer is allocated with
+	 *       raw libc malloc; release it with the standard libc free(). Do NOT use
+	 *       lcu_free() on it. (Internal lcu code that includes mem_debug.h must use
+	 *       lcu_free_raw() since its bare free is rewritten to lcu_free.)
 	 */
 	char *strreplace(char const *const original,
 					 char const *const pattern, char const *const replacement);

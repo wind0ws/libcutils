@@ -55,6 +55,21 @@ static void raw_free(void* ptr)
 	free(ptr);
 }
 
+/* Public raw allocate/free: plain libc malloc/free, untracked. See allocator.h.
+ * Defined after the #undef block above, so malloc/free are the libc symbols. */
+void* lcu_malloc_raw(size_t size)
+{
+	return malloc(size);
+}
+
+void lcu_free_raw(void* ptr)
+{
+	if (ptr)
+	{
+		free(ptr);
+	}
+}
+
 char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_name, int file_line)
 {
 	size_t size = strlen(str) + 1;  // + 1 for the null terminator

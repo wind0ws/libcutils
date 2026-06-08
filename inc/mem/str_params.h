@@ -59,6 +59,10 @@ int str_params_get_float(str_params_ptr params, const char *key, float *out_val)
  * combine key value pair params to string.
  * the return string is malloc on heap, so you should free after use!
  * or memory leak will occur!
+ *
+ * @note Ownership is transferred to the caller. The buffer is allocated with raw
+ *       libc malloc; release it with the standard libc free(). Do NOT use lcu_free().
+ *       (Internal lcu code that includes mem_debug.h must use lcu_free_raw().)
  */
 char *str_params_to_str(str_params_ptr params);
 

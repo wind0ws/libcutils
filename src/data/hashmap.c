@@ -17,6 +17,14 @@
  * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/hash_map.c
  *           https://android.googlesource.com/platform/system/core/+/refs/heads/master/libcutils/hashmap.cpp
  ******************************************************************************/
+
+/* CRITICAL: This file does NOT include mem_debug.h to avoid recursion with allocation_tracker.
+ * The allocation tracker's internal storage is a hashmap. If this hashmap used tracked allocators,
+ * every allocation here would trigger tracker -> hashmap_put -> allocator -> tracker (infinite loop).
+ * hashmap_create_ex accepts an allocator parameter; allocation_tracker passes allocator_calloc_raw
+ * (defined in allocator.c) which bypasses tracking. Business code using hashmaps should use
+ * tracked allocators (allocator_calloc) instead. */
+
 #include "common_macro.h"
 #include "data/hashmap.h"
 #include <string.h>
@@ -437,11 +445,12 @@ void hashmap_foreach(hashmap_t *map, hashmap_iter_cb callback, void *context)
 			Entry *next = entry->next;
 			if (!callback(entry->key, entry->value, context))
 			{
-				break;
+				goto foreach_done;
 			}
 			entry = next;
 		}
 	}
+foreach_done:
 #ifdef _DEBUG
 	map->debug_iterating = false;
 #endif

@@ -2,6 +2,15 @@
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/list.c
 */
 
+/* CRITICAL: This file does NOT include mem_debug.h to avoid macro expansion conflicts.
+ * list.c uses the allocator abstraction (allocator_t->alloc / allocator_t->free) instead
+ * of direct malloc/free. When mem_debug.h is included, the macro "#define free(p) lcu_free(p)"
+ * causes "allocator->free(list)" to expand into "allocator->lcu_free(list)", but allocator_t
+ * has no "lcu_free" member (only "free"), resulting in compilation failure.
+ * Memory tracking is STILL ACTIVE via the allocator: allocator_calloc routes through
+ * lcu_calloc1 -> lcu_calloc_trace (in allocator.c which includes mem_debug.h), so all
+ * list allocations ARE tracked. This file never calls libc malloc/free directly. */
+
 //#include <assert.h>
 #include "mem/allocator.h"
 #include "data/list.h"

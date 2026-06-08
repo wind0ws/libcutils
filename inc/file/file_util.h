@@ -98,6 +98,11 @@ extern "C" {
 	 * @param out_alloced_file_data: the pointer's pointer of store read out data
 	 * @param out_file_byte_len: the pointer of the file byte len
 	 * @return 0 for success, otherwise fail
+	 *
+	 * @note Ownership of *out_alloced_file_data is transferred to the caller. The
+	 *       buffer is allocated with raw libc malloc; release it with the standard
+	 *       libc free(). Do NOT use lcu_free(). (Internal lcu code that includes
+	 *       mem_debug.h must use lcu_free_raw().)
 	 */
 	int file_util_read_all(__in const char* file_path, __out char **out_alloced_file_data, __out int *out_file_byte_len);
 

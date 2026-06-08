@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "mem/mplite.h"
 #include <stdlib.h>
 #include <stdio.h>

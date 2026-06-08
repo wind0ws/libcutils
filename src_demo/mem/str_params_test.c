@@ -1,5 +1,6 @@
 #include "mem/mem_debug.h"
 #include "mem/str_params.h"
+#include "mem/allocator.h"  /* for lcu_free_raw (str_params_to_str ownership) */
 #include "common_macro.h"
 
 #define LOG_TAG  "STR_PARAMS_TEST"
@@ -55,7 +56,10 @@ int str_params_test(void)
 	if (param_str)
 	{
 		LOGI("param_str=> %s", param_str);
-		free(param_str);
+		/* str_params_to_str returns a raw-libc buffer (ownership transfer). This
+		 * test file includes mem_debug.h, so bare free()==lcu_free() would abort on
+		 * the untracked pointer; external (non-mem_debug) callers just use free(). */
+		lcu_free_raw(param_str);
 	}
 
 	str_params_destroy(params);

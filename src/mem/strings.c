@@ -1,6 +1,12 @@
 #include "mem/strings.h"
+#include "mem/allocator.h"  /* for lcu_malloc_raw (cross-boundary ownership) */
 #include <malloc.h>
 #include <stdint.h>  /* for SIZE_MAX */
+
+/* CRITICAL: This file does NOT include mem_debug.h to avoid macro expansion breaking
+ * the strndup function definition (Windows system function implementation).
+ * strreplace returns ownership to the caller, so it uses raw libc malloc (the
+ * caller frees with libc free); it does NOT use a tracked allocator. */
 
 #ifdef _WIN32
 char* strndup(const char* s, size_t n)
@@ -147,7 +153,23 @@ char* strreplace(char const* const original,
 		retlen = orilen + patcnt * (replen - patlen);
 	}
 
-	// allocate memory for the new string
+	/* ========================================================================
+	 * OWNERSHIP TRANSFER - DO NOT TRACK
+	 * ========================================================================
+	 * strreplace returns this buffer to the caller who releases it with libc
+	 * free(). Using lcu_malloc_trace here would return a canary-offset/tracked
+	 * pointer that corrupts the heap when the caller's free() runs while the
+	 * allocation tracker is active.
+	 *
+	 * KEEP THIS AS RAW LIBC malloc() PERMANENTLY. DO NOT change to lcu_malloc_trace.
+	 *
+	 * Internal lcu callers (e.g. file_logger.c) that include mem_debug.h must
+	 * use lcu_free_raw() to release strreplace results, NOT bare free() (which
+	 * is rewritten to lcu_free and would crash on this untracked pointer).
+	 *
+	 * External callers use standard libc free().
+	 * See: allocator.h (lcu_malloc_raw/lcu_free_raw), ownership_contract_test.c
+	 * ======================================================================== */
 	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
 	do
 	{

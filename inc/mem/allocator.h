@@ -104,6 +104,30 @@ extern "C" {
 	// |p_ptr| cannot be NULL.
 	void lcu_free_and_reset(void** p_ptr);
 
+	/**
+	 * @brief Raw (untracked) allocate/free that route straight to libc malloc/free.
+	 *
+	 * @details These are the function-call counterparts of |allocator_malloc_raw|.
+	 * They bypass the allocation tracker entirely: the returned pointer is a plain
+	 * libc-malloc pointer (no canary, no tracking), and |lcu_free_raw| is a plain
+	 * libc-free. Their correctness does NOT depend on whether the tracker is active.
+	 *
+	 * @par When to use
+	 * Public APIs that allocate a buffer and TRANSFER OWNERSHIP across the library
+	 * boundary (e.g. |strreplace|, |file_util_read_all|, |asprintf|, |str_params_to_str|)
+	 * MUST allocate with |lcu_malloc_raw| (or libc malloc directly), so that an
+	 * external caller can release it with the standard libc |free()| regardless of
+	 * the tracker state. Internal lcu code (which includes mem_debug.h, so its bare
+	 * |free| is rewritten to |lcu_free|) MUST release such buffers with |lcu_free_raw|
+	 * to avoid an lcu_free-on-untracked-pointer abort when the tracker is active.
+	 *
+	 * @warning Buffers allocated here are INVISIBLE to leak detection / canary checks.
+	 *          Use ONLY for cross-boundary ownership transfer, never for normal
+	 *          internal allocations (those should stay tracked).
+	 */
+	void* lcu_malloc_raw(size_t size);
+	void lcu_free_raw(void* ptr);
+
 #ifdef __cplusplus
 }
 #endif

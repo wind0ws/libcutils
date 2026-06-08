@@ -9,6 +9,7 @@
  *               - Removed signal handling (non-async-signal-safe)
  *               - Used atomic operations where appropriate
  ********************************/
+#include "mem/mem_debug.h"
 
 #include "thread/posix_thread.h"
 #include <signal.h>

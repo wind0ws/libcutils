@@ -45,6 +45,14 @@ array_t *array_new(size_t element_size)
 
 array_t *array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 {
+    /* NOTE(reviewed 2026-06-08): element_size * init_capacity (and grow()'s
+     * new_capacity * element_size) are not overflow-checked. This is a known
+     * hardening gap, NOT an active bug: array.h documents element_size > 0 as a
+     * caller precondition, there is no overflow-safety contract, and this code
+     * has no internal callers. If array is ever exposed to attacker-controlled
+     * sizes, add: reject element_size == 0 and check
+     * init_capacity <= (SIZE_MAX - sizeof(array_t)) / element_size. Tracked as
+     * D-2 in .ai/review-2026-06-08.md. */
     if (init_capacity < 4)
     {
         init_capacity = 4;

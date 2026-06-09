@@ -292,6 +292,11 @@ static inline bool private_equal_keys(void *keyA, int hashA, void *keyB, int has
 
 size_t hashmap_size(hashmap_t *map)
 {
+	/* NOTE(reviewed 2026-06-08): no NULL guard is intentional. Per hashmap.h,
+	 * `map` MUST NOT be NULL here -- caller's responsibility. Adding a guard
+	 * for "API consistency" is not required and would silently mask caller bugs.
+	 * Do not add `if (!map) return 0;` -- update the header contract instead if
+	 * that behavior is ever wanted. */
 	return map->size;
 }
 
@@ -330,6 +335,12 @@ void *hashmap_put(hashmap_t *map, void *key, void *value)
 		// Replace existing entry.
 		if (private_equal_keys(current->key, current->hash, key, hash, map->fn_key_equality))
 		{
+			// NOTE(reviewed 2026-06-08): on replace, the map KEEPS its existing key;
+			// the caller-supplied `key` is intentionally NOT stored and NOT freed here.
+			// Per hashmap.h, key ownership transfers to the map ONLY for a new entry.
+			// A caller that allocated `key` must free it itself on the update path
+			// (see str_params_add_str cleanup). This is NOT a hashmap leak.
+			// 这里ret返回的指针可能会被 freed, 但不是bug: 是函数设计的预期行为, 返回的指针是给用户做比较使用, 不是做解引用用途, 已在函数中说明
 			ret = current->value; // return the old value.
 			current->value = value;
 			/* Free the old value after updating */

@@ -159,17 +159,25 @@
    - **影响面**：所有返回堆所有权给调用方的公共 API，现在统一约定"raw libc malloc + 文档明确 libc free 契约"。内部 lcu 代码（含 mem_debug.h）释放这些 buffer 时必须用 `lcu_free_raw`。
    - **最终验证**：两个构建配置 × 全量 CTest 23/23 = **100% PASS，零回归**。
 
-
-       - ring_buffer 基本读写、满/环绕 wrap-around 数据完整性、peek + discard 不移动读指针
-       - ring_buffer SPSC 并发（5000 items，producer/consumer 双线程，严格顺序验证 P1-5 原子可见性）
-       - ring_buffer create_with_mem 外部内存模式
-       - list 空操作防御（NULL front/back/remove/foreach）、1000 元素压力 + 连续 remove front
-   - **验证结果**：
-     - `ctest -C Debug -L lcu`：**22/22 全部通过**，0 failed，耗时 150s
-     - 全部 27 个深度子测试 PASS，零 assertion 警告
-     - 既有 20 个原始测试零退化
-   - **发现的行为特征（非 bug，已在测试中记录）**：
-     - `hashmap_foreach` 回调返回 false 仅中断当前 bucket 的 while 循环，外层 for 继续遍历后续 bucket → visited >= stop_after（非精确等于）
-     - `strreplace` 对空 pattern 返回 NULL（防无限循环，正确防护行为）
-     - `ring_buffer_create_with_mem(256)` 内部结构头占用后实际可用 128 字节（文档已标注 round-down）
+10. **0608 评审落地（文档/注释批次）+ 闭环验证 + 开放项移交** — 2026-06-09
+   - **背景**：0608 双人独立评审（Claude Opus 4.8 + Codex gpt-5.5，方法论"先读头文件契约再看实现"）纠偏上一版误报，重新核出 2 C + 4 H + 4 M + 3 L + 1 caller-side + 3 文档项。本次仅落地**零逻辑风险**的文档/注释子集，逻辑修复留待后续按优先级执行。
+   - **本次已完成（8 文件，纯注释/文档，零可执行代码改动）**：
+     - **H-3（取最廉价方案）**：`inc/lcu.h` / `inc/time/time_util.h` 补线程安全契约 `@warning`——`*_global_init/cleanup` 的 `g_init_times` 非原子，要求"启动时单线程调用一次"。落点是头文件契约而非加 once 保护（根因仍在，见开放项）。
+     - **D-1**：`inc/data/hashmap.h` 重写 `hashmap_put` `@return` 文档——旧文档"caller 释放 old_value"与实现（map 自动释放）矛盾，所有现存 caller 已按实现行为运行，判为文档过期；改文档对齐实现（替换路径返回值仅作"是否替换"指示，不可 deref/free）。
+     - **误判位置固化注释** `NOTE(reviewed 2026-06-08)`：`src/lcu.c`、`src/time/time_util.c`（g_init_times 非原子是契约非 bug）、`src/data/hashmap.c`（replace 分支 key 所有权归 caller per 头文件 `if new entry`；`hashmap_size` 无 NULL 守卫是 caller 前置条件）、`src/data/array.c`（容量乘法溢出是加固缺口非活跃 bug，无契约无 caller，记 D-2）、`src/data/base64.c`（size helper INT_MAX 截断是加固缺口，记 D-3）。防后续重复误报。
+   - **闭环验证**（原 `.ai/closed-loop-verification-2026-06-09.md`，删前转录）：
+     - 改动全为注释/doc-block，`git diff` 过滤后无可执行行变更。
+     - Windows MSVC 19.44 x64：Release + Debug 双配置 clean rebuild，0 新增警告（仅 pre-existing `C4996 fopen` in ini_reader.c）。
+     - CTest `-L lcu`：**Release 23/23 PASS (83.49s) + Debug 23/23 PASS (137.17s)**，对基线（#7/#8 的 20/20）零回归（harness 新纳入 2 core + 1 optional）。
+     - 关键路径覆盖：hashmap_test / str_params_test（put replace key 所有权）/ time_util_test / allocator_test / deep_validation{,2}_test / ownership_contract_test 全 PASS。
+   - **⚠️ 开放项移交（0608 评审发现，本次未修；原 `review-2026-06-08.md` 删前转录，后续按序处理）**：
+     - **C-1 CRITICAL**：`allocation_tracker_resize_for_canary`（allocation_tracker.c:230）`size + 2*canary` 无上限校验，`lcu_malloc(SIZE_MAX-8)` → 环绕小块 + 尾 canary 越界写。修：入口 `size > SIZE_MAX - 2*canary ? 0 : ...`。
+     - **C-2 CRITICAL**：`file_logger_log`（file_logger.c:501/513）`size_t msg_size` 截断为 uint32_t 后却用原始 size_t memcpy，传 >4GB → 巨型堆溢出。修：入口拒 `msg_size > INT_MAX` 或头文件文档化上限。
+     - **H-1 HIGH**：`ini_parser_dump`（ini_parser.c:625）用 `strdup`（经 mem_debug.h 改写为 tracked 指针），外部 libc free 崩——与 b2f71fe 已修的跨边界所有权同类，遗漏此文件。修：改 `lcu_malloc_raw`+strcpy，头文件补 libc free 契约。
+     - **H-2 HIGH**：`msg_queue_handler_push`（msg_queue_handler.c:271）未校验负 `obj_len`（头文件 errno 已预期校验），负值经 uint32_t 提升成巨值。修：入口 `obj_len < 0` 拒。
+     - **H-4 HIGH**：`file_util_mkdirs`（file_util.c:81）`> MAX_FOLDER_PATH_LEN` 应为 `>=`，等长时填满无 NUL 位 → 栈外读。修：改 `>=`。
+     - **M-1~M-4 MEDIUM**：thpool `jobqueue.len` 跨锁 race（M-1）/ thpool `volatile int` 当同步原语（M-2）/ `pthread_rwlock_init` Windows simple 读未初始化 `*rwlock`（M-3，pthread_win_simple.c:281）/ `file_util` 读写 `int` 进度累加溢出（M-4）。
+     - **L-1~L-3 LOW**：`lcu_realloc_trace` tracker 未 INIT 时静默丢数据（建议加 ASSERT）/ `hashmap_size(NULL)` 段错误（实现不一致，已加注释，待决定加守卫或文档化）/ `pthread_cond_init` 忽略 `CreateSemaphoreW` 失败（pthread_win_simple.c:194，资源耗尽应返 ENOMEM）。
+     - **Caller-1（非库 bug）**：`str_params_create_str`（str_params.c:140）重复 key 时新 key 泄漏，应照 `add_str` 模式在 cleanup 释放。
+   - **行动优先级**：下一发布前修 C-1/C-2；1.9.0 前修 H-1/H-2/H-4；M/L/Caller-1 中期。
 

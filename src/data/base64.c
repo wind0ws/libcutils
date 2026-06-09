@@ -15,6 +15,13 @@
 static const char basis_64[] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+/* NOTE(reviewed 2026-06-08): the *_buf_size helpers compute in size_t but return
+ * int, and lcu_base64_encode has no output-capacity parameter. For inputs whose
+ * encoded/decoded size exceeds INT_MAX this truncates. This is a documented
+ * hardening gap (D-3 in .ai/review-2026-06-08.md), NOT an active bug: there is no
+ * contract promising SIZE_MAX-safe sizing, and realistic base64 payloads are far
+ * below INT_MAX. If large/untrusted inputs become a use case, return size_t (or a
+ * checked status) and reject sizes > INT_MAX. */
 int lcu_base64_encode_buf_size(const size_t plain_buf_len)
 {
 	return (int)(((plain_buf_len + 2) / 3 * 4) + 1);

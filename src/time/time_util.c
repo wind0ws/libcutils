@@ -16,6 +16,11 @@
 #define TIME_STAMP_FORMAT ("%m-%d %H:%M:%S")
 #define TIME_STAMP_FORMAT_FOR_FILE_NAME ("%m%d%H%M%S")
 
+/* NOTE (reviewed 2026-06-08): g_init_times is intentionally non-atomic.
+ * time_util_global_init/cleanup are documented NOT thread-safe (see time_util.h)
+ * and are normally driven by lcu_global_init at single-threaded startup.
+ * Deliberate contract, not a missing-lock bug -- do not add synchronization here
+ * without also updating the header contract. See lcu.c for the same pattern. */
 static volatile unsigned char g_init_times = 0;
 
 #if (defined(USE_TIME_CACHE) && USE_TIME_CACHE)

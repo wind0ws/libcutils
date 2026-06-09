@@ -149,8 +149,9 @@ extern "C" {
 
 	/**
 	 * @brief Get current hashmap size
-	 * 
-	 * @param map Hashmap to get size from
+	 *
+	 * @param map Hashmap to get size from. MUST NOT be NULL (unlike get/put/remove,
+	 *            this accessor does not NULL-check and will dereference map directly).
 	 * @return Number of key-value pairs in the hashmap
 	 */
 	size_t hashmap_size(hashmap_t* map);
@@ -162,14 +163,20 @@ extern "C" {
 	 * exists, the old value is replaced and returned to the caller.
 	 *
 	 * @param map Hashmap to put value into
-	 * @param key Key to associate with value (ownership transferred to map if new entry)
+	 * @param key Key to associate with value (ownership transferred to map ONLY for a
+	 *            new entry; on update the map keeps its existing key and the caller
+	 *            retains ownership of this `key` -- the caller must free it itself)
 	 * @param value Value to store in the map (ownership transferred to map)
 	 *
 	 * @return Four possible outcomes:
 	 *   1. **New entry created successfully**: Returns NULL (no previous value existed).
-	 *   2. **Existing entry updated**: Returns the old value that was replaced.
-	 *      Caller is responsible for freeing this old value if needed (the map has
-	 *      already released ownership and will NOT call value_free_fn on it).
+	 *   2. **Existing entry updated**: Returns the old value pointer.
+	 *      - If value_free_fn IS set: the map has ALREADY freed the old value via
+	 *        value_free_fn. The returned pointer is therefore DANGLING and must be
+	 *        used ONLY as a "an entry was replaced" indicator -- do NOT dereference
+	 *        or free it.
+	 *      - If value_free_fn is NULL: the map did not free anything; the returned
+	 *        pointer is the live old value and the caller owns it.
 	 *   3. **Memory allocation failure**: Returns NULL and errno is set to ENOMEM.
 	 *      Map size unchanged, key/value ownership NOT transferred (caller must free).
 	 *   4. **NULL map parameter**: Returns NULL immediately (no-op).
@@ -178,10 +185,11 @@ extern "C" {
 	 *          Check errno == ENOMEM to distinguish. Alternatively, check map size
 	 *          before/after: if size increased, insertion succeeded.
 	 *
-	 * @warning If value_free_fn is set and an existing entry is updated, the OLD value
-	 *          is returned to the caller AFTER the map releases ownership. The caller
-	 *          must NOT assume the map will free it later. If the returned value is
-	 *          NULL, it could be a legitimately stored NULL value (not an error).
+	 * @warning On update with value_free_fn set, the returned old-value pointer is
+	 *          already freed by the map (see outcome 2). Treat it as opaque; never
+	 *          deref or free it. With value_free_fn NULL the caller owns the returned
+	 *          old value. A NULL return on update may also be a legitimately stored
+	 *          NULL value (not an error).
 	 *
 	 * @note This function may trigger rehash (when load factor exceeds 0.75), which
 	 *       can fail due to OOM. In that case the map gracefully degrades (no rehash)

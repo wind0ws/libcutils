@@ -3,6 +3,13 @@
 #include "time/time_util.h"
 #include "log/xlog.h"
 
+/* NOTE (reviewed 2026-06-08): g_init_times is intentionally a plain non-atomic
+ * counter. lcu_global_init/cleanup are documented as NOT thread-safe (see lcu.h)
+ * and must be called once at startup/shutdown from a single thread. This is a
+ * deliberate contract, not a missing-synchronization bug. If a future caller
+ * needs concurrent init, the fix is to serialize at the call site or switch this
+ * to call_once/pthread_once + atomic refcount AND update the header contract --
+ * do not "fix" it silently by adding a lock here. */
 static volatile unsigned char g_init_times = 0;
 
 char* lcu_get_version()

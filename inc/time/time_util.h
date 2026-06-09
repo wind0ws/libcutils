@@ -37,17 +37,24 @@ extern "C" {
 
 	/**
 	 * global init once.
-	 * 
-	 * generally speaking, users do not need to call this method, 
+	 *
+	 * generally speaking, users do not need to call this method,
 	 * lcu_global_init will call it at the appropriate time.
+	 *
+	 * @warning NOT thread-safe. The internal refcount is a non-atomic counter;
+	 *          call once at startup from a single thread (normally via
+	 *          lcu_global_init). Concurrent calls can double-initialize the
+	 *          time caches' rwlocks.
 	 */
 	int time_util_global_init();
 
 	/**
-	 * global cleanup. 
-	 * 
-	 * just like above, 
+	 * global cleanup.
+	 *
+	 * just like above,
      * lcu_global_cleanup will call it at the appropriate time.
+	 *
+	 * @warning NOT thread-safe; pair 1:1 with time_util_global_init().
 	 */
 	int time_util_global_cleanup();
 

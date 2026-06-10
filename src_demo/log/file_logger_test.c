@@ -40,6 +40,7 @@ static void create_dummy_log_file(const char *file_name, size_t file_size, time_
 static bool does_log_file_exist(const char *file_name);
 static void set_file_time(const char *full_path, time_t modified_time);
 static uint64_t sum_log_files_size(void);
+static void test_file_logger_oversized_msg(void);  /* C-2 测试声明 */
 
 #ifdef _WIN32
 #define FILE_LOGGER_PATH ("./log/")
@@ -60,7 +61,7 @@ int file_logger_test_begin(void)
 	strcpy(g_logger_ctx.logger_cfg.log_folder_path, FILE_LOGGER_PATH);
 	strcpy(g_logger_ctx.logger_cfg.log_file_name_prefix, "lcu_");
 
-	// here we are not provide lock for file_logger, 
+	// here we are not provide lock for file_logger,
 	// because xlog will ensure printing order.
 	g_logger_ctx.logger_hdl = file_logger_init(&g_logger_ctx.logger_cfg);
 	if (NULL == g_logger_ctx.logger_hdl)
@@ -68,6 +69,10 @@ int file_logger_test_begin(void)
 		return 1;
 	}
 	file_logger_cleanup_feature_tests();
+
+	/* C-2 测试调用 */
+	test_file_logger_oversized_msg();
+
 	xlog_set_user_callback(my_xlog_custom_user_cb, (void*)g_logger_ctx.logger_hdl);
 	xlog_set_target(LOG_TARGET_ANDROID | LOG_TARGET_CONSOLE | LOG_TARGET_USER_CALLBACK);
 	LOGD("Now call xlog_stdout2file");
@@ -260,4 +265,22 @@ static void my_xlog_custom_user_cb(LogLevel level, void* log_msg, size_t msg_siz
 	}
 	// let file_logger to write it
 	file_logger_log(f_logger_hdl, log_msg, msg_size);
+}
+
+/* C-2 + 4.1 回归测试：拒绝超大日志消息 */
+static void test_file_logger_oversized_msg(void)
+{
+	LOGI("[C-2] Testing oversized message rejection...");
+
+	/* 测试 INT_MAX 边界 */
+	char small_msg[16] = "test";
+	int ret_ok = file_logger_log(g_logger_ctx.logger_hdl, small_msg, sizeof(small_msg));
+	ASSERT(ret_ok == 0);  /* 正常消息应成功 */
+
+	/* 测试超大消息（模拟 >INT_MAX，实际分配小 buffer 避免 OOM） */
+	size_t huge_size = (size_t)INT_MAX + 1;
+	ret_ok = file_logger_log(g_logger_ctx.logger_hdl, small_msg, huge_size);
+	ASSERT(ret_ok == -1);  /* 应拒绝 */
+
+	LOGI("[C-2] PASS: oversized message correctly rejected");
 }

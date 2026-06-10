@@ -72,19 +72,7 @@ struct Hashmap
 		(handle)->lock.release((handle)->lock.arg); \
 	}
 
-hashmap_t *hashmap_create(size_t initial_capacity,
-						  hash_key_fn fn_hash,
-						  key_free_fn fn_key_free,
-						  value_free_fn fn_value_free,
-						  key_equality_fn fn_key_equality,
-						  hashmap_lock_t *lock)
-{
-	return hashmap_create_ex(initial_capacity, fn_hash, fn_key_free,
-							 fn_value_free, fn_key_equality, lock,
-							 &allocator_calloc);
-}
-
-hashmap_t *hashmap_create_ex(size_t initial_capacity,
+hashmap_t *hashmap_create_with_allocator(size_t initial_capacity,
 							 hash_key_fn fn_hash,
 							 key_free_fn fn_key_free,
 							 value_free_fn fn_value_free,
@@ -142,6 +130,18 @@ hashmap_t *hashmap_create_ex(size_t initial_capacity,
 	map->fn_key_equality = fn_key_equality;
 	map->size = 0;
 	return map;
+}
+
+hashmap_t *hashmap_create(size_t initial_capacity,
+						  hash_key_fn fn_hash,
+						  key_free_fn fn_key_free,
+						  value_free_fn fn_value_free,
+						  key_equality_fn fn_key_equality,
+						  hashmap_lock_t *lock)
+{
+	return hashmap_create_with_allocator(initial_capacity, fn_hash, fn_key_free,
+							 fn_value_free, fn_key_equality, lock,
+							 &allocator_calloc);
 }
 
 /**

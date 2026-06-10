@@ -63,6 +63,17 @@ int str_params_test(void)
 	}
 
 	str_params_destroy(params);
+
+	/* Caller-1 回归测试：重复 key 不泄漏 */
+	LOGI("[Caller-1] Testing duplicate key handling...");
+	str_params_ptr dup_test = str_params_create_str(";", "a=1;a=2;a=3");
+	ASSERT(dup_test != NULL);
+	char val[32];
+	ASSERT(0 == str_params_get_str(dup_test, "a", val, sizeof(val)));
+	ASSERT(0 == strcmp(val, "3"));  /* 最后一个值生效 */
+	str_params_destroy(dup_test);
+	LOGI("[Caller-1] PASS: duplicate keys handled without leak");
+
 	return 0;
 }
 

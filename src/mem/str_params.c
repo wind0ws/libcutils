@@ -136,11 +136,34 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 			free(value);
 			goto label_next_pair;
 		}
-		/* we replaced a value */
+		/* Caller-1 修复：检查 hashmap_put 返回值，处理替换路径的 key 所有权。
+		 * hashmap_put 行为（见 hashmap.c:338-342 及头文件 NOTE(reviewed 2026-06-08)）：
+		 * - old_val == NULL: 新插入成功，map 接管 key 和 value；或插入失败（errno==ENOMEM）
+		 * - old_val != NULL: 替换路径，map 保留旧 key 不接管新 key，只接管新 value
+		 * 参考 str_params_add_str (180-210 行) 的正确模式。 */
 		old_val = hashmap_put(parms->map, key, value);
-		RELEASE_OWNERSHIP(value);
-		RELEASE_OWNERSHIP(old_val);
-		RELEASE_OWNERSHIP(key);
+		if (old_val == NULL)
+		{
+			/* 新插入路径：检查是否因 OOM 失败 */
+			if (errno == ENOMEM)
+			{
+				/* 插入失败，key/value 所有权未转移，需释放 */
+				free(key);
+				free(value);
+				goto label_next_pair;
+			}
+			/* 新插入成功，map 接管 key 和 value */
+			RELEASE_OWNERSHIP(key);
+			RELEASE_OWNERSHIP(value);
+		}
+		else
+		{
+			/* 替换路径：map 接管新 value（旧 value 已被 value_free_fn 释放），
+			 * 但不接管新 key（保留旧 key），新 key 必须由 caller 释放 */
+			free(key);
+			RELEASE_OWNERSHIP(value);
+			RELEASE_OWNERSHIP(old_val);
+		}
 
 		items++;
 	label_next_pair:

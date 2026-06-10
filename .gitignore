@@ -63,3 +63,4 @@ mylog.log
 stdout2file.log
 tool/deploy/**/log/
 tool/deploy/**/*.log
+build_verify/

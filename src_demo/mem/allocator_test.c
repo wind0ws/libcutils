@@ -1,6 +1,7 @@
 #include "mem/mem_debug.h"
 #include "common_macro.h"
 #include "mem/allocation_tracker.h"
+#include "mem/allocator.h"  /* C-1: 显式包含 lcu_malloc/lcu_free 声明 */
 #include "mem/strings.h"
 
 #define LOG_TAG "ALLOC_TEST"
@@ -33,6 +34,17 @@ int allocator_test(void)
 	//LOGD("str4 => %s", str4);
 	//free(str4);
 	//free(str4);
+
+	/* C-1 回归测试: 溢出保护 */
+	LOGD("[C-1] Testing allocation overflow protection...");
+	void* p_overflow = lcu_malloc(SIZE_MAX - 8);  /* 加 16 字节 canary 会溢出 */
+	if (p_overflow != NULL)
+	{
+		LOGE("[C-1] FAIL: lcu_malloc(SIZE_MAX-8) should return NULL but got %p", p_overflow);
+		lcu_free(p_overflow);
+		return -1;
+	}
+	LOGD("[C-1] PASS: overflow correctly rejected");
 
 	return 0;
 }

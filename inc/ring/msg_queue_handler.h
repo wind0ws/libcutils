@@ -63,8 +63,11 @@ extern "C"
 	} queue_msg_header_t;
 
 	/**
-	 * msg prototype 
+	 * msg prototype
 	 * with flexible array member.
+	 *
+	 * @note obj_len must be non-negative (>= 0). Negative values are rejected
+	 *       by msg_queue_handler_push (H-2 fix).
 	 */
 	typedef struct
 	{

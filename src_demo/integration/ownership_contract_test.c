@@ -26,6 +26,7 @@
 #include "file/file_util.h"
 #include "mem/asprintf.h"
 #include "mem/str_params.h"
+#include "file/ini_parser.h"  /* H-1 新增头文件 */
 
 #include <stdlib.h>
 #include <string.h>
@@ -139,6 +140,33 @@ static int test_str_params_to_str_libc_free(void)
     return 0;
 }
 
+/* ------------------------------------------------------------------ */
+/* 5. ini_parser_dump: allocate + libc free (H-1 修复验证)   */
+/* ------------------------------------------------------------------ */
+static int test_ini_parser_dump_libc_free(void)
+{
+    LOGI("[own] 5 ini_parser_dump + libc free");
+
+    for (int i = 0; i < 50; i++)
+    {
+        ini_parser_handle p = ini_parser_create();
+        ASSERT(p != NULL);
+        ini_parser_put_string(p, "section", "key", "value");
+        ini_parser_put_string(p, "section", "key2", "value2");
+
+        char *dump = ini_parser_dump(p);
+        ASSERT(dump != NULL);
+        ASSERT(strstr(dump, "[section]") != NULL);
+        ASSERT(strstr(dump, "key = value") != NULL);
+        free(dump);  /* libc free — must be safe even with tracker ON */
+
+        ini_parser_destroy(&p);
+    }
+
+    LOGI("[own] 5 PASS");
+    return 0;
+}
+
 int ownership_contract_test(void)
 {
     LOGI("=== ownership_contract_test BEGIN ===");
@@ -148,6 +176,7 @@ int ownership_contract_test(void)
     if (0 == rc) rc = test_asprintf_libc_free();
     if (0 == rc) rc = test_file_util_read_all_libc_free();
     if (0 == rc) rc = test_str_params_to_str_libc_free();
+    if (0 == rc) rc = test_ini_parser_dump_libc_free();  /* H-1 新增 */
 
     LOGI("=== ownership_contract_test END: %s ===", (0 == rc) ? "ALL PASS" : "FAIL");
     return rc;

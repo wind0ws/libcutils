@@ -622,7 +622,24 @@ char *ini_parser_dump(ini_parser_handle parser_p)
 	{
 		return NULL;
 	}
-	char *ini_string = strdup(stringbuilder_to_string(sb));
+	/* ====================================================================
+	 * OWNERSHIP TRANSFER - DO NOT TRACK (H-1 修复)
+	 * ====================================================================
+	 * ini_parser_dump 返回堆所有权给 caller，caller 用 libc free() 释放。
+	 * 不能用 strdup（被 mem_debug.h 改写为 lcu_strdup，返回 tracked 指针）。
+	 * 使用 lcu_malloc_raw + memcpy 确保返回 raw libc 指针。
+	 *
+	 * 内部 lcu 代码释放此 buffer 必须用 lcu_free_raw()。
+	 * 外部 caller 用标准 libc free()。
+	 * 见 allocator.h (lcu_malloc_raw 文档) 和 ownership_contract_test.c。
+	 * ==================================================================== */
+	const char *src = stringbuilder_to_string(sb);
+	size_t len = strlen(src);
+	char *ini_string = (char*)lcu_malloc_raw(len + 1);
+	if (ini_string)
+	{
+		memcpy(ini_string, src, len + 1);
+	}
 	stringbuilder_destroy(&sb);
 	return ini_string;
 }

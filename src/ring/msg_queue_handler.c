@@ -258,6 +258,16 @@ msg_q_code_e msg_queue_handler_push(__in msg_queue_handler handler, __in queue_m
 	{
 		return MSG_Q_CODE_INVALID_MSG;
 	}
+	/* H-2 修复: 校验 obj_len 非负。
+	 * 虽然头文件契约未明确, 但负长度无语义，且会导致两处问题:
+	 * 1. line 274: (uint32_t)(sizeof + obj_len) 若 obj_len 为负, int 加法后转 uint32_t 仍正确
+	 * 2. line 292: malloc(msg_p->obj_len) 直接传 int, 负数提升为巨型 size_t 导致分配失败或 OOM
+	 * 在入口统一拒绝负数。 */
+	if (msg_p->obj_len < 0)
+	{
+		Q_LOGE("invalid obj_len: %d (must be non-negative)", msg_p->obj_len);
+		return MSG_Q_CODE_INVALID_MSG;
+	}
 	if (handler->flag2exit)
 	{
 		return MSG_Q_CODE_GENERIC_FAIL;

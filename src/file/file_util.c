@@ -78,7 +78,11 @@ int file_util_mkdirs(__in const char* folder_path)
 	}
 	int ret;
 	size_t dir_path_len = strlen(folder_path);
-	if (dir_path_len > MAX_FOLDER_PATH_LEN)
+	/* H-4 修复: 改 > 为 >=，确保 tmp_dir_path 有 NUL terminator 空间。
+	 * 原判断 dir_path_len > MAX_FOLDER_PATH_LEN(256) 允许 256 字节路径,
+	 * 但 tmp_dir_path[256] 会在 i=255 时写满 tmp[0..255]，无 NUL。
+	 * 后续 ACCESS(tmp_dir_path, 0) 读到 tmp[256] 越界。 */
+	if (dir_path_len >= MAX_FOLDER_PATH_LEN)
 	{
 		return -2; // dir too long
 	}

@@ -490,6 +490,15 @@ int file_logger_log(file_logger_handle handle, void *log_msg, size_t msg_size)
 	{
 		return -1;
 	}
+	/* C-2 + 4.1 修复: 拒绝超大消息，防止两处截断:
+	 * 1. line 501: (uint32_t)msg_size 截断（msg_size > UINT32_MAX）
+	 * 2. line 514: (int)msg_size 截断为负数（msg_size > INT_MAX）
+	 * 保守上限取 INT_MAX (2GB)，覆盖所有合理日志场景。 */
+	if (msg_size > (size_t)INT_MAX)
+	{
+		MY_LOGE("reject oversized log message: %zu bytes (max %d)", msg_size, INT_MAX);
+		return -1;
+	}
 	msg_q_code_e status = MSG_Q_CODE_BUF_NOT_ENOUGH;
 	int retry_counter = 0;
 

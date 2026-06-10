@@ -52,7 +52,10 @@ static void* raw_calloc(size_t size)
 
 static void raw_free(void* ptr)
 {
-	free(ptr);
+	if (ptr)
+	{
+		free(ptr);
+	}
 }
 
 /* Public raw allocate/free: plain libc malloc/free, untracked. See allocator.h.
@@ -72,7 +75,7 @@ void lcu_free_raw(void* ptr)
 
 char* lcu_strdup_trace(const char* str, const char* file_path, const char* func_name, int file_line)
 {
-	size_t size = strlen(str) + 1;  // + 1 for the null terminator
+	size_t size = strlen(str) + 1U;  // + 1 for the null terminator
 	size_t real_size = allocation_tracker_resize_for_canary(size);
 	void* ptr = malloc(real_size);
 	if (!ptr)
@@ -126,6 +129,11 @@ char* lcu_strndup(const char* str, size_t len)
 void* lcu_malloc_trace(size_t size, const char* file_path, const char* func_name, int file_line)
 {
 	const size_t real_size = allocation_tracker_resize_for_canary(size);
+	/* C-1 修复: 检查溢出。real_size == 0 且 size != 0 说明加 canary 溢出 */
+	if (0 == real_size && size != 0)
+	{
+		return NULL;
+	}
 	void* ptr = malloc(real_size);
 	if (!ptr)
 	{
@@ -148,6 +156,11 @@ void* lcu_calloc_trace(size_t item_count, size_t item_size, const char* file_pat
 	}
 	const size_t request_size = item_count * item_size;
 	const size_t real_size = allocation_tracker_resize_for_canary(request_size);
+	/* C-1 修复: 检查溢出 */
+	if (0 == real_size && request_size != 0)
+	{
+		return NULL;
+	}
 	void* ptr = calloc(1, real_size);
 	if (!ptr)
 	{

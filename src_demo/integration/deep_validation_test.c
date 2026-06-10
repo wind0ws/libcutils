@@ -143,7 +143,7 @@ static int test_hashmap_raw_allocator(void)
 
     /* Create hashmap using raw allocator (same path as allocation_tracker).
      * Verify all 3 allocation paths use raw: struct, buckets, entries. */
-    hashmap_t *map = hashmap_create_ex(8, int_hash_fn, NULL, NULL, int_eq_fn,
+    hashmap_t *map = hashmap_create_with_allocator(8, int_hash_fn, NULL, NULL, int_eq_fn,
                                         NULL, &allocator_calloc_raw);
     ASSERT(map != NULL);
 
@@ -480,14 +480,14 @@ static int test_calloc_overflow(void)
 }
 
 /* ============================================================================
- * Section 6: hashmap_create_ex with NULL allocator
+ * Section 6: hashmap_create_with_allocator with NULL allocator
  * ========================================================================== */
 
 static int test_hashmap_null_allocator(void)
 {
-    LOGI("[deep] 6.1 hashmap_create_ex NULL allocator");
+    LOGI("[deep] 6.1 hashmap_create_with_allocator NULL allocator");
 
-    hashmap_t *map = hashmap_create_ex(8, int_hash_fn, NULL, NULL, int_eq_fn,
+    hashmap_t *map = hashmap_create_with_allocator(8, int_hash_fn, NULL, NULL, int_eq_fn,
                                         NULL, NULL);
     ASSERT(map == NULL);
 

@@ -109,7 +109,7 @@ void allocation_tracker_init(void)
 	 * recurse: lcu_*alloc -> allocation_tracker_notify_alloc -> hashmap_put
 	 * -> lcu_*alloc -> ... (and would also self-deadlock on allocations_lock).
 	 * Do NOT change &allocator_calloc_raw to a tracked allocator. */
-	allocations = hashmap_create_ex(ALLOCATION_MAP_INIT_CAPACITY,
+	allocations = hashmap_create_with_allocator(ALLOCATION_MAP_INIT_CAPACITY,
 		hash_function_pointer, NULL, free, pointer_key_equals, &map_lock,
 		&allocator_calloc_raw);
 }
@@ -227,7 +227,19 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 
 size_t allocation_tracker_resize_for_canary(size_t size)
 {
-	return (!allocations) ? size : (size + (2 * canary_size));
+	if (!allocations)
+	{
+		return size;
+	}
+	/* C-1 修复: 防止 size + 2*canary_size 溢出。
+	 * 当 size > SIZE_MAX - 2*canary_size 时，加法会环绕为极小值，
+	 * 导致分配小堆块但尾 canary 越界写入后续内存。
+	 * canary_size = 8 (strlen("tinybird"))，保守检查 16 字节余量。 */
+	if (size > SIZE_MAX - (2 * canary_size))
+	{
+		return 0;  /* 返回 0 通知调用方溢出（size != 0 时 0 是非法值） */
+	}
+	return size + (2 * canary_size);
 }
 
 static bool allocation_memory_corruption_checker(allocation_t* allocation)

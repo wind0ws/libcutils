@@ -59,7 +59,7 @@ extern "C" {
 	 * **When to use**:
 	 * - ONLY when creating hashmap/array/container instances that back the
 	 *   allocation_tracker itself (see allocation_tracker.c init functions).
-	 * - Pass to hashmap_create_ex / array_new_ex as the allocator parameter.
+	 * - Pass to hashmap_create_with_allocator / array_new_ex as the allocator parameter.
 	 *
 	 * **When NOT to use**:
 	 * - DO NOT use for normal application allocations.

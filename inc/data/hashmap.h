@@ -195,7 +195,7 @@ extern "C" {
 	 *       can fail due to OOM. In that case the map gracefully degrades (no rehash)
 	 *       and the put operation still succeeds if the entry fits in the current buckets.
 	 *
-	 * @note Thread-safety: If a lock was provided to hashmap_create/hashmap_create_ex,
+	 * @note Thread-safety: If a lock was provided to hashmap_create/hashmap_create_with_allocator,
 	 *       this function is thread-safe. Concurrent put/remove/get are serialized.
 	 *       DO NOT call put from within a hashmap_foreach callback on the same map
 	 *       (Debug builds assert this; Release builds may deadlock or crash).

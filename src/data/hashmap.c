@@ -21,7 +21,7 @@
 /* CRITICAL: This file does NOT include mem_debug.h to avoid recursion with allocation_tracker.
  * The allocation tracker's internal storage is a hashmap. If this hashmap used tracked allocators,
  * every allocation here would trigger tracker -> hashmap_put -> allocator -> tracker (infinite loop).
- * hashmap_create_ex accepts an allocator parameter; allocation_tracker passes allocator_calloc_raw
+ * hashmap_create_with_allocator accepts an allocator parameter; allocation_tracker passes allocator_calloc_raw
  * (defined in allocator.c) which bypasses tracking. Business code using hashmaps should use
  * tracked allocators (allocator_calloc) instead. */
 

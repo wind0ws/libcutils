@@ -180,4 +180,36 @@
      - **L-1~L-3 LOW**：`lcu_realloc_trace` tracker 未 INIT 时静默丢数据（建议加 ASSERT）/ `hashmap_size(NULL)` 段错误（实现不一致，已加注释，待决定加守卫或文档化）/ `pthread_cond_init` 忽略 `CreateSemaphoreW` 失败（pthread_win_simple.c:194，资源耗尽应返 ENOMEM）。
      - **Caller-1（非库 bug）**：`str_params_create_str`（str_params.c:140）重复 key 时新 key 泄漏，应照 `add_str` 模式在 cleanup 释放。
    - **行动优先级**：下一发布前修 C-1/C-2；1.9.0 前修 H-1/H-2/H-4；M/L/Caller-1 中期。
+   - **【2026-06-10 更新】上述开放项已全部结案，见条目 11。**
 
+11. **0608 开放项全量落地（C/H/M/L/Caller 13 项）+ ABI 审查 + 闭环验证** — 2026-06-10
+   - **背景**：承接条目 10 移交的开放项台账，按"对抗评审 → 修复 plan → 分阶段实施 → 闭环验证"推进，全部 13 项结案。新增 4 项评审发现（4.1/4.2/4.3/4.5）一并处理。
+   - **Phase 1（P0，commit 25bcfa8）**：
+     - **C-1**：`allocation_tracker_resize_for_canary`（allocation_tracker.c:228）入口加 `size > SIZE_MAX - 2*canary_size ? 0 : ...` 溢出守卫；`lcu_malloc_trace`/`lcu_calloc_trace` 检查 `real_size==0 && size!=0` 拒绝分配。验证：`allocator_test` 跑 `lcu_malloc(SIZE_MAX-8)` 返回 NULL。
+     - **C-2 + 4.1**：`file_logger_log`（file_logger.c:489）入口拒 `msg_size > INT_MAX`，一次堵死两处截断（line 501 `(uint32_t)` + line 514 `(int)`）。验证：`file_logger_test` 超大消息拒绝。
+     - **H-1**：`ini_parser_dump`（ini_parser.c:625）`strdup`（tracked）→ `lcu_malloc_raw`+memcpy（raw libc），头文件补 libc free 契约。**根因**：b2f71fe 漏修同源 bug，且 `ownership_contract_test` 未覆盖 ini → 已补 `test_ini_parser_dump_libc_free`（50 轮），测试从 4 API 扩到 5 API。
+     - **Caller-1**：`str_params_create_str`（str_params.c:140）照 `add_str` 模式——检查 `hashmap_put` 返回值，替换路径（old_val!=NULL）`free(key)`，新插入成功则移交所有权。验证：`str_params_test` 跑 `"a=1;a=2;a=3"` 无泄漏。
+   - **Phase 2（P1/P2，commit d19c3b2）**：
+     - **H-2**：`msg_queue_handler_push`（msg_queue_handler.c:251）入口拒 `obj_len < 0`，头文件补 `obj_len >= 0` 契约。
+     - **H-4**：`file_util_mkdirs`（file_util.c:81）`> MAX_FOLDER_PATH_LEN` 改 `>=`，等长路径无 NUL 位的栈外读修复。
+     - **M-4**：`pri_internal_rw_file`（file_util.c:151）累加器 `int`→`size_t`，返回前 `> INT_MAX` 截断；防 >2GB 文件累加 UB。
+     - **M-3**：`pthread_rwlock_init`（pthread_win_simple.c:278）移除 `|| NULL == *rwlock`（init 前读 `*rwlock` 是 UB），与 `pthread_mutex_init` 契约对齐。
+     - **4.5**：`ini_parser_save`（ini_parser.c）原子写——Windows `MoveFileExA(REPLACE_EXISTING|WRITE_THROUGH)`，POSIX `rename`（本就原子）；修复前 `remove`+`rename` 之间断电丢配置。补 `#include <windows.h>`。
+     - **M-1 / M-2 / 4.2 / 4.3（文档化决策）**：thpool `jobqueue.len` 跨锁读（M-1）/ `volatile int` 当同步原语（M-2）/ `thpool_init` 忙等 `num_threads_alive`（4.2）/ `add_work` 与 `destroy` 并发产生孤儿 job（4.3）。**决策**：不改 atomic（保 x86 性能；ARM 真机 80s 压测未触发），改为 `thpool.h` 三处 `@warning` 文档化 ARM 弱模型限制与并发契约。根因仍在，建议任务关键 ARM 部署迁移 `lcu_atomic_uint32_t`（1.9.0+ 路线）。
+   - **stale 注释清理（commit 55a4c30）**：`hashmap_create_ex` 在 25bcfa8 已重命名 `hashmap_create_with_allocator`，4 处注释/文档引用同步（hashmap.h:198 / allocator.h:62 / hashmap.c:24 / allocation_tracker.c:23）；changelog 历史引用保留。
+   - **Phase 3（L 项，commit 5fac23b）**：
+     - **L-1**：`lcu_realloc_trace`（allocator.c:202）tracker 未 INIT 时 `allocation_tracker_ptr_size` 返回 0 → `memcpy(_,_,0)` 静默丢数据后 free 旧指针。加 `ASSERT(cur_ptr_size > 0)`（Debug 捕获误用，Release no-op 行为不变）；`allocator.c` 补 `common_macro.h` include。
+     - **L-3**：`pthread_cond_init`（pthread_win_simple.c:194）`CreateSemaphoreW` 失败返 NULL 时旧实现仍返 0，后续 wait/signal 在 NULL 句柄 UB。失败返 `ENOMEM`。
+     - **L-2（不修，已文档化）**：`hashmap_size(NULL)` 段错误是 caller 前置条件（条目 10 已加 `NOTE` 注释固化契约），维持现状。
+   - **ABI 兼容性审查（0527→HEAD，专项）**：逐个 diff 16 个变更头文件的签名/结构体/枚举。结论：**以 0527 交付物（197ff01 树）为基线，零 ABI 破坏**。
+     - 真实签名变化仅 2 处且都在 197ff01 当天（"rename internal symbols" commit 自身）：`slog.h` `__slog_internal_hex_print`→`_slog_internal_hex_print`（链接破坏，但仅跨 0527 边界 + 用 `SLOGx_HEX` 宏时触发，失败模式是响亮的链接错误非静默损坏）；`slog_get_min_level()`→`(void)` 与 `slog_stdout2file` 加 `const`（ABI 无影响）。
+     - `strings.h` `strsplit` 去 `const`：ABI 无影响（指针就是指针）。
+     - 新增 `hashmap_create_with_allocator` / `lcu_malloc_raw` / `lcu_free_raw` / `allocator_*_raw` / `lcu_atomic_*`：纯 additive，向后兼容。
+     - 静默 ABI 杀手专项排查**全部清白**：结构体布局（`file_logger_cfg` 逐字段核对仅加注释）/ 枚举值（全头文件扫描无重排）/ opaque 句柄（`ring_buffer` in/out 改 atomic 但 `struct _ring_buffer_t` 定义在 .c 内用户访问不到）/ 同签名语义变更（`hashmap_put` 替换分支 0527 前就 `fn_value_free` 释放旧 value，行为从未变，D-1 仅改对过期文档）。
+     - 行为契约收紧（不破 ABI，旧头不警告但都"变安全"）：`file_logger_log` 拒 >INT_MAX / `msg_queue_handler_push` 拒负 obj_len / `file_util_mkdirs` 边界 / 跨边界所有权 5 API 改 raw libc（对外部集成方反而是修复——其 libc free 现恒正确）。
+   - **闭环验证**：
+     - Release + Debug 双配置 clean build，0 error。
+     - **Debug 全量 22/22 PASS**（含 autocover 80s SPSC 压测），L-1 ASSERT 未在任何合法 realloc 路径误触发（allocator/str_params/ini/file_logger/deep_validation{,2} 等 realloc 调用方全绿）。
+     - 关键回归：allocator_test（C-1）/ file_logger_test（C-2）/ ownership_contract_test（H-1，新增 test 5）/ str_params_test（Caller-1）全 PASS。
+   - **遗留（1.9.0+ 路线，非阻塞发布）**：thpool volatile→atomic 迁移（ARM 严格正确性）；file_util API 返回类型现代化（ssize_t 支持 >2GB 不截断）；D-2/D-3（array 容量乘法溢出 / base64 size helper INT_MAX 截断，加固缺口非活跃 bug）。
+   - **发版提示**：发布说明须点名 slog hex 符号重命名——任何持有 0527 之前头文件且使用 `SLOGx_HEX` 宏的集成方，头文件必须一起更新（否则链接失败）。

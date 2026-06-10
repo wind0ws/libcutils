@@ -278,7 +278,11 @@ int pthread_cond_broadcast(pthread_cond_t* cond)
 int pthread_rwlock_init(pthread_rwlock_t* rwlock, const pthread_rwlockattr_t* attr)
 {
 	pthread_rwlock_t rwl;
-	if (NULL == rwlock || NULL == *rwlock)
+	/* M-3 修复: 移除 || NULL == *rwlock 检查。
+	 * *rwlock 在 init 前持有未初始化值，读它是 UB。
+	 * 正确契约: caller 传入 pthread_rwlock_t* 指针，init 写入句柄。
+	 * 与 pthread_mutex_init (line 97) 对齐：只检查 mutex != NULL。 */
+	if (NULL == rwlock)
 	{
 		return EINVAL;
 	}

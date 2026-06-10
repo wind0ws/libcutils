@@ -7,6 +7,9 @@
 #include "mem/strings.h" /* for strcmp */
 #include "mem/allocator.h" /* for lcu_free_raw (file_util_read_all ownership) */
 #include "mem/stringbuilder.h"
+#ifdef _WIN32
+#include <windows.h>  /* for MoveFileExA (4.5 atomic save) */
+#endif
 #define LOG_TAG "INI_PARSER"
 #include "log/slog.h"
 #include <stdio.h>	/* for fopen */
@@ -693,13 +696,26 @@ ini_parser_code_e ini_parser_save(ini_parser_handle parser_p, const char *file_p
 		remove(tmp_path);
 		return INI_PARSER_CODE_FAILED;
 	}
-	/* Windows: rename 不能覆盖已存在文件, 需先 remove 目标. */
-	(void)remove(file_path);
+	/* 4.5 修复: 原子替换文件，防止 remove + rename 之间断电丢失配置。
+	 * Windows: 使用 MoveFileExA + MOVEFILE_REPLACE_EXISTING + WRITE_THROUGH。
+	 *          REPLACE_EXISTING 原子覆盖，WRITE_THROUGH 确保元数据落盘。
+	 * POSIX: rename 本身是原子的，直接替换。
+	 * 修复前: remove(file_path) 后断电，file_path 永久消失（tmp 还在但拿不回）。 */
+#ifdef _WIN32
+	if (!MoveFileExA(tmp_path, file_path,
+		MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+	{
+		remove(tmp_path);
+		return INI_PARSER_CODE_FAILED;
+	}
+#else
+	/* POSIX rename 是原子的，无需先 remove */
 	if (0 != rename(tmp_path, file_path))
 	{
 		remove(tmp_path);
 		return INI_PARSER_CODE_FAILED;
 	}
+#endif
 	return INI_PARSER_CODE_SUCCEED;
 }
 

@@ -150,18 +150,26 @@ int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_cha
 
 static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
 {
-	int cur_char_count = 0;
+	/* M-4 修复: cur_char_count 改 size_t，防止大文件累加溢出 INT_MAX。
+	 * 原 int 类型在 >2GB 文件时溢出为负数 (UB)。
+	 * 返回前检查溢出并截断为 INT_MAX（兼容返回类型）。 */
+	size_t cur_char_count = 0;
 	do
 	{
-		int once_op_size = (int)target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
+		ssize_t once_op_size = target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
 		if (once_op_size < 1)
 		{
 			//0:normal rw complete, otherwise error occurred
 			break;
 		}
-		cur_char_count += once_op_size;
+		cur_char_count += (size_t)once_op_size;
 	} while (cur_char_count != max_char_count);
-	return cur_char_count;
+	/* 返回时检查溢出：size_t > INT_MAX 时截断 */
+	if (cur_char_count > (size_t)INT_MAX)
+	{
+		return INT_MAX;
+	}
+	return (int)cur_char_count;
 }
 
 int file_util_read_txt(__in const char* file_path,

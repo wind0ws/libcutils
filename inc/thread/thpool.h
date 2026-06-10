@@ -40,6 +40,13 @@ typedef struct thpool_* threadpool;
  * @param  num_threads   number of threads to be created in the threadpool
  * @return threadpool    created threadpool on success,
  *                       NULL on error
+ *
+ * @warning ARM memory model (4.2): thpool_init busy-waits on num_threads_alive
+ *          (volatile int) until all workers are ready. On ARM weak memory models,
+ *          the main thread may observe stale values, causing extended spin or
+ *          premature return. In practice, worker startup is slow enough (~ms) that
+ *          cache coherence catches up. For strict ARM correctness, replace volatile
+ *          counters with lcu_atomic_uint32_t + acquire/release barriers.
  */
 threadpool thpool_init(int num_threads);
 
@@ -70,6 +77,11 @@ threadpool thpool_init(int num_threads);
  * @param  function_p    pointer to function to add as work
  * @param  arg_p         pointer to an argument
  * @return 0 on success, -1 if threadpool or function is NULL, -2 if memory allocation failed
+ *
+ * @warning Concurrent add_work + destroy: Do NOT call thpool_add_work concurrently
+ *          with thpool_destroy. Caller must ensure all producers stop before calling
+ *          destroy. Jobs added during destroy may become orphaned (enqueued but never
+ *          executed), and job->arg resources may leak (4.3).
  */
 int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
 
@@ -94,6 +106,16 @@ int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
  *
  * @param threadpool     the threadpool to wait for
  * @return nothing
+ *
+ * @warning Thread-safety caveat (M-1/M-2/4.2): thpool_wait reads jobqueue.len
+ *          and threads_keepalive/num_threads_* (volatile int) for termination.
+ *          On x86/x64 TSO, this is safe via volatile semantics. On ARM/ARMv8 weak
+ *          memory models, lock-free reads may observe stale values, but are bounded
+ *          by mutex barriers in typical flows (cond_wait wakeup re-checks state).
+ *          Strict ARM correctness would require unified locking or C11 atomics.
+ *          Current implementation prioritizes x86 performance; ARM safety is
+ *          best-effort. For mission-critical ARM deployments, consider migrating
+ *          volatile counters to lcu_atomic_uint32_t (common_macro.h).
  */
 void thpool_wait(threadpool);
 

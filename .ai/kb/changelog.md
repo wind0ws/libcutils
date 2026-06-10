@@ -208,8 +208,9 @@
      - 静默 ABI 杀手专项排查**全部清白**：结构体布局（`file_logger_cfg` 逐字段核对仅加注释）/ 枚举值（全头文件扫描无重排）/ opaque 句柄（`ring_buffer` in/out 改 atomic 但 `struct _ring_buffer_t` 定义在 .c 内用户访问不到）/ 同签名语义变更（`hashmap_put` 替换分支 0527 前就 `fn_value_free` 释放旧 value，行为从未变，D-1 仅改对过期文档）。
      - 行为契约收紧（不破 ABI，旧头不警告但都"变安全"）：`file_logger_log` 拒 >INT_MAX / `msg_queue_handler_push` 拒负 obj_len / `file_util_mkdirs` 边界 / 跨边界所有权 5 API 改 raw libc（对外部集成方反而是修复——其 libc free 现恒正确）。
    - **闭环验证**：
-     - Release + Debug 双配置 clean build，0 error。
-     - **Debug 全量 22/22 PASS**（含 autocover 80s SPSC 压测），L-1 ASSERT 未在任何合法 realloc 路径误触发（allocator/str_params/ini/file_logger/deep_validation{,2} 等 realloc 调用方全绿）。
-     - 关键回归：allocator_test（C-1）/ file_logger_test（C-2）/ ownership_contract_test（H-1，新增 test 5）/ str_params_test（Caller-1）全 PASS。
+     - **Windows MSVC 19.44 x64**：Release + Debug 双配置 clean build，0 error。Debug 全量 22/22 PASS（含 autocover 80s SPSC 压测），L-1 ASSERT 未在任何合法 realloc 路径误触发（allocator/str_params/ini/file_logger/deep_validation{,2} 等 realloc 调用方全绿）。
+     - **Linux WSL Ubuntu 16.04 / GCC 5.4.0**（跨平台补验，commit 6d22e35）：抓出 Windows 遗漏的可移植性 bug——C-2 修复用 `INT_MAX` 但 `file_logger.c` / `file_logger_test.c` 未含 `<limits.h>`（MSVC 间接可见而通过，GCC 严格报错）。补 include 后 CTest `-L lcu` **23/23 PASS（91.82s）**，覆盖 Windows 未编译的 POSIX 路径（`ini_parser_save` 的 `rename` 分支 / `file_util` 的 `ssize_t` 路径）。
+     - 关键回归：allocator_test（C-1）/ file_logger_test（C-2）/ ownership_contract_test（H-1，新增 test 5）/ str_params_test（Caller-1）双平台全 PASS。
+     - **教训**：跨边界/共享 `.c` 改动必须双平台验证。Windows-only 验证会放过 `INT_MAX` 这类"MSVC 头文件间接可见、GCC 严格报错"的可移植性 bug。
    - **遗留（1.9.0+ 路线，非阻塞发布）**：thpool volatile→atomic 迁移（ARM 严格正确性）；file_util API 返回类型现代化（ssize_t 支持 >2GB 不截断）；D-2/D-3（array 容量乘法溢出 / base64 size helper INT_MAX 截断，加固缺口非活跃 bug）。
    - **发版提示**：发布说明须点名 slog hex 符号重命名——任何持有 0527 之前头文件且使用 `SLOGx_HEX` 宏的集成方，头文件必须一起更新（否则链接失败）。

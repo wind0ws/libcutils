@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include "mem/mem_debug.h"
+#include "common_macro.h"   /* L-1: for ASSERT (realloc tracker-uninit guard) */
 #include <stdlib.h>
 #include <string.h>
 #include "mem/allocator.h"
@@ -200,6 +201,12 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 	}
 
 	const size_t cur_ptr_size = allocation_tracker_ptr_size(ALLOCTOR_ID, ptr);
+	/* L-1 修复: 当 tracker 未初始化时, allocation_tracker_ptr_size 返回 0,
+	 * 下面的 memcpy(new_ptr, ptr, cur_ptr_size) 会静默拷贝 0 字节(旧数据丢失),
+	 * 然后 free 掉旧指针 -> 返回的 buffer 不含原内容. lcu_realloc_trace 的契约
+	 * 是必须在 tracker 激活后调用(ptr 来自 lcu_*alloc, 被追踪).
+	 * Debug 下 ASSERT 捕获此误用; Release 下为 no-op(保持现有行为不变). */
+	ASSERT(cur_ptr_size > 0);
 	if (cur_ptr_size && size <= cur_ptr_size)
 	{
 		//current size is enough, no need alloc new memory.

@@ -192,6 +192,13 @@ int pthread_cond_init(pthread_cond_t* cond, const pthread_condattr_t* attr)
 	cond->mWake = 0;
 	cond->mGeneration = 0;
 	cond->mSemaphore = CreateSemaphoreW(NULL, 0, 0x7FFFFFFF, NULL);
+	/* L-3 修复: CreateSemaphoreW 失败(资源耗尽等)返回 NULL, 旧实现忽略它并返回 0,
+	 * 后续 pthread_cond_wait/signal 在 NULL 句柄上 WaitForSingleObject/ReleaseSemaphore
+	 * 行为未定义. 失败时返回 ENOMEM, 不残留半初始化的 cond. */
+	if (NULL == cond->mSemaphore)
+	{
+		return ENOMEM;
+	}
 	pthread_mutex_init(&cond->mLock, NULL);
 	return 0;
 }

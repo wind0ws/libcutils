@@ -13,6 +13,7 @@
 #endif
 
 #include <errno.h>
+#include <limits.h> /* C-2 test: for INT_MAX */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

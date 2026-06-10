@@ -11,6 +11,7 @@
 #include "time/time_util.h"		 /* for timestamp file name */
 
 #include <errno.h>
+#include <limits.h> /* C-2: for INT_MAX (msg_size upper-bound check) */
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

@@ -278,3 +278,18 @@
      - **Linux WSL Ubuntu 16.04 / GCC 5.4.0 x64 / Debug**（Ninja，build_linux）：编译零错误（仅 `LCU_TEST_REGISTER` 既有 non-prototype warning，与改动无关）；`ini_test` PASS；全量 `ctest -L lcu` **24/24 PASS（100%，89.3s）**，覆盖 Windows 未编译的 POSIX 路径（`ini_parser_save` 的 `rename` 分支）。WSL build_linux 未配置 diagnostics 测试，反证 MSVC 两失败与 ini 无关。
      - 双平台一致：缩进 key 修复在 MSVC 19.44 与 GCC 5.4.0 行为一致、ini 相关全绿、零退化。
    - **改动文件**：`inc/file/ini_reader.h`、`src_demo/file/ini_test.c`（新增测试用例）。
+14. **上游 inih 修改合入** — 2026-06-17
+   - **目标**：将 G:\temp\inih 上游最新代码的改进点合入本仓库 `ini_reader.{h,c}`。
+   - **版权年份更新**：`2009-2020` → `2009-2025`。
+   - **新增 API**：`ini_reader_parse_string_length(string, length, handler, user)` 支持带长度字符串解析，避免 `strlen()` 调用，适用于网络数据、内存块或 C++ `std::string_view`。
+   - **性能优化**：`ini_rstrip(s, end)` 改为接受 `end` 参数（预先计算的字符串末尾指针），避免重复 `strlen()`；所有调用点更新传入 `line + offset`。
+   - **超长行处理**：新增 `abyss[16]` 缓冲区机制，当行超过 `INI_MAX_LINE` 时消费剩余字节直到 `\n`，防止解析器卡住。
+   - **代码健壮性**：添加 `#include <assert.h>`；`ini_reader_parse_stream()` 入口添加 `assert(reader/stream/handler != NULL)`；变量声明优化（`offset` 移到函数体，`abyss_len` 新增）。
+   - **INI_ALLOW_MULTILINE 分支简化**：与上游保持一致，移除本地复杂的缩进键处理逻辑（已禁用 multiline，代码路径不执行但保持可维护性）。
+   - **文档改进**：为 `ini_reader_handler` typedef 添加详细注释，说明 `value` 参数可修改性（section/name 不可修改）。
+   - **保留本地配置**：`ini_reader_*` 命名前缀、`INI_ALLOW_MULTILINE=0`（含注释说明缩进键被吞问题）、`INI_STOP_ON_FIRST_ERROR=1`、`INI_ALLOW_NO_VALUE=1`、首行 `#include "mem/mem_debug.h"`、`#pragma once` + `LCU_INI_READER_H` 头文件保护。
+   - **验证**：
+     - **WSL Linux (Ubuntu 22.04 / GCC)**：`ninja lcu_static lcu_demo` 编译成功，`lcu_demo ini_test` 全量通过（ini_reader + ini_parser 子测试全 PASS，0.010s）。
+     - **Windows (MSVC 旧版)**：`lcu_demo.exe ini_test` 全量通过（ini_reader + ini_parser 子测试全 PASS，0.003s）。
+   - **变更统计**：`inc/file/ini_reader.h` +19/-2，`src/file/ini_reader.c` +110/-53（76 行新增，53 行删除）。
+   - **影响面**：`ini_parser.c` 依赖 `ini_reader` 底层 API，测试验证未发现回归；新增 API 向后兼容，不影响现有调用。

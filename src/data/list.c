@@ -11,7 +11,6 @@
  * lcu_calloc1 -> lcu_calloc_trace (in allocator.c which includes mem_debug.h), so all
  * list allocations ARE tracked. This file never calls libc malloc/free directly. */
 
-//#include <assert.h>
 #include "mem/allocator.h"
 #include "data/list.h"
 

@@ -18,6 +18,9 @@ local.properties
 .tmp/
 .ai/review/
 *.local.md
+# AI 会话级 plan/review 产物，不进版本库（superpowers 等 skill 默认落点）
+docs/plans/
+docs/superpowers/
 __pycache__/
 /build
 /captures
@@ -58,9 +61,5 @@ tool/cmake/toolchains/*.sh
 
 # 测试运行时生成的产物
 basic_test.txt
-memleak.log
-mylog.log
-stdout2file.log
-tool/deploy/**/log/
-tool/deploy/**/*.log
-build_verify/
+*.log
+build_*/

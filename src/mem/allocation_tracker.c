@@ -63,11 +63,30 @@ typedef struct
 } allocation_free_checker_context;
 
 #define ALLOCATION_MAP_INIT_CAPACITY    (1024)
-static const char* canary = "tinybird";
 
-static size_t canary_size = 0;
+/* Fix #3: canary length is a COMPILE-TIME constant, not a runtime value set in
+ * init(). Previously |canary_size| was assigned in allocation_tracker_init()
+ * and left dangling after uninit(); making it constant guarantees the offset
+ * arithmetic (+/- CANARY_SIZE) is identical in every phase, including any
+ * stray free() that races teardown. */
+#define CANARY_STR  "tinybird"
+enum { CANARY_SIZE = sizeof(CANARY_STR) - 1 };
+static const char* const canary = CANARY_STR;
+
 static hashmap_t* allocations = NULL;
 static pthread_mutex_t allocations_lock;
+
+/* Fix #3: once uninit() has torn down the tracker, any later lcu_free() of a
+ * once-tracked (canary-offset) pointer can no longer be un-offset safely and
+ * will corrupt the heap. We cannot auto-repair it (tracked vs raw is
+ * indistinguishable post-teardown), but we refuse to stay silent: warn loudly
+ * so the lifecycle violation (e.g. a static dtor freeing lcu memory after
+ * MEM_CHECK_DEINIT) is visible in development. */
+static bool tracker_was_torn_down = false;
+
+/* Fix #3: one-shot guard so the post-teardown free warning (in notify_free)
+ * fires at most once instead of spamming every late free. */
+static bool uninit_use_warned = false;
 
 static bool allocation_entry_freed_checker(void* key, void* value, void* context);
 static bool allocation_memory_corruption_checker(allocation_t* allocation);
@@ -95,10 +114,13 @@ void allocation_tracker_init(void)
 	{
 		return;
 	}
-	canary_size = strlen(canary);
-	pthread_mutex_init(&allocations_lock, NULL);
-	
-	hashmap_lock_t map_lock = 
+	/* M4: a failed mutex init leaves every subsequent lock op undefined; that
+	 * is an unrecoverable setup error, so abort early rather than limp on with
+	 * a broken lock guarding the allocations map. */
+	int mtx_rc = pthread_mutex_init(&allocations_lock, NULL);
+	ASSERT_ABORT(0 == mtx_rc);
+
+	hashmap_lock_t map_lock =
 	{
        .arg = &allocations_lock,
        .acquire = (int(*)(void*))pthread_mutex_lock, //lock_allocations_map,
@@ -122,10 +144,29 @@ void allocation_tracker_uninit(void)
 		return;
 	}
 
+	/* Fix #3 (A4): report any still-live tracked allocations as a fatal-level
+	 * diagnostic, then CONTINUE teardown. We deliberately do NOT abort here:
+	 * a leak is not heap corruption, and turning "leak at exit" into "crash at
+	 * exit" would punish otherwise-correct programs and mask unrelated issues.
+	 * Callers who want hard enforcement should check
+	 * allocation_tracker_expect_no_allocations()'s return value themselves. */
+	size_t leaked = allocation_tracker_expect_no_allocations(NULL, NULL);
+	if (leaked > 0)
+	{
+		lcu_diagnostics_writef("MEMORY_LEAK",
+			"'%s' tearing down tracker with %zu bytes still unfreed; "
+			"these blocks can no longer be validated/un-offset safely",
+			__func__, leaked);
+	}
+
 	hashmap_free(allocations);
 	allocations = NULL;
 
 	pthread_mutex_destroy(&allocations_lock);
+
+	/* Fix #3: from here on, any lcu_free() of a once-tracked pointer is a
+	 * lifecycle violation we can detect but not repair. Arm the warning. */
+	tracker_was_torn_down = true;
 }
 
 void allocation_tracker_reset(void)
@@ -161,7 +202,7 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 		return ptr;
 	}
 	char* return_ptr = (char*)ptr;
-	return_ptr += canary_size;
+	return_ptr += CANARY_SIZE;
 
 	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, return_ptr);
 	if (allocation)
@@ -189,8 +230,8 @@ void* allocation_tracker_notify_alloc(allocator_id_t allocator_id, void* ptr, si
 	allocation->file_line = file_line;
 
 	// Add the canary on both sides
-	memcpy(return_ptr - canary_size, canary, canary_size);
-	memcpy(return_ptr + requested_size, canary, canary_size);
+	memcpy(return_ptr - CANARY_SIZE, canary, CANARY_SIZE);
+	memcpy(return_ptr + requested_size, canary, CANARY_SIZE);
 	return return_ptr;
 }
 
@@ -198,10 +239,28 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 {
 	if (!allocations || !ptr)
 	{
+		/* Fix #3: tracker torn down but a (possibly once-tracked) pointer is
+		 * being freed. We return |ptr| unchanged (cannot un-offset safely), but
+		 * if it WAS a tracked, canary-offset pointer the caller's libc free will
+		 * corrupt the heap. Warn loudly so the lifecycle violation is visible. */
+		if (ptr && tracker_was_torn_down && !uninit_use_warned)
+		{
+			uninit_use_warned = true;
+			lcu_diagnostics_writef("MEM_CHECK",
+				"'%s' called after tracker teardown (addr 0x%zx) — freeing a "
+				"once-tracked pointer now risks heap corruption; ensure all lcu "
+				"memory is released before MEM_CHECK_DEINIT().",
+				__func__, (uintptr_t)ptr);
+		}
 		return ptr;
 	}
 	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
-	ASSERT_ABORT(allocation);                               // Must have been tracked before
+	if (!allocation)
+	{
+		/* Keep mem_debug.h's free macro compatible with raw/libc pointers.
+		 * lcu_free() will free the returned pointer through the raw libc path. */
+		return ptr;
+	}
 	ASSERT_ABORT(!allocation->freed);                       // Must not double free
 	ASSERT_ABORT(allocation->allocator_id == allocator_id); // Must be from the same allocator
 	allocation->freed = true;
@@ -210,7 +269,7 @@ void* allocation_tracker_notify_free(allocator_id_t allocator_id, void* ptr)
 	// Double-free of memory is detected with "ASSERT_ABORT(allocation)" above
 	// as the allocation entry will not be present.
 	hashmap_remove(allocations, ptr);
-	return ((char*)ptr) - canary_size;
+	return ((char*)ptr) - CANARY_SIZE;
 }
 
 size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
@@ -225,37 +284,66 @@ size_t allocation_tracker_ptr_size(allocator_id_t allocator_id, void* ptr)
 	return allocation->size;
 }
 
+bool allocation_tracker_try_ptr_size(allocator_id_t allocator_id, void* ptr, size_t* out_size)
+{
+	/* Fix #1: non-aborting counterpart of allocation_tracker_ptr_size().
+	 * Returns false (without asserting) when the tracker is inactive or |ptr|
+	 * is not tracked, so lcu_realloc_trace can fall back to libc realloc for
+	 * raw/cross-boundary pointers — symmetric with notify_free's raw fallback. */
+	if (out_size)
+	{
+		*out_size = 0;
+	}
+	if (!allocations || !ptr)
+	{
+		return false;
+	}
+	allocation_t* allocation = (allocation_t*)hashmap_get(allocations, ptr);
+	if (!allocation)
+	{
+		return false;
+	}
+	/* A tracked pointer from a different allocator id is still a misuse worth
+	 * catching; keep the hard assert for that genuine programming error. */
+	ASSERT_ABORT(allocation->allocator_id == allocator_id);
+	if (out_size)
+	{
+		*out_size = allocation->size;
+	}
+	return true;
+}
+
 size_t allocation_tracker_resize_for_canary(size_t size)
 {
 	if (!allocations)
 	{
 		return size;
 	}
-	/* C-1 修复: 防止 size + 2*canary_size 溢出。
-	 * 当 size > SIZE_MAX - 2*canary_size 时，加法会环绕为极小值，
+	/* C-1 修复: 防止 size + 2*CANARY_SIZE 溢出。
+	 * 当 size > SIZE_MAX - 2*CANARY_SIZE 时，加法会环绕为极小值，
 	 * 导致分配小堆块但尾 canary 越界写入后续内存。
-	 * canary_size = 8 (strlen("tinybird"))，保守检查 16 字节余量。 */
-	if (size > SIZE_MAX - (2 * canary_size))
+	 * CANARY_SIZE = 8 (strlen("tinybird"))，保守检查 16 字节余量。 */
+	if (size > SIZE_MAX - (2 * CANARY_SIZE))
 	{
 		return 0;  /* 返回 0 通知调用方溢出（size != 0 时 0 是非法值） */
 	}
-	return size + (2 * canary_size);
+	return size + (2 * CANARY_SIZE);
 }
 
 static bool allocation_memory_corruption_checker(allocation_t* allocation)
 {
 	void* ptr = allocation->ptr;
-	UNUSED_ATTR const char* beginning_canary = ((char*)ptr) - canary_size;
+	UNUSED_ATTR const char* beginning_canary = ((char*)ptr) - CANARY_SIZE;
 	UNUSED_ATTR const char* end_canary = ((char*)ptr) + allocation->size;
-	for (size_t i = 0; i < canary_size; ++i)
+	for (size_t i = 0; i < CANARY_SIZE; ++i)
 	{
 		if (beginning_canary[i] != canary[i] ||
 			end_canary[i] != canary[i])
 		{
-			EMERGENCY_LOG("detect corrupted memory at '%s' (%s:%d), address: 0x%zx, size: %zd bytes",
+			lcu_diagnostics_fatalf("MEMORY_CORRUPTION",
+				"detected corrupted memory at '%s' (%s:%d), address: 0x%zx, size: %zd bytes",
 				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), 
 				allocation->file_line, (uintptr_t)allocation->ptr, allocation->size);
-			abort();
 			return false;
 		}
 	}
@@ -278,7 +366,8 @@ static bool allocation_entry_freed_checker(void *key, void *value, void* context
 		}
 		else
 		{
-			EMERGENCY_LOG("'%s' found unfreed memory at '%s' (%s:%d), address: 0x%zx size: %zd bytes", __func__,
+			lcu_diagnostics_writef("MEMORY_LEAK",
+				"'%s' found unfreed memory at '%s' (%s:%d), address: 0x%zx size: %zd bytes", __func__,
 				NULLABLE_STRING(allocation->func_name), NULLABLE_STRING(allocation->file_path), allocation->file_line,
 				(uintptr_t)allocation->ptr, allocation->size);
 		}

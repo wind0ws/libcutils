@@ -1,5 +1,4 @@
 #include "mem/strings.h"
-#include "mem/allocator.h"  /* for lcu_malloc_raw (cross-boundary ownership) */
 #include <malloc.h>
 #include <stdint.h>  /* for SIZE_MAX */
 
@@ -156,19 +155,14 @@ char* strreplace(char const* const original,
 	/* ========================================================================
 	 * OWNERSHIP TRANSFER - DO NOT TRACK
 	 * ========================================================================
-	 * strreplace returns this buffer to the caller who releases it with libc
-	 * free(). Using lcu_malloc_trace here would return a canary-offset/tracked
-	 * pointer that corrupts the heap when the caller's free() runs while the
-	 * allocation tracker is active.
+	 * strreplace returns this buffer to the caller who releases it with free().
+	 * Using lcu_malloc_trace here would return a canary-offset/tracked pointer
+	 * that would not be compatible with a plain libc free.
 	 *
 	 * KEEP THIS AS RAW LIBC malloc() PERMANENTLY. DO NOT change to lcu_malloc_trace.
 	 *
-	 * Internal lcu callers (e.g. file_logger.c) that include mem_debug.h must
-	 * use lcu_free_raw() to release strreplace results, NOT bare free() (which
-	 * is rewritten to lcu_free and would crash on this untracked pointer).
-	 *
-	 * External callers use standard libc free().
-	 * See: allocator.h (lcu_malloc_raw/lcu_free_raw), ownership_contract_test.c
+	 * See: allocator.h (lcu_malloc_raw/lcu_free untracked fallback),
+	 * ownership_contract_test.c
 	 * ======================================================================== */
 	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
 	do

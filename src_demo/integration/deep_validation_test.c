@@ -417,26 +417,23 @@ static int test_strreplace_edge_cases(void)
 {
     LOGI("[deep] 4.3 strreplace edge cases");
 
-    /* Basic replacement.
-     * NOTE: strreplace returns a raw-libc buffer (ownership transfer). This file
-     * includes mem_debug.h, so bare free()==lcu_free() aborts on the untracked
-     * pointer when the tracker is active; use lcu_free_raw throughout this test. */
+    /* Basic replacement. strreplace returns an ownership-transfer buffer. */
     char *r = strreplace("hello world", "world", "earth");
     ASSERT(r != NULL);
     ASSERT(strcmp(r, "hello earth") == 0);
-    lcu_free_raw(r);
+    free(r);
 
     /* No match */
     r = strreplace("hello", "xyz", "abc");
     ASSERT(r != NULL);
     ASSERT(strcmp(r, "hello") == 0);
-    lcu_free_raw(r);
+    free(r);
 
     /* Multiple occurrences */
     r = strreplace("aaa", "a", "bb");
     ASSERT(r != NULL);
     ASSERT(strcmp(r, "bbbbbb") == 0);
-    lcu_free_raw(r);
+    free(r);
 
     /* Empty pattern - implementation returns NULL (prevents infinite loop) */
     r = strreplace("test", "", "x");
@@ -446,13 +443,13 @@ static int test_strreplace_edge_cases(void)
     r = strreplace("he//llo", "//", "");
     ASSERT(r != NULL);
     ASSERT(strcmp(r, "hello") == 0);
-    lcu_free_raw(r);
+    free(r);
 
     /* Backslash to forward slash (same as file_logger uses) */
     r = strreplace("C:\\Users\\test\\logs", "\\", "/");
     ASSERT(r != NULL);
     ASSERT(strcmp(r, "C:/Users/test/logs") == 0);
-    lcu_free_raw(r);
+    free(r);
 
     LOGI("[deep] 4.3 PASS");
     return 0;

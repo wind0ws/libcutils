@@ -1,7 +1,6 @@
 #include "mem/mem_debug.h"
 #include "mem/stringbuilder.h"
 #include "mem/strings.h"
-#include "mem/allocator.h"  /* for lcu_free_raw (strreplace ownership) */
 #include "common_macro.h"
 #include "thread/posix_thread.h"
 
@@ -44,10 +43,7 @@ static int stringreplace_test()
 		return -1;
 	}
 	LOGD("replaced string => %s", replaced_str);
-	/* strreplace returns a raw-libc buffer (ownership transfer). This file includes
-	 * mem_debug.h so bare free()==lcu_free() would abort on the untracked pointer
-	 * when the tracker is active; use lcu_free_raw to match the raw allocation. */
-	lcu_free_raw(replaced_str);
+	free(replaced_str);
 	return 0;
 }
 

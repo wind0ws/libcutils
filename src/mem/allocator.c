@@ -24,8 +24,8 @@
 #include "mem/allocator.h"
 #include "mem/allocation_tracker.h"
 
- //we define alloc function to lcu_alloc, 
- //so here we should undef it to avoid Recursive call. 
+// we define alloc function to lcu_alloc, 
+// so here we should undef it to avoid Recursive call. 
 #ifdef _USE_LCU_MEM_CHECK 
 #undef malloc
 #undef free
@@ -41,22 +41,27 @@
 // After the #undef block above, malloc/calloc/free are always the libc symbols
 // (whether or not _USE_LCU_MEM_CHECK is defined), so these never re-enter the
 // tracker. Used by allocation_tracker's internal hashmap to break recursion.
-static void* raw_malloc(size_t size)
+static inline void* raw_malloc(size_t size)
 {
 	return malloc(size);
 }
 
-static void* raw_calloc(size_t size)
+static inline void* raw_calloc(size_t size)
 {
 	return calloc(1, size);
 }
 
-static void raw_free(void* ptr)
+static inline void raw_free(void* ptr)
 {
 	if (ptr)
 	{
 		free(ptr);
 	}
+}
+
+static inline void* raw_realloc(void* ptr, size_t size)
+{
+	return realloc(ptr, size);
 }
 
 /* Public raw allocate/free: plain libc malloc/free, untracked. See allocator.h.
@@ -183,7 +188,6 @@ void* lcu_calloc1(size_t size)
 
 void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const char* func_name, int file_line)
 {
-#define _REALLOC_MORE_SIZE (4096U)
 	if (0 == size)
 	{
 		//if (0 == size), free the ptr, return NULL.
@@ -194,27 +198,33 @@ void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const cha
 		return NULL;
 	}
 
-	if (NULL == ptr)
+	/* Fix #1: when the tracker is inactive, every pointer is a plain libc
+	 * pointer — delegate straight to libc realloc. This is also the correct
+	 * behaviour for ptr==NULL (libc realloc(NULL,size) == malloc(size)) and it
+	 * retires the old L-1 bug where a 0-byte memcpy silently dropped the data. */
+	size_t cur_ptr_size = 0;
+	if (!allocation_tracker_try_ptr_size(ALLOCTOR_ID, ptr, &cur_ptr_size))
 	{
-		/* a little trick: give more memory than you need, for maybe reduce realloc times */
-		return lcu_malloc_trace(size + _REALLOC_MORE_SIZE, file_path, func_name, file_line);
+		/* Either the tracker is off, or |ptr| is an untracked raw/cross-boundary
+		 * buffer (e.g. from file_util_read_all / strreplace / ini_parser_dump).
+		 * Symmetric with lcu_free's raw fallback: realloc it via libc. The
+		 * returned pointer stays untracked (no canary/leak coverage), exactly
+		 * like the buffer it grew from. */
+		return raw_realloc(ptr, size);
 	}
 
-	const size_t cur_ptr_size = allocation_tracker_ptr_size(ALLOCTOR_ID, ptr);
-	/* L-1 修复: 当 tracker 未初始化时, allocation_tracker_ptr_size 返回 0,
-	 * 下面的 memcpy(new_ptr, ptr, cur_ptr_size) 会静默拷贝 0 字节(旧数据丢失),
-	 * 然后 free 掉旧指针 -> 返回的 buffer 不含原内容. lcu_realloc_trace 的契约
-	 * 是必须在 tracker 激活后调用(ptr 来自 lcu_*alloc, 被追踪).
-	 * Debug 下 ASSERT 捕获此误用; Release 下为 no-op(保持现有行为不变). */
-	ASSERT(cur_ptr_size > 0);
-	if (cur_ptr_size && size <= cur_ptr_size)
+	/* From here on the tracker is active AND |ptr| is a tracked block. */
+	if (size <= cur_ptr_size)
 	{
 		//current size is enough, no need alloc new memory.
 		return ptr;
 	}
 
-	/* a little trick: give more memory than you need, for reduce realloc times */
-	void* new_ptr = lcu_malloc_trace(size + _REALLOC_MORE_SIZE, file_path, func_name, file_line);
+	/* Fix #4: allocate EXACTLY |size| (no +N over-allocation). The previous
+	 * over-allocation pushed the tail canary |N| bytes past the user-visible
+	 * end, blinding the corruption checker to [size, size+N) overruns. Correct
+	 * detection outweighs realloc-churn amortization in a debug-only build. */
+	void* new_ptr = lcu_malloc_trace(size, file_path, func_name, file_line);
 	if (!new_ptr)
 	{
 		return NULL;

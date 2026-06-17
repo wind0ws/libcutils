@@ -49,7 +49,7 @@
 ### 目录边界
 
 - **`.ai/kb/`** 是唯一的持久区，只存长期知识：`build.md` / `changelog.md` / `ci.md` / `conventions.md` / `modules.md`。新增持久文件需在 `CLAUDE.md` 知识库索引表登记，否则不要建。
-- **`.ai/` 顶层禁止堆放** plan、review report、verification report、diagnosis、session-summary 等过程产物。这类文件是会话级临时产物，不是项目资产。
+- **`.ai/` 顶层、`docs/plans/`、`docs/superpowers/` 及其他仓库内目录，禁止堆放** plan、review report、verification report、diagnosis、session-summary 等过程产物。这类文件是会话级临时产物，不是项目资产（已在 `.gitignore` 兜底忽略，但仍应遵守优先写到 claude 目录的原则）。
 
 ### 结论沉淀去向（耐久内容必须进 `kb/`，不能只留在临时文件里）
 
@@ -61,7 +61,7 @@
 
 ### 临时文件生命周期（如果确实需要先写草稿）
 
-1. 临时 plan / review / 分析文件**优先写到 `kb/` 之外的会话临时位置**（如 `~/.claude/plans/`），不要落进受版本控制的 `.ai/`。
+1. 临时 plan / review / 分析文件**优先写到 `kb/` 之外的会话临时位置**（如 `~/.claude/plans/`），不要落进受版本控制的 `.ai/`，也不要写进仓库内的 `docs/plans/`、`docs/superpowers/` 等目录（superpowers 等 skill 的默认落点已在 `.gitignore` 兜底忽略，但仍应优先写到 claude 目录）。
 2. 若因协作必须放进 `.ai/`：**任务收尾前**把耐久结论转录进 `kb/`，然后**删除该临时文件**（git 已跟踪的用 `git rm`）。
 3. **判据**：一个文件若"结论已进 `kb/` 且无人再引用"，即应删除——留着只会误导后续会话、不利维护。
 4. 删除前先确认结论确已沉淀（尤其是「未结案的开放 bug 台账」这类内容，丢失代价高）。

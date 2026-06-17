@@ -84,7 +84,7 @@ CTest 失败时按顺序排查：
 1. `ctest --rerun-failed --output-on-failure -V` — 看详细输出
 2. `lcu_demo <case_name>` — 单独跑失败用例（带完整日志）
 3. `tool/build/Testing/Temporary/LastTest.log` — CTest 日志归档
-4. 看 `tool/deploy/<config>/<plat>/memleak.log`（Windows MSVC Debug）
+4. 看测试工作目录下的 `lcu_diagnostics.log`；并发进程的诊断位于 `lcu_diagnostics.<pid>.log`
 
 ## 退出码语义
 
@@ -110,3 +110,4 @@ JUnit 报告由 `lcu_demo --junit <file>` 直接输出（与 `--all` / `--filter
 2. **`#if 0` 包裹注册宏**：CMake 仍会发现并 add_test，但运行时报 unknown test。**对策**：用 `//` 注释整行或删除。
 3. **同一行多个 `LCU_TEST_REGISTER`**：CMake 只匹配第一个。**对策**：每行只写一个注册宏。
 4. **mem_debug 验证须 Debug build**：Windows MSVC Debug 下 CRT 全局跟踪自动生效；Linux 默认无追踪，需 `-D_LCU_MEM_CHECK_FEATURE_ENABLE=1`。
+5. **Windows 诊断默认无弹窗**：`ASSERT`、CRT warn/error/assert、泄漏和内存破坏会同步写 `stderr` 与本地诊断文件。单进程使用 `lcu_diagnostics.log`；并发冲突进程仅在实际产生诊断时创建 PID 文件。PID 文件自动保留最近 32 个。

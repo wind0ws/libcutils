@@ -1,7 +1,8 @@
 #include "mem/mem_debug.h"
 #include "mem/str_params.h"
-#include "mem/allocator.h"  /* for lcu_free_raw (str_params_to_str ownership) */
 #include "common_macro.h"
+
+#include <errno.h>
 
 #define LOG_TAG  "STR_PARAMS_TEST"
 #include "log/logger.h"
@@ -56,10 +57,7 @@ int str_params_test(void)
 	if (param_str)
 	{
 		LOGI("param_str=> %s", param_str);
-		/* str_params_to_str returns a raw-libc buffer (ownership transfer). This
-		 * test file includes mem_debug.h, so bare free()==lcu_free() would abort on
-		 * the untracked pointer; external (non-mem_debug) callers just use free(). */
-		lcu_free_raw(param_str);
+		free(param_str);
 	}
 
 	str_params_destroy(params);
@@ -73,6 +71,36 @@ int str_params_test(void)
 	ASSERT(0 == strcmp(val, "3"));  /* 最后一个值生效 */
 	str_params_destroy(dup_test);
 	LOGI("[Caller-1] PASS: duplicate keys handled without leak");
+
+	/* Regression: a stale ENOMEM from caller state must not make successful
+	 * hashmap insertion look like OOM. */
+	LOGI("[Caller-1] Testing stale errno before parse...");
+	int saved_errno = errno;
+	errno = ENOMEM;
+	str_params_ptr errno_test = str_params_create_str(";", "k=v;z=9");
+	ASSERT(errno_test != NULL);
+	memset(val, 0, sizeof(val));
+	ASSERT(0 == str_params_get_str(errno_test, "k", val, sizeof(val)));
+	ASSERT(0 == strcmp(val, "v"));
+	memset(val, 0, sizeof(val));
+	ASSERT(0 == str_params_get_str(errno_test, "z", val, sizeof(val)));
+	ASSERT(0 == strcmp(val, "9"));
+	str_params_destroy(errno_test);
+	errno = saved_errno;
+	LOGI("[Caller-1] PASS: stale errno ignored during parse");
+
+	LOGI("[Caller-1] Testing stale errno before add_str...");
+	str_params_ptr add_errno_test = str_params_create(";");
+	ASSERT(add_errno_test != NULL);
+	saved_errno = errno;
+	errno = ENOMEM;
+	ASSERT(0 == str_params_add_str(add_errno_test, "add_k", "add_v"));
+	memset(val, 0, sizeof(val));
+	ASSERT(0 == str_params_get_str(add_errno_test, "add_k", val, sizeof(val)));
+	ASSERT(0 == strcmp(val, "add_v"));
+	str_params_destroy(add_errno_test);
+	errno = saved_errno;
+	LOGI("[Caller-1] PASS: stale errno ignored during add_str");
 
 	return 0;
 }

@@ -5,7 +5,7 @@
 #include "file/file_util.h"
 #include "data/list.h"
 #include "mem/strings.h" /* for strcmp */
-#include "mem/allocator.h" /* for lcu_free_raw (file_util_read_all ownership) */
+#include "mem/allocator.h" /* for lcu_malloc_raw */
 #include "mem/stringbuilder.h"
 #ifdef _WIN32
 #include <windows.h>  /* for MoveFileExA (4.5 atomic save) */
@@ -226,9 +226,7 @@ ini_parser_handle ini_parser_parse_file(const char *ini_file)
 	} while (0);
 	if (ini_content)
 	{
-		/* file_util_read_all returns a raw-libc buffer; this file includes mem_debug.h
-		 * so bare free()==lcu_free() would abort on the untracked pointer. */
-		lcu_free_raw(ini_content);
+		free(ini_content);
 	}
 	return parser;
 }
@@ -625,17 +623,8 @@ char *ini_parser_dump(ini_parser_handle parser_p)
 	{
 		return NULL;
 	}
-	/* ====================================================================
-	 * OWNERSHIP TRANSFER - DO NOT TRACK (H-1 修复)
-	 * ====================================================================
-	 * ini_parser_dump 返回堆所有权给 caller，caller 用 libc free() 释放。
-	 * 不能用 strdup（被 mem_debug.h 改写为 lcu_strdup，返回 tracked 指针）。
-	 * 使用 lcu_malloc_raw + memcpy 确保返回 raw libc 指针。
-	 *
-	 * 内部 lcu 代码释放此 buffer 必须用 lcu_free_raw()。
-	 * 外部 caller 用标准 libc free()。
-	 * 见 allocator.h (lcu_malloc_raw 文档) 和 ownership_contract_test.c。
-	 * ==================================================================== */
+	/* Return an ownership-transfer buffer. It must stay raw so callers can
+	 * release it with free(), even when mem_debug.h rewrites free to lcu_free. */
 	const char *src = stringbuilder_to_string(sb);
 	size_t len = strlen(src);
 	char *ini_string = (char*)lcu_malloc_raw(len + 1);

@@ -1,7 +1,7 @@
 #include "mem/mem_debug.h"
 #include "file/file_util.h"
 #include "mem/strings.h"
-#include "mem/allocator.h" /* for lcu_malloc_raw / lcu_free_raw (read_all ownership) */
+#include "mem/allocator.h" /* for lcu_malloc_raw */
 #include <sys/stat.h>
 #include <limits.h> /* P2-4: for INT_MAX */
 
@@ -277,19 +277,16 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 		 * OWNERSHIP TRANSFER - DO NOT TRACK
 		 * ====================================================================
 		 * file_util_read_all transfers ownership of this buffer to the caller
-		 * via out_alloced_file_data. The caller releases it with libc free().
+		 * via out_alloced_file_data. The caller releases it with free().
 		 * Using lcu_malloc_trace here would return a canary-offset/tracked
 		 * pointer that corrupts the heap when the caller's free() runs while
 		 * the allocation tracker is active.
 		 *
 		 * KEEP THIS AS lcu_malloc_raw() PERMANENTLY. DO NOT change to lcu_malloc_trace.
 		 *
-		 * Internal lcu callers (e.g. ini_parser.c) that include mem_debug.h
-		 * must use lcu_free_raw() to release this buffer, NOT bare free()
-		 * (which is rewritten to lcu_free and would crash on this untracked
-		 * pointer).
+		 * When mem_debug.h rewrites free to lcu_free, lcu_free's untracked
+		 * fallback still releases this raw buffer correctly.
 		 *
-		 * External callers use standard libc free().
 		 * See: allocator.h, ownership_contract_test.c
 		 * ==================================================================== */
 		char* mem = (char*)lcu_malloc_raw((size_t)file_size + 1);
@@ -301,7 +298,7 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 		mem[file_size] = '\0'; // place '\0' for string file
 		if ((size_t)file_size != fread(mem, 1, (size_t)file_size, fp))
 		{
-			lcu_free_raw(mem);
+			free(mem);
 			ret = -5;
 			break;
 		}
@@ -312,4 +309,3 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 	fclose(fp);
 	return ret;
 }
-

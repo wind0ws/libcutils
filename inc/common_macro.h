@@ -9,6 +9,7 @@
 #include <stdio.h>          /* for FILE                          */
 #include <assert.h>         /* for assert                        */
 #include <sys/types.h>      /* for ssize_t                       */
+#include "debug/diagnostics.h"
 
 #if(defined(__linux__) || defined(__ANDROID__))
 #include <sys/cdefs.h>      /* for __BEGIN_DECLS / __END_DECLS   */
@@ -215,23 +216,20 @@ typedef intptr_t ssize_t;
 #define ASSERT(expr)  (void)(expr)
 #define _TEMP_FOR_ASSERT_ABORT(expr, line)                                          \
      do {                                                                           \
-          if (expr) break;                                                          \
-          EMERGENCY_LOG("API check '%s' failed at '%s' (%s:%d)",                    \
-	          #expr, __func__, __FILE__, line);                                     \
-	      abort();                                                                  \
-     } while(0)
+           if (expr) break;                                                          \
+           lcu_diagnostics_assert_fail(#expr, __func__, __FILE__, line);             \
+      } while(0)
 #else
 #ifdef _WIN32
-//why we not use _ASSERT_AND_INVOKE_WATSON directly? Because we don't want to be affected by double computation!
-#define _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)                              \
-    do {                                                                            \
-          bool expr_##line = !!(expr);                                              \
-          if(expr_##line) break;                                                    \
-          _ASSERT_EXPR(expr_##line, _CRT_WIDE(#expr));                              \
+#define _TEMP_FOR_ASSERT(expr, line)                                                 \
+    do {                                                                             \
+          bool expr_##line = !!(expr);                                               \
+          if(expr_##line) break;                                                     \
+          lcu_diagnostics_assert_fail(#expr, __func__, __FILE__, line);              \
     } while(0)
-#define _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line) _TEMP_FOR_ASSERT_AND_INVOKE_WATSON(expr, line)
-#define ASSERT(expr) _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, __LINE__)
-#define _TEMP_FOR_ASSERT_ABORT(expr, line)  _TEMP_FOR_EXPAND_ASSERT_AND_INVOKE_WATSON(expr, line)
+#define _TEMP_FOR_EXPAND_ASSERT(expr, line) _TEMP_FOR_ASSERT(expr, line)
+#define ASSERT(expr) _TEMP_FOR_EXPAND_ASSERT(expr, __LINE__)
+#define _TEMP_FOR_ASSERT_ABORT(expr, line) _TEMP_FOR_EXPAND_ASSERT(expr, line)
 #else
 #define ASSERT(expr) assert(expr)
 #define _TEMP_FOR_ASSERT_ABORT(expr, line)  assert(expr)
@@ -242,7 +240,7 @@ typedef intptr_t ssize_t;
 #define _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, line)  _TEMP_FOR_ASSERT_ABORT(expr, line)
 /**
  * In debug mode, expression check failure will catch by ASSERT.
- * In release mode, it will log error to stdout/logcat and abort program.
+ * In release mode, it writes diagnostics to stderr/file and aborts.
  */
 #define ASSERT_ABORT(expr)  _TEMP_FOR_EXPAND_ASSERT_ABORT(expr, __LINE__)
 

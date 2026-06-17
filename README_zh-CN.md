@@ -241,5 +241,7 @@ ctest -L lcu_optional --output-on-failure                # 跑 opt-in 用例
 ### 失败处理语义
 
 - 测试函数 `return != 0` → 记入 stat、继续后续用例。
-- 测试函数内部 `ASSERT_ABORT` → **整进程死**，summary 不会打印（CTest 视为该 case 失败）。
+- Windows 下 `ASSERT` / `ASSERT_ABORT` 失败会同步写入 Console 和本地诊断文件，然后立即终止进程，不再弹出阻塞对话框。
+- 单进程默认写 `lcu_diagnostics.log`；并发冲突进程仅在实际产生诊断时写 `lcu_diagnostics.<pid>.log`，PID 文件自动保留最近 32 个。
+- 测试函数内部 `ASSERT_ABORT` → **整进程终止**，summary 不会打印（CTest 视为该 case 失败）。
 - `--fail-fast` 开关 → 首次失败立即停。

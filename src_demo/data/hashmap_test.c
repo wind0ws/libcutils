@@ -11,6 +11,7 @@
 
 #include "data/hashmap.h"
 #include "common_macro.h"
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -343,6 +344,63 @@ static int test_edge_cases(void)
 }
 
 /* ============================================================================
+ * Test 8: Expand OOM after successful insert
+ * ========================================================================== */
+
+static int fail_allocator_alloc_count = 0;
+static int fail_allocator_fail_at = 0;
+
+static void *fail_allocator_alloc(size_t size)
+{
+	++fail_allocator_alloc_count;
+	if (fail_allocator_alloc_count == fail_allocator_fail_at)
+	{
+		errno = ENOMEM;
+		return NULL;
+	}
+	return calloc(1, size);
+}
+
+static void fail_allocator_free(void *ptr)
+{
+	free(ptr);
+}
+
+static const allocator_t fail_allocator =
+{
+	.alloc = fail_allocator_alloc,
+	.free = fail_allocator_free,
+};
+
+static int test_expand_oom_preserves_successful_put(void)
+{
+	LOGD("Test 8: Expand OOM after successful insert");
+
+	fail_allocator_alloc_count = 0;
+	fail_allocator_fail_at = 5; /* map, buckets, entry1, entry2, expanded buckets */
+	errno = 0;
+
+	hashmap_t *map = hashmap_create_with_allocator(1, int_hash, NULL, NULL, int_equality, NULL, &fail_allocator);
+	ASSERT(map != NULL);
+
+	void *old = hashmap_put(map, (void*)1, (void*)10);
+	ASSERT(old == NULL);
+	ASSERT(hashmap_size(map) == 1);
+
+	old = hashmap_put(map, (void*)2, (void*)20);
+	ASSERT(old == NULL);
+	ASSERT(errno == ENOMEM);
+	ASSERT(hashmap_size(map) == 2);
+	ASSERT(hashmap_get(map, (void*)1) == (void*)10);
+	ASSERT(hashmap_get(map, (void*)2) == (void*)20);
+
+	hashmap_free(map);
+	errno = 0;
+	LOGD("Test 8: PASS");
+	return 0;
+}
+
+/* ============================================================================
  * Main test entry
  * ========================================================================== */
 
@@ -357,8 +415,9 @@ int hashmap_test(void)
 	if (0 != test_foreach()) return -1;
 	if (0 != test_foreach_guard()) return -1;
 	if (0 != test_edge_cases()) return -1;
+	if (0 != test_expand_oom_preserves_successful_put()) return -1;
 
-	LOGI("=== hashmap_test END: ALL 7 TESTS PASS ===");
+	LOGI("=== hashmap_test END: ALL 8 TESTS PASS ===");
 	return 0;
 }
 

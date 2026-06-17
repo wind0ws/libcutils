@@ -96,6 +96,16 @@ extern "C" {
 	void* lcu_realloc_trace(void* ptr, size_t size, const char* file_path, const char* func_name, int file_line);
 	void* lcu_realloc(void* ptr, size_t size);
 
+	/**
+	 * @brief Release memory through the lcu allocator.
+	 *
+	 * @details For tracked pointers allocated by |lcu_malloc|, |lcu_calloc|,
+	 * |lcu_realloc|, |lcu_strdup|, or their trace variants, this validates the
+	 * allocation tracker entry and canaries before releasing the real allocation.
+	 * If the tracker is active and |ptr| is not tracked, this falls back to raw
+	 * libc free so mem_debug.h's |free| macro remains compatible with raw/libc
+	 * pointers returned by public APIs.
+	 */
 	void lcu_free(void* ptr);
 
 	// Free a buffer that was previously allocated with function |lcu_malloc|
@@ -114,16 +124,24 @@ extern "C" {
 	 *
 	 * @par When to use
 	 * Public APIs that allocate a buffer and TRANSFER OWNERSHIP across the library
-	 * boundary (e.g. |strreplace|, |file_util_read_all|, |asprintf|, |str_params_to_str|)
-	 * MUST allocate with |lcu_malloc_raw| (or libc malloc directly), so that an
-	 * external caller can release it with the standard libc |free()| regardless of
-	 * the tracker state. Internal lcu code (which includes mem_debug.h, so its bare
-	 * |free| is rewritten to |lcu_free|) MUST release such buffers with |lcu_free_raw|
-	 * to avoid an lcu_free-on-untracked-pointer abort when the tracker is active.
+	 * boundary (e.g. |strreplace|, |file_util_read_all|, |asprintf|,
+	 * |str_params_to_str|, |ini_parser_dump|) MUST allocate with |lcu_malloc_raw|
+	 * (or libc malloc directly), so callers can release it with standard libc
+	 * |free|. When mem_debug.h rewrites |free| to |lcu_free|, the untracked
+	 * fallback in |lcu_free| still releases these raw buffers correctly.
 	 *
 	 * @warning Buffers allocated here are INVISIBLE to leak detection / canary checks.
 	 *          Use ONLY for cross-boundary ownership transfer, never for normal
 	 *          internal allocations (those should stay tracked).
+	 *
+	 * @note (#5) Because raw buffers are untracked, releasing them through the
+	 *       tracker-aware path (|lcu_free| / mem_debug's |free| macro) takes the
+	 *       untracked libc-free fallback. That fallback CANNOT detect a
+	 *       double-free or a wild-pointer free of a raw buffer — such misuse is
+	 *       passed straight to libc (undefined behaviour, no diagnostic). Only
+	 *       tracked allocations (|lcu_malloc|/|lcu_calloc|/...) get double-free
+	 *       and canary protection. Similarly, |realloc| of a raw buffer falls
+	 *       back to libc realloc and yields another untracked pointer.
 	 */
 	void* lcu_malloc_raw(size_t size);
 	void lcu_free_raw(void* ptr);

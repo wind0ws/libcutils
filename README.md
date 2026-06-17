@@ -23,6 +23,7 @@
 * **memory**
    *  **string** : include ***asprintf***, ***stringbuilder***, ***str_params***, ***strlcpy***, ***strlcat***, ***strreplace***, ***strsplit***, ***strtrim***, ***strutf8len*** ...
    *  **allocator** : can trace heap memory, help you find memory leak or memory corruption.
+   *  **diagnostics** : Windows assertions and memory reports are written to stderr and `lcu_diagnostics.log` without modal dialog boxes. Concurrent processes use lazy `lcu_diagnostics.<pid>.log` files.
    *  **mplite** : a zero-malloc memory pool based on [SQLite's memsys5 memory subsystem](https://github.com/hannes/sqlite-simplified/blob/master/mem5.c)
 
 * **ring_buffer**

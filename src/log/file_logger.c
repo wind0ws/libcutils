@@ -3,7 +3,6 @@
 #include "log/file_logger.h"
 #include "ring/msg_queue_handler.h"
 #include "mem/strings.h"
-#include "mem/allocator.h"		 /* for lcu_free_raw (strreplace ownership) */
 #include "data/integer.h"		 /* for integer_roundup_pow_of_two */
 #include "file/file_util.h"		 /* for mkdir */
 #include "sys/dirent.h"			 /* for access dir entry */
@@ -389,9 +388,7 @@ file_logger_handle file_logger_init(file_logger_cfg *cfg_p)
 		goto cleanup_on_error;
 	}
 	strlcpy(handle->cfg.log_folder_path, log_folder_path_formatted, MAX_LOG_FOLDER_PATH_SIZE);
-	/* strreplace returns a raw-libc buffer; this file includes mem_debug.h so a bare
-	 * free() would be lcu_free() and abort on the untracked pointer. Use lcu_free_raw. */
-	lcu_free_raw(log_folder_path_formatted);
+	free(log_folder_path_formatted);
 	log_folder_path_formatted = NULL;
 
 	size_t log_folder_path_len = strlen(handle->cfg.log_folder_path);
@@ -442,7 +439,7 @@ cleanup_on_error:
 	 * - 局部 log_folder_path_formatted 不为 NULL 时单独 free(raw, strreplace 所有权) */
 	if (log_folder_path_formatted)
 	{
-		lcu_free_raw(log_folder_path_formatted);
+		free(log_folder_path_formatted);
 	}
 	if (handle)
 	{

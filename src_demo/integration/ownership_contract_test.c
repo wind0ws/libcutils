@@ -17,8 +17,8 @@
  * the same state). Build the whole program with -D_LCU_MEM_CHECK_FEATURE_ENABLE=1 to
  * exercise the tracker-ON path — the exact condition that used to crash here. In a
  * normal build the tracker is OFF and this verifies basic correctness. Either way the
- * pass criterion is the same: allocate via these APIs, release with libc free(), and
- * neither crash nor corrupt the heap.
+ * pass criterion is the same: allocate via these APIs, release with libc free(),
+ * and neither crash nor corrupt the heap.
  */
 
 #include "common_macro.h"
@@ -47,7 +47,7 @@ static int test_strreplace_libc_free(void)
         char *r = strreplace("C:\\a\\b\\c\\d", "\\", "/");
         ASSERT(r != NULL);
         ASSERT(strcmp(r, "C:/a/b/c/d") == 0);
-        free(r); /* libc free — must be safe even with tracker ON */
+        free(r);
     }
 
     LOGI("[own] 1 PASS");
@@ -68,7 +68,7 @@ static int test_asprintf_libc_free(void)
         ASSERT(n > 0);
         ASSERT(s != NULL);
         ASSERT((int)strlen(s) == n);
-        free(s); /* libc free — must be safe even with tracker ON */
+        free(s);
     }
 
     LOGI("[own] 2 PASS");
@@ -100,7 +100,7 @@ static int test_file_util_read_all_libc_free(void)
         ASSERT(data != NULL);
         ASSERT(len == (int)strlen(content));
         ASSERT(strcmp(data, content) == 0);
-        free(data); /* libc free — must be safe even with tracker ON */
+        free(data);
     }
 
     remove(path);
@@ -109,7 +109,7 @@ static int test_file_util_read_all_libc_free(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* 4. str_params_to_str: both non-empty and empty paths + libc free    */
+/* 4. str_params_to_str: both non-empty and empty paths + libc free */
 /* ------------------------------------------------------------------ */
 static int test_str_params_to_str_libc_free(void)
 {
@@ -124,7 +124,7 @@ static int test_str_params_to_str_libc_free(void)
     char *s = str_params_to_str(p);
     ASSERT(s != NULL);
     ASSERT(strlen(s) > 0);
-    free(s); /* libc free */
+    free(s);
     str_params_destroy(p);
 
     /* Empty path: result comes from the lcu_malloc_raw("") branch */
@@ -133,7 +133,7 @@ static int test_str_params_to_str_libc_free(void)
     char *e = str_params_to_str(empty);
     ASSERT(e != NULL);
     ASSERT(e[0] == '\0');
-    free(e); /* libc free — empty branch must also be raw */
+    free(e);
     str_params_destroy(empty);
 
     LOGI("[own] 4 PASS");
@@ -141,7 +141,7 @@ static int test_str_params_to_str_libc_free(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. ini_parser_dump: allocate + libc free (H-1 修复验证)   */
+/* 5. ini_parser_dump: allocate + libc free                */
 /* ------------------------------------------------------------------ */
 static int test_ini_parser_dump_libc_free(void)
 {
@@ -158,7 +158,7 @@ static int test_ini_parser_dump_libc_free(void)
         ASSERT(dump != NULL);
         ASSERT(strstr(dump, "[section]") != NULL);
         ASSERT(strstr(dump, "key = value") != NULL);
-        free(dump);  /* libc free — must be safe even with tracker ON */
+        free(dump);
 
         ini_parser_destroy(&p);
     }
@@ -176,7 +176,7 @@ int ownership_contract_test(void)
     if (0 == rc) rc = test_asprintf_libc_free();
     if (0 == rc) rc = test_file_util_read_all_libc_free();
     if (0 == rc) rc = test_str_params_to_str_libc_free();
-    if (0 == rc) rc = test_ini_parser_dump_libc_free();  /* H-1 新增 */
+    if (0 == rc) rc = test_ini_parser_dump_libc_free();
 
     LOGI("=== ownership_contract_test END: %s ===", (0 == rc) ? "ALL PASS" : "FAIL");
     return rc;

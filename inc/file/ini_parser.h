@@ -161,9 +161,7 @@ extern "C" {
 	 * @return NULL means error occurred.
 	 *
 	 * @note Ownership of the returned buffer is transferred to the caller.
-	 *       The buffer is allocated with raw libc malloc; release it with
-	 *       the standard libc free(). Do NOT use lcu_free(). (Internal lcu
-	 *       code that includes mem_debug.h must use lcu_free_raw().)
+	 *       Release it with free().
 	 */
 	char* ini_parser_dump(ini_parser_handle parser_p);
 

@@ -92,9 +92,15 @@ INI_API int ini_reader_parse_string(const char* string, ini_reader_handler handl
 
 /* Nonzero to allow multi-line value parsing, in the style of Python's
    configparser. If allowed, ini_reader_parse() will call the handler with the same
-   name for each subsequent line parsed. */
+   name for each subsequent line parsed.
+
+   Disabled by default in libcutils: with multi-line on, an indented line such
+   as "   port=8080" following a "host=..." line is swallowed as a continuation
+   of host's value instead of being parsed as its own key, so the indented key
+   silently disappears. Turning it off makes leading-whitespace lines fall
+   through to the normal name=value branch. */
 #ifndef INI_ALLOW_MULTILINE
-#define INI_ALLOW_MULTILINE 1
+#define INI_ALLOW_MULTILINE 0
 #endif
 
 /* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of

@@ -249,6 +249,40 @@ static void test_ini_parser_key_trim_dedup(void)
 	ini_parser_destroy(&parser2);
 }
 
+static void test_ini_parser_indented_keys(void)
+{
+	/* 回归测试: 验证 INI_ALLOW_MULTILINE=0 后，缩进 key 能独立解析而不会被吞入上一行。
+	 * 修复前: INI_ALLOW_MULTILINE=1 时，"   port=8080" 因前导空格被当作 host 的多行续值，
+	 * port key 消失。修复后应正常解析 host/port 两个独立 key。 */
+	static const char* indented_ini = "\
+[server]\r\n\
+host = 192.168.1.1\r\n\
+   port = 8080\r\n\
+  timeout = 30\r\n\
+name=main\r\n";
+
+	ini_parser_handle parser = ini_parser_parse_str(indented_ini);
+	ASSERT(parser);
+
+	char buf[64] = {0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "host", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "192.168.1.1") == 0);
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "port", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "8080") == 0);  /* 修复前此断言失败: port 被吞入 host 的续值，查询返回 NOT_FOUND */
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "timeout", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "30") == 0);
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "name", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "main") == 0);
+
+	ini_parser_destroy(&parser);
+}
+
 /**
  * ini parse callback
  *   return true continue,
@@ -309,6 +343,8 @@ static int ini_parser_test()
 	test_ini_parser_error_paths();
 	LOGD("  -> run ini_parser_key_trim_dedup tests");
 	test_ini_parser_key_trim_dedup();
+	LOGD("  -> run ini_parser_indented_keys tests");
+	test_ini_parser_indented_keys();
 	return 0;
 }
 

@@ -214,3 +214,67 @@
      - **教训**：跨边界/共享 `.c` 改动必须双平台验证。Windows-only 验证会放过 `INT_MAX` 这类"MSVC 头文件间接可见、GCC 严格报错"的可移植性 bug。
    - **遗留（1.9.0+ 路线，非阻塞发布）**：thpool volatile→atomic 迁移（ARM 严格正确性）；file_util API 返回类型现代化（ssize_t 支持 >2GB 不截断）；D-2/D-3（array 容量乘法溢出 / base64 size helper INT_MAX 截断，加固缺口非活跃 bug）。
    - **发版提示**：发布说明须点名 slog hex 符号重命名——任何持有 0527 之前头文件且使用 `SLOGx_HEX` 宏的集成方，头文件必须一起更新（否则链接失败）。
+
+12. **Windows 无弹窗统一诊断** — 2026-06-15
+   - **症状 → 根因**：Agent/CTest 遇到 ASSERT 或 CRT 内存报告时可能被模态对话框阻塞；此前仅在 `lcu_demo/main.cpp` 局部重定向 CRT，随后又会被 `MEM_CHECK_INIT` 覆盖，且 `/MTd` 下 EXE/DLL 各自拥有独立 CRT 状态。CMake 还把 `/DEBUG` 错放进编译 flags，实际被解析为 `/D EBUG`，导致 `_DEBUG` 未定义。
+   - **落点**：新增无 logger/allocator 依赖的公共 `diagnostics` 模块。Windows `ASSERT`、`ASSERT_ABORT`、CRT warn/error/assert、CRT 泄漏、自定义 tracker 泄漏和内存破坏统一写 `stderr` 与本地文件；fatal 路径记录后立即终止，不再弹窗。
+   - **多 CRT**：`MEM_CHECK_INIT/DEINIT` 通过当前模块 CRT 函数表登记/去重，覆盖静态链接及 `/MTd` EXE + DLL 场景，多个 CRT 共用同一个进程级文件出口。
+   - **文件策略**：单实例使用 `lcu_diagnostics.log`；并发进程仅在真正产生诊断时创建 `lcu_diagnostics.<pid>.log`。PID 文件自动清理并保留最近 32 个；文件操作失败降级为仅写 `stderr`。
+   - **构建修复**：Debug targets 显式定义 `_DEBUG`，移除错误的编译器 `/DEBUG` flag；测试入口删除局部 `_CrtSetReportMode` 补丁。
+   - **自动验证**：新增 Windows 子进程 probes，覆盖 Debug ASSERT、Release ASSERT_ABORT、CRT warn/leak、固定主文件、并发 PID 文件、32 文件保留、多 CRT，以及 `_LCU_MEM_CHECK_FEATURE_ENABLE=1` 的 leak/corruption。
+
+13. **内存模块审计：客户结合 mem_debug.h 的 5 项硬伤修复（#1/#2/#3/#4/M3）** — 2026-06-16
+   - **背景**：审计"lcu 返回内存指针的处理"，聚焦客户在源文件首行 include `mem_debug.h`（宏重写 new/malloc/free/realloc）的交叉场景。初评 6 条 → **两轮 codex 对抗评审**（先评结论再评修复方案），收敛为 5 条真实硬伤 + 若干文档化项。对抗中纠正了 2 处事实错误（strreplace 用裸 `malloc` 而非 `lcu_malloc_raw`；Fix #3 一度误判可 REFUTE 后确认成立），并据理**驳回** codex 两条建议（见下 #1/#4 决策）。
+   - **#1（P0）`lcu_realloc` 对未追踪指针的对称回退**：
+     - **根因**：`lcu_free` 走 `notify_free`，对未命中指针回退 libc free；但 `lcu_realloc_trace` 走 `allocation_tracker_ptr_size`，后者对未命中 `ASSERT_ABORT`（allocation_tracker.c）。客户对公共 API 返回的 raw libc 指针（`file_util_read_all`/`strreplace`/`ini_parser_dump`/`asprintf`/`str_params_to_str`）调 `realloc` → tracker 激活时**进程 abort（release 亦终止）**。free 能容忍 raw 指针、realloc 却崩，设计不对称。
+     - **落点**：新增非中止查询 `allocation_tracker_try_ptr_size()`（未命中返 false 不 assert，allocation_tracker.c/.h）；重写 `lcu_realloc_trace`（allocator.c）：`size==0`→free；`allocations==NULL` 或**未命中**→libc `realloc`（新增 `raw_realloc`），对称于 `lcu_free` 的 raw 回退；命中→原 grow/shrink。**顺带消除 L-1 旧债**（tracker 未 init 时不再 `memcpy(_,_,0)` 丢数据）。
+     - **驳回 codex A1**（"未命中应 debug ASSERT"）：合法 raw 指针 realloc 必然未命中，ASSERT 会重新打死本 P0。依据=与 `lcu_free` 对称。代价：raw 指针 realloc 不享越界/double-free 检测（同 #5，已文档化）。
+   - **#2（P0）operator new/delete 移出头文件，消除 ODR**：
+     - **根因**：`mem_debug.h` 在 `__cplusplus` 段**非 inline 定义**全局 `operator new/new[]/delete/delete[]`；规范要求每个 `.c/.cpp` 首行 include → 2+ C++ TU 链接重定义（LNK2005/LNK1169）。已用 `main.cpp + opnew_odr_test.cpp` 双 TU **确凿复现**。
+     - **落点**：新建 `src/mem/mem_debug.cpp`（**整文件 `#ifdef _USE_LCU_MEM_CHECK` guard**）承载唯一定义；头文件只留**声明** + 保留 `#define new new(...)` 宏。CMake `GLOB_RECURSE *.cpp` 自动收录，memcheck 关闭时为空 TU **不污染全局 operator**（比条件编译更稳，非 memcheck CI 仍查语法）。
+     - **关键澄清**：真实构建（CMake MSVC 默认）C++ 编译带 `/EHsc`（`FLAGS = .../GR /EHsc/...`）；初次 M3 泄漏是复现命令 `-DCMAKE_CXX_FLAGS=` **覆盖**掉默认 `/EHsc` 的假象，非项目缺陷，无需改 CMake。
+   - **M3（P1）补 placement delete，堵构造抛异常泄漏**：
+     - **根因**：定义了 placement `operator new(size,file,func,line)`（`#define new` 选中），但无匹配 placement delete。`new T` 时 T 构造抛异常 → 运行时找不到匹配 delete → 已分配 raw 块**泄漏**。
+     - **落点**：`mem_debug.cpp` 补 `operator delete(void*,const char*,const char*,int)`/`[]`（调 `lcu_free`），头文件补声明。验证：100 次抛异常构造，tracker live 字节 before==after（0 泄漏）。
+   - **#4（P1）移除 realloc 的 `+4096` 过分配，恢复越界检测**：
+     - **根因**：`lcu_realloc_trace` 以 `size+4096` 作 `requested_size` 传 `notify_alloc`，尾 canary 落在用户边界后 4096B，`[size, size+4096)` 越界写不被检测——削弱 memcheck 核心价值。
+     - **落点**：删 `_REALLOC_MORE_SIZE`，按精确 `size` 分配放 canary。**驳回 codex A2**（加 `capacity` 字段保 +4096）：该优化仅在 `_USE_LCU_MEM_CHECK` 编译期生效（生产 realloc 是 libc realloc），只作用于已声明"会变慢"的 debug 构建，不值结构永久膨胀。
+   - **#3（P1）uninit 后释放 tracked 指针的堆损坏**：
+     - **根因**：`uninit` 置 `allocations=NULL` 后，`notify_free` 走 `if(!allocations) return ptr`，返回 canary 偏移用户指针，libc free 收到非 malloc 基址 → 堆损坏（触发：C++ 静态对象析构晚于 `MEM_CHECK_DEINIT`）。
+     - **诚实定性**：拆除后无法区分 tracked(需 -canary)/raw，**无法在 free 端自动修复**；静态析构序无法编译期保证。落地"检测+约束+不静默"：① `canary`/`CANARY_SIZE` 改**编译期常量**（消除 init 才赋值、uninit 后悬空的不一致面）；② `uninit` 残留条目 **fatal-log + 继续**（采纳 codex A4，**不 abort**——泄漏不是堆损坏，升级为崩溃会误杀；严厉度交还调用方）；③ 新增 `tracker_was_torn_down` 标志，deinit 后 `lcu_free` 发**一次性 loud warn**（不能阻止，但让生命周期违规可见）；④ 头文件文档化生命周期契约。
+   - **M4（P2）**：`allocation_tracker_init` 校验 `pthread_mutex_init` 返回值，失败 `ASSERT_ABORT`（破锁不可恢复）。
+   - **#5 / M1（文档化，不改逻辑）**：#5 raw 指针 double-free/野指针释放走 libc 不报警（allocator.h 标注）；M1 `uninit` 与 notify_* 无锁竞争=UAF，标注为 **test-only**、调用前须 quiesce 所有 alloc/free 线程（allocation_tracker.h 标注）。
+   - **#6（提案后撤回）**：曾加"feature 编译但未 MEM_CHECK_INIT"的一次性 warn。验证发现它在 `str_params_test`（init 确已运行）误触发，打印误导性"MEM_CHECK_INIT() not run?"——bisect 确认是 str_params 一条良性边角 `notify_alloc`（`allocations==NULL` 时 `return ptr`，buffer 由同路径释放无损坏）被该 warn 放大成噪音。按"不误导/可核实"原则**撤回 #6**，保留触发条件可靠的 #3 post-teardown warn。
+   - **新增回归测试**（src_demo/integration）：
+     - `mem_realloc_contract_test.c`：realloc raw 指针（file_util_read_all/strreplace）不崩 + 数据保全 + 增长链 + 精确 size 越界检测无误报（4 子项）。
+     - `opnew_odr_test.cpp`：作为**第 2 个 C++ TU** 锁死 #2 ODR（与 main.cpp 共存可链接）；100 次抛异常构造验 M3 无泄漏。
+   - **闭环验证（Windows MSVC 19.44 x64，Ninja+Debug）**：
+     - **memcheck 构建**（`-D_LCU_MEM_CHECK_FEATURE_ENABLE=1 /EHsc`）：#2 ODR 修复前确凿复现 LNK1169，修复后链接通过；内存相关 10/10 PASS（realloc/opnew/ownership/deep_validation{,2}/allocator/basic/string/str_params/hashmap），#6 撤回后无 inactive 噪音。
+     - **默认构建**：全量 ctest `-L lcu` 23/24 真实 PASS；唯一"失败" `mplite_test` 是**交互式 scanf 无 stdin 阻塞超时**（预存测试-框架限制，喂 EOF 后 PASS），与本次改动无链接路径交集。
+   - **Linux 跨平台验证（WSL Ubuntu 16.04 / GCC 5.4.0，Ninja+Debug）**：
+     - 我改的文件（`mem_debug.cpp`/`allocator.c`/`allocation_tracker.c`）GCC 下**零错误零警告**（`enum CANARY_SIZE` 无 narrowing）。
+     - **memcheck 构建**（`-D_LCU_MEM_CHECK_FEATURE_ENABLE=1`）：#2 ODR 双 C++ TU 在 GCC 下同样链接通过；内存相关 12/12 PASS，M3 无泄漏（GCC 默认启用异常，无需 `/EHsc`），无 inactive 噪音/corruption。
+     - **默认构建**：全量 ctest `-L lcu` **24/24 PASS（100%，81.5s）**——Linux 下 ctest 以 `/dev/null` 作 stdin，`mplite_test` 的 scanf 立即返 EOF 而通过，**反证** Windows 那次超时纯属交互式-scanf-无-stdin 的框架限制，非回归。
+     - 双平台一致结论：5 项修复在 MSVC 19.44 与 GCC 5.4.0 上行为一致、全绿。
+   - **改动文件**：`inc/mem/mem_debug.h`、`src/mem/mem_debug.cpp`(新增)、`src/mem/allocator.c`、`src/mem/allocation_tracker.c`、`inc/mem/allocation_tracker.h`、`inc/mem/allocator.h`（文档）。
+   - **遗留（非阻塞）**：M1 uninit 并发安全（改 atomic/RCU 成本高，现 test-only 文档化）；#5 raw double-free 检测盲区（设计取舍）。
+
+12. **ini_parser 缩进 key 被多行续行吞掉修复** — 2026-06-17
+   - **SDK 用户反馈**：INI 配置中 key 前有空格时解析不到，例如 `   port=8080` 查询 `port` 返回 `NOT_FOUND`。
+   - **根因分析**：
+     - **trim 处理已到位**：`ini_reader.c` 的 `ini_lskip`/`ini_rstrip` 和 `ini_parser.c` 的 `trim_whitespace_copy` 两层都能去空白，前导空格本身不是问题。
+     - **真正根因**：`INI_ALLOW_MULTILINE=1`（Python configparser 多行续值模式）时，`ini_reader.c:174` 分支判断**缩进行**（`start > line` 即有前导空格）+ 上一行存在 key（`*prev_name`）→ 将该行**当作上一个 key 的多行续值**而非独立 key，导致缩进 key 被吞入上一行 value，该 key 从未建立。
+   - **修复**：
+     - 关闭多行续行：`inc/file/ini_reader.h` 中 `INI_ALLOW_MULTILINE` 默认值 `1 → 0`（保留 `#ifndef` 守卫允许调用方覆盖）。
+     - 修复后缩进行直接落到 `ini_reader.c:222` 的正常 `name=value` 解析分支，缩进 key 可独立解析。
+     - 头文件补充注释说明禁用原因：「多行模式下缩进行会被当作上一行的续值而非独立 key，导致缩进 key 消失；关闭后缩进 key 能正常解析」。
+   - **新增回归测试**（`src_demo/file/ini_test.c`）：
+     - `test_ini_parser_indented_keys()`：验证 `[server]\nhost=...\n   port=8080\n  timeout=30` 中缩进 key `port`/`timeout` 均可查询成功（修复前 `port` 被吞入 `host` 的续值，查询失败）。
+   - **影响面**：
+     - 若现有配置依赖多行续值（行首缩进表示续行），需在 include `ini_reader.h` 前 `#define INI_ALLOW_MULTILINE 1` 恢复旧行为。
+     - 常规单行 `key=value` 配置不受影响，前导/尾随空白仍正常 trim。
+   - **闭环验证（双平台）**：
+     - **Windows MSVC 19.44 (VS2022 Enterprise) x64 / Debug**（Ninja，build_default）：`ini_test` 单项含 `ini_parser_indented_keys` PASS；全量 `ctest -L lcu` **24/24 PASS**（含 80s autocover 压测，喂 `/dev/null` 规避 mplite scanf）。另 `lcu_diagnostics` 标签 `crt_warn`/`crt_leak` 2 项失败=stderr 字符串匹配断言，属在研 diagnostics 探针工作，与 ini 改动**无编译/链接交集**（已核验 `diagnostics_probe.c` 不依赖 ini，`ini_reader.h` 仅被 ini 三文件 include）。
+     - **Linux WSL Ubuntu 16.04 / GCC 5.4.0 x64 / Debug**（Ninja，build_linux）：编译零错误（仅 `LCU_TEST_REGISTER` 既有 non-prototype warning，与改动无关）；`ini_test` PASS；全量 `ctest -L lcu` **24/24 PASS（100%，89.3s）**，覆盖 Windows 未编译的 POSIX 路径（`ini_parser_save` 的 `rename` 分支）。WSL build_linux 未配置 diagnostics 测试，反证 MSVC 两失败与 ini 无关。
+     - 双平台一致：缩进 key 修复在 MSVC 19.44 与 GCC 5.4.0 行为一致、ini 相关全绿、零退化。
+   - **改动文件**：`inc/file/ini_reader.h`、`src_demo/file/ini_test.c`（新增测试用例）。

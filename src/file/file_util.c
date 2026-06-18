@@ -3,7 +3,7 @@
 #include "mem/strings.h"
 #include "mem/allocator.h" /* for lcu_malloc_raw */
 #include <sys/stat.h>
-#include <limits.h> /* P2-4: for INT_MAX */
+#include <limits.h> /* for INT_MAX */
 
 #ifdef _WIN32
 #include <io.h>
@@ -28,7 +28,7 @@
 
 typedef ssize_t (*rw_func_t)(int file_handle, void* buffer, size_t max_char_count);
 
-static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
+static ssize_t pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
 
 int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size)
 {
@@ -138,42 +138,37 @@ long file_util_get_size_by_fs(__in FILE* fs)
 	return total_file_size;
 }
 
-int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count)
+ssize_t file_util_read(__in int file_handle, __inout void* buffer, __in size_t max_char_count)
 {
 	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&READ_FUNC);
 }
 
-int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count)
+ssize_t file_util_write(__in int file_handle, __inout void* buffer, __in size_t max_char_count)
 {
 	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&WRITE_FUNC);
 }
 
-static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
+static ssize_t pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
 {
-	/* M-4 修复: cur_char_count 改 size_t，防止大文件累加溢出 INT_MAX。
-	 * 原 int 类型在 >2GB 文件时溢出为负数 (UB)。
-	 * 返回前检查溢出并截断为 INT_MAX（兼容返回类型）。 */
-	size_t cur_char_count = 0;
+	ssize_t cur_char_count = 0;
 	do
 	{
 		ssize_t once_op_size = target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
-		if (once_op_size < 1)
+		if (once_op_size < 1) // 0:normal rw complete, otherwise error occurred
 		{
-			//0:normal rw complete, otherwise error occurred
+			if (0 == cur_char_count) // first rw failed, return error code
+			{
+				cur_char_count = once_op_size;
+			}
 			break;
 		}
-		cur_char_count += (size_t)once_op_size;
+		cur_char_count += once_op_size;
 	} while (cur_char_count != max_char_count);
-	/* 返回时检查溢出：size_t > INT_MAX 时截断 */
-	if (cur_char_count > (size_t)INT_MAX)
-	{
-		return INT_MAX;
-	}
-	return (int)cur_char_count;
+	return cur_char_count;
 }
 
 int file_util_read_txt(__in const char* file_path,
-	__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+	__in int (*handle_txt_line_fn)(int line_num, const char* txt, void* user_data),
 	__in void* user_data)
 {
 	int ret = 0;

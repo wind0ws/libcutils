@@ -20,7 +20,8 @@
  * The allocation tracker itself cannot be tracked, as every allocation here would
  * trigger allocation_tracker_notify_alloc -> hashmap_put -> allocator -> tracker again.
  * The tracker's internal hashmap uses allocator_calloc_raw (defined in allocator.c)
- * which bypasses tracking. See hashmap_create_with_allocator call and the CRITICAL comment there. */
+ * which bypasses tracking. See hashmap_create_with_allocator call and the CRITICAL comment there.
+ * lcu-mem-debug: skip */
 
 #include "mem/allocation_tracker.h"
 #include "thread/posix_thread.h"

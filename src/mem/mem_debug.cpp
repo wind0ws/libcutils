@@ -28,6 +28,7 @@
  * the rewrites are harmless here because we never call new/malloc by name. */
 #include "mem/mem_debug.h"
 
+// it may defined by "mem/mem_debug.h", to make sure enabled lcu memory-check feature
 #ifdef _USE_LCU_MEM_CHECK
 
 #include "mem/allocator.h"

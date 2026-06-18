@@ -82,4 +82,4 @@ static inline void lcu_diagnostics_unregister_current_crt(void)
 }
 #endif
 
-#endif
+#endif // !LCU_DEBUG_DIAGNOSTICS_H

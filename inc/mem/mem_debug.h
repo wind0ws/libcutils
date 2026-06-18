@@ -36,8 +36,7 @@
 #include <windows.h>
 #pragma warning(pop)
 
-// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the
-// allocations to be of _CLIENT_BLOCK type
+// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the allocations to be of _CLIENT_BLOCK type
 #define __MYDEBUG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new __MYDEBUG_NEW
 
@@ -98,12 +97,13 @@ void operator delete[](void *ptr, const char *fileName, const char *funcName, in
 #define new new (__FILE__, __func__, __LINE__)
 #endif // __cplusplus
 
-#define MEM_CHECK_INIT()                    \
-	do                                      \
-	{                                       \
+#define MEM_CHECK_INIT()                     \
+	do                                       \
+	{                                        \
 		lcu_diagnostics_init();              \
 		allocation_tracker_init();           \
 	} while (0)
+
 #define MEM_CHECK_DEINIT()                                    \
 	do                                                        \
 	{                                                         \
@@ -125,12 +125,8 @@ void operator delete[](void *ptr, const char *fileName, const char *funcName, in
 #endif // !_CRTDBG_MAP_ALLOC && _LCU_MEM_CHECK_FEATURE_ENABLE
 
 #ifndef MEM_CHECK_INIT
-#define MEM_CHECK_INIT() lcu_diagnostics_init()
-#define MEM_CHECK_DEINIT() \
-	do                     \
-	{                      \
-		lcu_diagnostics_deinit(); \
-	} while (0)
+#define MEM_CHECK_INIT()   lcu_diagnostics_init()
+#define MEM_CHECK_DEINIT() lcu_diagnostics_deinit()
 #endif // !MEM_CHECK_INIT
 
 #endif // !LCU_MEM_DEBUG_H

@@ -20,9 +20,9 @@ extern "C" {
 	int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size);
 
 	/**
-	 * check folder_path is exists.
+	 * check path is exists.
 	 * 
-	 * @param path: folder path
+	 * @param path: the path
 	 * @param access_mode: F_OK(0)
 	 * @return 0 means access by mode is ok, otherwise it is error code.
 	 */
@@ -64,7 +64,7 @@ extern "C" {
      * @param max_char_count: byte size that we want to read out, buffer size should bigger than it.
 	 * @return read size
 	 */
-	int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count);
+	ssize_t file_util_read(__in int file_handle, __inout void* buffer, __in size_t max_char_count);
 
 	/**
 	 * write on file_handle(file descriptor).
@@ -76,7 +76,7 @@ extern "C" {
      * @param max_char_count: byte size that we read from buffer.
 	 * @return real write size
 	 */
-	int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count);
+	ssize_t file_util_write(__in int file_handle, __inout void* buffer, __in size_t max_char_count);
 
 	/**
 	 * read text from file line by line.
@@ -87,7 +87,7 @@ extern "C" {
 	 * @return 0 for success, otherwise fail
 	 */
 	int file_util_read_txt(__in const char* file_path,
-		__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+		__in int (*handle_txt_line_fn)(int line_num, const char* txt, void* user_data),
 		__in void* user_data);
 
 	/**

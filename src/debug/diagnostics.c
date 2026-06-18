@@ -669,4 +669,4 @@ void lcu_diagnostics_fatalf(const char *category, const char *format, ...)
 	abort();
 }
 
-#endif
+#endif // !_WIN32

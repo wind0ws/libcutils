@@ -80,7 +80,8 @@ extern "C" {
 
 	/**
 	 * read text from file line by line.
-	 * 
+	 * Supports lines of arbitrary length (dynamically expands buffer as needed).
+	 *
      * @param file_path: the file path.
      * @param handle_txt_line_fn: function that we will callback out each text line.
      * @param user_data: the user pointer that we will pass to callback function.

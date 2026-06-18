@@ -172,42 +172,101 @@ int file_util_read_txt(__in const char* file_path,
 	__in void* user_data)
 {
 	int ret = 0;
-	FILE* fp;
 	int line_num;
-	char* p, buf[1024];
+	FILE* fp;
+	char* p;
+	char* line_buf = NULL;
+	size_t buf_capacity = 1024;
+	size_t line_len = 0;
 
-	fp = fopen(file_path, "r");
-	if (NULL == fp)
+	if (NULL == (fp = fopen(file_path, "r")))
 	{
 		return -1;
 	}
-	// if fgets returned not null, it make sure buf end with '\0'
-	for (line_num = 0; NULL != fgets(buf, sizeof(buf), fp); ++line_num) 
+
+	line_buf = (char*)lcu_malloc_raw(buf_capacity);
+	if (NULL == line_buf)
 	{
-		if (NULL == (p = strchr(buf, '\n'))) 
+		fclose(fp);
+		return -1;
+	}
+
+	for (line_num = 0; ; ++line_num)
+	{
+		line_len = 0;
+		/* Read line in chunks, expanding buffer as needed */
+		while (1)
 		{
-			p = buf + strlen(buf);
+			if (NULL == fgets(line_buf + line_len, (int)(buf_capacity - line_len), fp))
+			{
+				/* EOF or error */
+				if (line_len == 0)
+				{
+					goto cleanup_read_txt; /* End of file, exit outer loop */
+				}
+				break; /* Process partial line */
+			}
+
+			line_len += strlen(line_buf + line_len);
+
+			/* Check if we got a complete line (ends with '\n' or EOF) */
+			if (line_len > 0 && line_buf[line_len - 1] == '\n')
+			{
+				break; /* Complete line */
+			}
+			if (feof(fp))
+			{
+				break; /* Last line without newline */
+			}
+
+			/* Line didn't fit, expand buffer and continue reading */
+			size_t new_capacity = buf_capacity * 2;
+			char* new_buf = (char*)lcu_malloc_raw(new_capacity);
+			if (NULL == new_buf)
+			{
+				ret = -1;
+				goto cleanup_read_txt;
+			}
+			memcpy(new_buf, line_buf, line_len);
+			FREE(line_buf);
+			line_buf = new_buf;
+			buf_capacity = new_capacity;
 		}
-		if (p > buf && p[-1] == '\r') 
+
+		/* Trim trailing newline and carriage return */
+		p = line_buf + line_len;
+		if (p > line_buf && p[-1] == '\n')
+		{
+			--p;
+		}
+		if (p > line_buf && p[-1] == '\r')
 		{
 			--p;
 		}
 		*p = '\0';
-		for (p = buf; *p != '\0' && isspace((int)(*p)); ++p) 
+
+		/* Skip leading whitespace */
+		for (p = line_buf; *p != '\0' && isspace((int)(*p)); ++p)
 		{
 			;
 		}
-		if (*p == '\0' /* || *p == '#' */) 
+
+		/* Skip empty lines */
+		if (*p == '\0' /* || *p == '#' */)
 		{
 			continue;
 		}
 
-		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data))) 
+		/* Call handler */
+		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data)))
 		{
-			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, buf);
+			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, line_buf);
 			break;
 		}
 	}
+
+cleanup_read_txt:
+	FREE(line_buf);
 	fclose(fp);
 	return ret;
 }

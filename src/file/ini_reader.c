@@ -10,11 +10,11 @@ home page for more info:
 https://github.com/benhoyt/inih
 
 */
-#include "mem/mem_debug.h"
-
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+
+#include "mem/mem_debug.h"
 
 #include <stdio.h>
 #include <ctype.h>

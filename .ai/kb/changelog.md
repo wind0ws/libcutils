@@ -124,3 +124,9 @@
 - **改动**:`mem_debug.h` 在需要时先定义 `_CRTDBG_MAP_ALLOC` 并包含 `<stdlib.h>/<crtdbg.h>`,再包含 `diagnostics.h`(仅一处,L28);`diagnostics.h` 顶层不再包含标准库,在 CRT API 区域按需包含并通过 `_CRTDBG_H_` 守卫避免重复;`diagnostics.c:554` 补齐 `#endif` 注释
 - **影响**:Windows Debug 下 MSVC CRT 内存泄漏检测现可正确报告位置;包含结构清晰(单点 include),其他平台不受影响
 - **关联**:`inc/mem/mem_debug.h`、`inc/debug/diagnostics.h`、`src/debug/diagnostics.c`
+
+### 17. mem_debug.h 移除 diagnostics.h 依赖 — 2026-06-22
+- **动机**:Debug 客户端包含 `mem_debug.h` 链接 Release lcu 库时 LNK2001(`lcu_diagnostics_register_current_crt` 未定义);根因:`mem_debug.h` 包含 `diagnostics.h` 导致必须匹配库编译配置,违背轻量头文件设计
+- **改动**:移除 `diagnostics.h` include;Windows Debug 路径的 `MEM_CHECK_INIT()` 改为**头文件内联实现**(直接调用 `_CrtSetReportMode/_CrtSetReportFile` 等 CRT API,无链接依赖);`_LCU_MEM_CHECK_FEATURE_ENABLE` 和 fallback 路径添加前向声明避免警告
+- **影响**:Windows Debug 客户端可链接**任意配置**的 lcu 库(Release/Debug 均可),完整保留内存泄漏检测能力;头文件自洽,无编译配置耦合
+- **关联**:`inc/mem/mem_debug.h:28-64,88-96,156-165`

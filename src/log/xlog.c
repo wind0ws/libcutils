@@ -113,9 +113,7 @@ static portable_mutex_t g_xlog_mutex = NULL;
  *            pthread_once 仅作 POSIX 兜底.
  * 三层 fallback 顺序: C11 call_once > Win32 InitOnceExecuteOnce > POSIX pthread_once. */
 
-#if !defined(_WIN32) && \
-    ((defined(LCU_HAVE_C11_THREADS_H) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-     (defined(__has_include) && __has_include(<threads.h>)))
+#if !defined(_WIN32) && defined(LCU_HAVE_C11_THREADS_H) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
     /* Tier 1: C11 threads.h call_once */
     #include <threads.h>
     static portable_mutex_t g_xlog_guard = NULL;

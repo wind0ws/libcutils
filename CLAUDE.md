@@ -19,6 +19,7 @@ libcutils (lcu) 是一个跨平台 C 工具库，支持 Windows、Linux 和 Andr
 | 构建、部署、CI、工具链 | `.ai/kb/build.md` | 执行构建命令、配置工具链、排查编译问题时 |
 | 模块 API、用法示例 | `.ai/kb/modules.md` | 新增/修改模块代码、查看 API 用法时 |
 | 内存调试与所有权契约 | `.ai/kb/mem_debug.md` | 使用 mem_debug.h、跨边界返回内存、配置 memcheck/CRT 时 |
+| diagnostics 系统架构 | `.ai/kb/diagnostics_design.md` | 理解 diagnostics.h/mem_debug.h 关系、不同编译模式行为、CRT 集成机制时 |
 | 修改记录 | `.ai/kb/changelog.md` | 会话结束需要记录修改时 |
 | 开放项台账(评审发现但未修的 bug/债务) | `.ai/kb/open-items.md` | 评审发现问题登记;结案时标记 closed |
 

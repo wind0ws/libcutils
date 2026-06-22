@@ -112,3 +112,9 @@
 - **file_util API 现代化**(P2) — 返回类型改 `ssize_t`,支持 >2GB 不截断(条目 8 M-4 已防 UB,这是 API 限制)
 - **加固缺口**(P2) — D-2 array 容量乘法溢出 / D-3 base64 size INT_MAX 截断
 - **设计取舍/文档化** — M1 uninit 并发安全(test-only);#5 raw double-free 检测盲区
+
+### 15. 一键发版脚本 — 2026-06-22
+- **动机**:缺少统一发版入口,各平台脚本需手动逐个调用
+- **改动**:新增 `tool/deploy_release.ps1`(PowerShell 编排引擎) + `tool/deploy_release.bat`(cmd 薄壳);四平台均复用既有子脚本;顺带修复既有脚本 `deploy_for_linux.sh:20` 未引用括号语法错误(`echo ...($_build_type)...` → 加双引号);`build.md` 新增一键发版文档
+- **影响**:单条命令 `deploy_release.bat` 发全平台 Release;任一平台失败阻断打包并非零退出;产物归档到 `deploy/__archive__/lcu_<ver>_release_<date>.tar.gz`
+- **关联**:`tool/deploy_release.ps1`、`tool/deploy_release.bat`、`tool/deploy_for_linux.sh`、`.ai/kb/build.md`

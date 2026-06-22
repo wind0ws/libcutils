@@ -16,7 +16,7 @@ echo BUILD_TYPE=$_build_type
 source $BUILD_SCRIPT linux m64 $_build_type
 source $BUILD_SCRIPT linux m32 $_build_type
 
-echo 
-echo ...deploy linux($_build_type) finished...
+echo
+echo "...deploy linux($_build_type) finished..."
 echo
  

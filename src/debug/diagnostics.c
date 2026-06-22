@@ -552,7 +552,7 @@ void lcu_diagnostics_unregister_crt(const lcu_diagnostics_crt_api_t *crt_api)
 	}
 	ReleaseSRWLockExclusive(&g_crt_lock);
 }
-#endif
+#endif // defined(_WIN32) && defined(_DEBUG)
 
 void lcu_diagnostics_init(void)
 {

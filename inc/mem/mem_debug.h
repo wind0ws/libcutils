@@ -17,6 +17,18 @@
 // don't forget include this file(mem_debug.h) on your source file first line.
 // #define _LCU_MEM_CHECK_FEATURE_ENABLE	 1
 
+// Step 1: Define _CRTDBG_MAP_ALLOC early if needed (before any stdlib.h)
+// otherwise it won't tell you leak memory on which file with line number in MSVC.
+#if defined(_WIN32) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE)
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
+// Step 2: Include diagnostics.h (it won't include stdlib.h, so _CRTDBG_MAP_ALLOC is safe)
+#include "debug/diagnostics.h"
+
+// Step 3: Windows-specific macros and CRT setup
 #ifdef _WIN32
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -26,11 +38,6 @@
 #endif // !__PRETTY_FUNCTION__
 
 #if (defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE))
-// must keep next 3 line on your top source file,
-// otherwise it won't tell you leak memory on which file with line number.
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
 #pragma warning(push)
 #pragma warning(disable : 5105)
 #include <windows.h>
@@ -44,9 +51,6 @@
 #define MEM_CHECK_DEINIT() lcu_diagnostics_unregister_current_crt()
 #endif // _DEBUG && !_LCU_MEM_CHECK_FEATURE_ENABLE
 #endif // _WIN32
-
-// let this header below "_CRTDBG_MAP_ALLOC"
-#include "debug/diagnostics.h"
 
 // common header
 #ifdef __cplusplus

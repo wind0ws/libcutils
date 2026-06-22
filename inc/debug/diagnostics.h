@@ -2,12 +2,9 @@
 #ifndef LCU_DEBUG_DIAGNOSTICS_H
 #define LCU_DEBUG_DIAGNOSTICS_H
 
-#include <stddef.h>
-
-#if defined(_WIN32) && defined(_DEBUG)
-#include <crtdbg.h>
-#include <stdlib.h>
-#endif
+// NOTE: This header does NOT include <stdlib.h> or <crtdbg.h> to allow callers
+// (especially mem_debug.h) to control include order for _CRTDBG_MAP_ALLOC.
+// Callers must ensure required headers are included before using CRT APIs.
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +31,14 @@ __attribute__((noreturn))
 void lcu_diagnostics_fatalf(const char *category, const char *format, ...);
 
 #if defined(_WIN32) && defined(_DEBUG)
+
+// Need CRT debug types and APIs for the inline functions below.
+// If mem_debug.h included us, these headers are already in.
+// Otherwise, include them now (won't affect _CRTDBG_MAP_ALLOC since it's too late anyway).
+#if(!defined(_CRTDBG_H_) && !defined(_INC_CRTDBG))
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
 
 typedef struct lcu_diagnostics_crt_api
 {
@@ -76,7 +81,7 @@ static inline void lcu_diagnostics_unregister_current_crt(void)
 	lcu_diagnostics_unregister_crt(&crt_api);
 }
 
-#endif
+#endif // defined(_WIN32) && defined(_DEBUG)
 
 #ifdef __cplusplus
 }

@@ -118,3 +118,9 @@
 - **改动**:新增 `tool/deploy_release.ps1`(PowerShell 编排引擎) + `tool/deploy_release.bat`(cmd 薄壳);四平台均复用既有子脚本;顺带修复既有脚本 `deploy_for_linux.sh:20` 未引用括号语法错误(`echo ...($_build_type)...` → 加双引号);`build.md` 新增一键发版文档
 - **影响**:单条命令 `deploy_release.bat` 发全平台 Release;任一平台失败阻断打包并非零退出;产物归档到 `deploy/__archive__/lcu_<ver>_release_<date>.tar.gz`
 - **关联**:`tool/deploy_release.ps1`、`tool/deploy_release.bat`、`tool/deploy_for_linux.sh`、`.ai/kb/build.md`
+
+### 16. mem_debug.h CRT 头文件顺序修复 — 2026-06-22
+- **动机**:`diagnostics.h` 在 Windows Debug 下先包含 `<stdlib.h>`,导致 `mem_debug.h` 后定义的 `_CRTDBG_MAP_ALLOC` 失效(CRT malloc/free 宏替换必须在首次包含 stdlib.h 前定义),内存泄漏无法报告文件名/行号
+- **改动**:`mem_debug.h` 在需要时先定义 `_CRTDBG_MAP_ALLOC` 并包含 `<stdlib.h>/<crtdbg.h>`,再包含 `diagnostics.h`(仅一处,L28);`diagnostics.h` 顶层不再包含标准库,在 CRT API 区域按需包含并通过 `_CRTDBG_H_` 守卫避免重复;`diagnostics.c:554` 补齐 `#endif` 注释
+- **影响**:Windows Debug 下 MSVC CRT 内存泄漏检测现可正确报告位置;包含结构清晰(单点 include),其他平台不受影响
+- **关联**:`inc/mem/mem_debug.h`、`inc/debug/diagnostics.h`、`src/debug/diagnostics.c`

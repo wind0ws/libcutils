@@ -130,3 +130,9 @@
 - **改动**:移除 `diagnostics.h` include;Windows Debug 路径的 `MEM_CHECK_INIT()` 改为**头文件内联实现**(直接调用 `_CrtSetReportMode/_CrtSetReportFile` 等 CRT API,无链接依赖);`_LCU_MEM_CHECK_FEATURE_ENABLE` 和 fallback 路径添加前向声明避免警告
 - **影响**:Windows Debug 客户端可链接**任意配置**的 lcu 库(Release/Debug 均可),完整保留内存泄漏检测能力;头文件自洽,无编译配置耦合
 - **关联**:`inc/mem/mem_debug.h:28-64,88-96,156-165`
+
+### 18. ini 长行解析与诊断增强 — 2026-06-23
+- **动机**:`sample.ini` 长中文注释超过旧 `INI_MAX_LINE=200`, `file_util_read_all` 成功但 `ini_parser_parse_str` 返回 NULL, 调用方只能看到模糊失败。
+- **改动**:`ini_reader` 默认改为 heap+realloc、`INI_MAX_LINE` 提升到 64KiB, 超长注释行丢弃继续、超长配置行失败; `ini_parser` value 改为内联 256B + 超长堆分配; 新增 `*_with_diagnostics` API。
+- **影响**:支持长注释/长 value, 避免 value 静默截断; 旧 parse API 保持兼容, 新 API 可返回行号/reader_code/message。
+- **关联**:`inc/file/ini_reader.h`,`src/file/ini_reader.c`,`inc/file/ini_parser.h`,`src/file/ini_parser.c`,`src_demo/file/ini_test.c`

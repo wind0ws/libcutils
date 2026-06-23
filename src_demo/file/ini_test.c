@@ -1,11 +1,16 @@
 #include "mem/mem_debug.h"
 #include "file/ini_reader.h"
 #include "file/ini_parser.h"
+#include "file/file_util.h"
 #include "mem/strings.h"
 #include "common_macro.h"
 
 #define LOG_TAG "INI_TEST"
 #include "log/logger.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static const char* test_ini_str = "\
 [config]\r\n\
@@ -283,6 +288,101 @@ name=main\r\n";
 	ini_parser_destroy(&parser);
 }
 
+static char* make_repeated_ini(const char* prefix, char fill, size_t fill_count, const char* suffix)
+{
+	size_t prefix_len = strlen(prefix);
+	size_t suffix_len = strlen(suffix);
+	char* ini = (char*)malloc(prefix_len + fill_count + suffix_len + 1U);
+	ASSERT(ini);
+	memcpy(ini, prefix, prefix_len);
+	memset(ini + prefix_len, fill, fill_count);
+	memcpy(ini + prefix_len + fill_count, suffix, suffix_len + 1U);
+	return ini;
+}
+
+static void test_ini_parser_file_read_all_long_comment(void)
+{
+	const char* tmp_file = "ini_parser_long_comment_input.ini";
+	char* ini = make_repeated_ini(
+		"# long comment ",
+		'A',
+		(size_t)INI_MAX_LINE + 32U,
+		"\r\n[config]\r\nkey=value\r\n");
+
+	FILE* fp = fopen(tmp_file, "wb");
+	ASSERT(fp);
+	ASSERT(strlen(ini) == fwrite(ini, 1, strlen(ini), fp));
+	fclose(fp);
+
+	char* file_data = NULL;
+	int file_len = 0;
+	ASSERT(0 == file_util_read_all(tmp_file, &file_data, &file_len));
+	ASSERT(file_data);
+	ASSERT(file_len > 0);
+
+	ini_parser_handle parser = ini_parser_parse_str(file_data);
+	ASSERT(parser);
+
+	char buf[32] = {0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "config", "key", buf, sizeof(buf)));
+	ASSERT(0 == strcmp(buf, "value"));
+
+	ini_parser_destroy(&parser);
+	free(file_data);
+	free(ini);
+	remove(tmp_file);
+}
+
+static void test_ini_parser_long_value_roundtrip(void)
+{
+	const size_t value_len = 1024U;
+	char* ini = make_repeated_ini("[long]\r\nvalue=", 'B', value_len, "\r\n");
+	ini_parser_handle parser = ini_parser_parse_str(ini);
+	ASSERT(parser);
+
+	char small_buf[16] = {0};
+	ASSERT(INI_PARSER_CODE_NO_ENOUGH_MEMORY == ini_parser_get_string(parser, "long", "value", small_buf, sizeof(small_buf)));
+
+	char* value_buf = (char*)malloc(value_len + 1U);
+	ASSERT(value_buf);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "long", "value", value_buf, value_len + 1U));
+	ASSERT(strlen(value_buf) == value_len);
+	for (size_t i = 0; i < value_len; ++i)
+	{
+		ASSERT(value_buf[i] == 'B');
+	}
+
+	char* dumped = ini_parser_dump(parser);
+	ASSERT(dumped);
+	ASSERT(NULL != strstr(dumped, "[long]"));
+	ASSERT(NULL != strstr(dumped, "value = BBBB"));
+
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "long", "value", "short"));
+	memset(value_buf, 0, value_len + 1U);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "long", "value", value_buf, value_len + 1U));
+	ASSERT(0 == strcmp(value_buf, "short"));
+
+	free(dumped);
+	free(value_buf);
+	ini_parser_destroy(&parser);
+	free(ini);
+}
+
+static void test_ini_parser_diagnostics_for_too_long_non_comment(void)
+{
+	char* ini = make_repeated_ini("[bad]\r\nkey=", 'C', (size_t)INI_MAX_LINE + 32U, "\r\n");
+	ini_parser_diagnostics_t diagnostics;
+	memset(&diagnostics, 0, sizeof(diagnostics));
+
+	ini_parser_handle parser = ini_parser_parse_str_with_diagnostics(ini, &diagnostics);
+	ASSERT(NULL == parser);
+	ASSERT(diagnostics.line_no == 2);
+	ASSERT(diagnostics.reader_code == 2);
+	ASSERT(diagnostics.message[0] != '\0');
+
+	free(ini);
+}
+
 /**
  * ini parse callback
  *   return true continue,
@@ -345,6 +445,12 @@ static int ini_parser_test()
 	test_ini_parser_key_trim_dedup();
 	LOGD("  -> run ini_parser_indented_keys tests");
 	test_ini_parser_indented_keys();
+	LOGD("  -> run ini_parser_file_read_all_long_comment tests");
+	test_ini_parser_file_read_all_long_comment();
+	LOGD("  -> run ini_parser_long_value_roundtrip tests");
+	test_ini_parser_long_value_roundtrip();
+	LOGD("  -> run ini_parser_diagnostics_for_too_long_non_comment tests");
+	test_ini_parser_diagnostics_for_too_long_non_comment();
 	return 0;
 }
 

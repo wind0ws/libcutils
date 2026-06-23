@@ -3,6 +3,7 @@
 #define LCU_INI_PARSER_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +21,16 @@ extern "C" {
 		/* section / key not found */
 		INI_PARSER_CODE_NOT_FOUND_SECTION_KEY
 	} ini_parser_code_e;
+
+#define INI_PARSER_DIAGNOSTIC_MESSAGE_SIZE 128
+
+	typedef struct
+	{
+		ini_parser_code_e code;
+		int line_no;
+		int reader_code;
+		char message[INI_PARSER_DIAGNOSTIC_MESSAGE_SIZE];
+	} ini_parser_diagnostics_t;
 
 	/**
 	 * @brief callback for foreach ini section-key-value
@@ -57,6 +68,16 @@ extern "C" {
 	ini_parser_handle ini_parser_parse_str(const char* ini_content);
 
 	/**
+	 * @brief parse ini string config and return diagnostics on failure.
+	 *
+	 * @param[in] ini_content: string pointer, can be NULL
+	 * @param[out] diagnostics: optional diagnostics; cleared on entry.
+	 *
+	 * @return ini_parser inst pointer, NULL on failure.
+	 */
+	ini_parser_handle ini_parser_parse_str_with_diagnostics(const char* ini_content, ini_parser_diagnostics_t* diagnostics);
+
+	/**
 	 * @brief parse ini file config.
 	 *
 	 * @param[in] ini_file ini file path
@@ -65,6 +86,16 @@ extern "C" {
 			   returned NULL if file not exists or parse failed.
 	 */
 	ini_parser_handle ini_parser_parse_file(const char* ini_file);
+
+	/**
+	 * @brief parse ini file config and return diagnostics on failure.
+	 *
+	 * @param[in] ini_file ini file path
+	 * @param[out] diagnostics: optional diagnostics; cleared on entry.
+	 *
+	 * @return ini_parser inst pointer, NULL on failure.
+	 */
+	ini_parser_handle ini_parser_parse_file_with_diagnostics(const char* ini_file, ini_parser_diagnostics_t* diagnostics);
 
 	/**
 	 * @brief foreach ini section-key-value

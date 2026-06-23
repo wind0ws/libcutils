@@ -38,7 +38,8 @@ typedef struct
 typedef struct
 {
 	char key[SECTION_NAME_MAX_SIZE];
-	char value[INI_VALUE_STACK_SIZE];
+	char inline_value[INI_VALUE_STACK_SIZE];
+	char *heap_value;
 } key_value_t;
 
 typedef struct
@@ -85,6 +86,67 @@ static inline void allocator_my_free(void *ptr)
 	{
 		free(ptr);
 	}
+}
+
+static const char *key_value_current_value(const key_value_t *p_kv)
+{
+	if (!p_kv)
+	{
+		return "";
+	}
+	return p_kv->heap_value ? p_kv->heap_value : p_kv->inline_value;
+}
+
+static ini_parser_code_e key_value_set_value(key_value_t *p_kv, const char *value)
+{
+	if (!p_kv)
+	{
+		return INI_PARSER_CODE_INVALID_PARAM;
+	}
+	if (!value)
+	{
+		value = "";
+	}
+	size_t value_len = strlen(value);
+	if (value_len < sizeof(p_kv->inline_value))
+	{
+		memcpy(p_kv->inline_value, value, value_len + 1U);
+		if (p_kv->heap_value)
+		{
+			allocator_my_free(p_kv->heap_value);
+			p_kv->heap_value = NULL;
+		}
+		return INI_PARSER_CODE_SUCCEED;
+	}
+
+	char *heap_value = (char *)allocator_my_malloc(value_len + 1U);
+	if (!heap_value)
+	{
+		return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
+	}
+	memcpy(heap_value, value, value_len + 1U);
+	if (p_kv->heap_value)
+	{
+		allocator_my_free(p_kv->heap_value);
+	}
+	p_kv->heap_value = heap_value;
+	p_kv->inline_value[0] = '\0';
+	return INI_PARSER_CODE_SUCCEED;
+}
+
+static void key_value_free(void *data)
+{
+	key_value_t *p_kv = (key_value_t *)data;
+	if (!p_kv)
+	{
+		return;
+	}
+	if (p_kv->heap_value)
+	{
+		allocator_my_free(p_kv->heap_value);
+		p_kv->heap_value = NULL;
+	}
+	allocator_my_free(p_kv);
 }
 
 static void trim_whitespace_copy(const char *src, char *dst, size_t dst_size)
@@ -177,29 +239,63 @@ bool ini_parser_is_file_path(const char *str)
 	return is_file_path;
 }
 
-ini_parser_handle ini_parser_parse_str(const char *ini_content)
+static void ini_parser_set_diagnostics(ini_parser_diagnostics_t *diagnostics,
+									   ini_parser_code_e code, int line_no,
+									   int reader_code, const char *message)
+{
+	if (!diagnostics)
+	{
+		return;
+	}
+	memset(diagnostics, 0, sizeof(*diagnostics));
+	diagnostics->code = code;
+	diagnostics->line_no = line_no;
+	diagnostics->reader_code = reader_code;
+	if (message)
+	{
+		snprintf(diagnostics->message, sizeof(diagnostics->message), "%s", message);
+	}
+}
+
+ini_parser_handle ini_parser_parse_str_with_diagnostics(const char *ini_content, ini_parser_diagnostics_t *diagnostics)
 {
 	int ret = 0;
+	ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_SUCCEED, 0, 0, "ok");
 	list_t *plist_sections = list_new(allocator_my_free);
 	if (!plist_sections)
 	{
+		ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_NO_ENOUGH_MEMORY, 0, 0, "no enough memory");
 		return NULL;
 	}
 	ini_parser_handle parser_p = (ini_parser_handle)calloc(1, sizeof(struct _ini_parser));
 	if (!parser_p)
 	{
 		list_free(plist_sections);
+		ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_NO_ENOUGH_MEMORY, 0, 0, "no enough memory");
 		return NULL;
 	}
 	parser_p->plist_sections = plist_sections;
 	if (ini_content && '\0' != ini_content[0] &&
 		0 != (ret = ini_reader_parse_string(ini_content, ini_handler_cb, parser_p)))
 	{
-		LOGE_TRACE("failed(%d) on parse ini content", ret);
+		if (!diagnostics)
+		{
+			LOGE_TRACE("failed(%d) on parse ini content", ret);
+		}
+		ini_parser_set_diagnostics(diagnostics,
+								   ret == -2 ? INI_PARSER_CODE_NO_ENOUGH_MEMORY : INI_PARSER_CODE_FAILED,
+								   ret > 0 ? ret : 0,
+								   ret,
+								   ret > 0 ? "failed to parse ini content" : "failed to parse ini content");
 		ini_parser_destroy(&parser_p);
 		return NULL;
 	}
 	return parser_p;
+}
+
+ini_parser_handle ini_parser_parse_str(const char *ini_content)
+{
+	return ini_parser_parse_str_with_diagnostics(ini_content, NULL);
 }
 
 ini_parser_handle ini_parser_create()
@@ -207,10 +303,12 @@ ini_parser_handle ini_parser_create()
 	return ini_parser_parse_str(NULL);
 }
 
-ini_parser_handle ini_parser_parse_file(const char *ini_file)
+ini_parser_handle ini_parser_parse_file_with_diagnostics(const char *ini_file, ini_parser_diagnostics_t *diagnostics)
 {
+	ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_SUCCEED, 0, 0, "ok");
 	if (!ini_file || '\0' == ini_file[0])
 	{
+		ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_INVALID_PARAM, 0, 0, "invalid ini file path");
 		return NULL;
 	}
 	ini_parser_handle parser = NULL;
@@ -218,17 +316,24 @@ ini_parser_handle ini_parser_parse_file(const char *ini_file)
 	do
 	{
 		int file_size = 0;
-		if (0 != file_util_read_all(ini_file, &ini_content, &file_size))
+		int read_ret = file_util_read_all(ini_file, &ini_content, &file_size);
+		if (0 != read_ret)
 		{
+			ini_parser_set_diagnostics(diagnostics, INI_PARSER_CODE_FAILED, 0, read_ret, "failed to read ini file");
 			break;
 		}
-		parser = ini_parser_parse_str(ini_content);
+		parser = ini_parser_parse_str_with_diagnostics(ini_content, diagnostics);
 	} while (0);
 	if (ini_content)
 	{
 		free(ini_content);
 	}
 	return parser;
+}
+
+ini_parser_handle ini_parser_parse_file(const char *ini_file)
+{
+	return ini_parser_parse_file_with_diagnostics(ini_file, NULL);
 }
 
 // foreach key-value of target section: true to continue iterating, false to stop iterating
@@ -241,7 +346,7 @@ static bool iter_foreach_section_key_value(void *data, void *context)
 		return true; // just ignored empty key and continue
 	}
 	return (0 == context_p->user_handler(context_p->p_section_info->section_name,
-										 p_kv->key, p_kv->value, context_p->user_data)
+										 p_kv->key, key_value_current_value(p_kv), context_p->user_data)
 				? true
 				: false);
 }
@@ -314,7 +419,7 @@ static section_info_t *search_target_section(ini_parser_handle parser_p, bool au
 		{
 			return NULL;
 		}
-		target_section->plist_section = list_new(allocator_my_free);
+		target_section->plist_section = list_new(key_value_free);
 		if (NULL == target_section->plist_section)
 		{
 			allocator_my_free(target_section);
@@ -390,7 +495,15 @@ ini_parser_code_e ini_parser_put_string(ini_parser_handle parser_p,
 		}
 		strlcpy(p_kv->key, key, sizeof(p_kv->key));
 	}
-	strlcpy(p_kv->value, (value ? value : ""), sizeof(p_kv->value));
+	ini_parser_code_e set_value_ret = key_value_set_value(p_kv, value);
+	if (INI_PARSER_CODE_SUCCEED != set_value_ret)
+	{
+		if (!is_update)
+		{
+			key_value_free(p_kv);
+		}
+		return set_value_ret;
+	}
 	if (is_update)
 	{
 		return INI_PARSER_CODE_SUCCEED;
@@ -398,7 +511,7 @@ ini_parser_code_e ini_parser_put_string(ini_parser_handle parser_p,
 
 	if (false == list_append(target_section->plist_section, p_kv))
 	{
-		allocator_my_free(p_kv);
+		key_value_free(p_kv);
 		return INI_PARSER_CODE_FAILED;
 	}
 	return INI_PARSER_CODE_SUCCEED;
@@ -450,12 +563,13 @@ ini_parser_code_e ini_parser_get_string(ini_parser_handle parser_p,
 	}
 	if (value && value_size)
 	{
-		size_t the_value_len = strlen(p_kv->value);
+		const char *current_value = key_value_current_value(p_kv);
+		size_t the_value_len = strlen(current_value);
 		if (value_size <= the_value_len)
 		{
 			return INI_PARSER_CODE_NO_ENOUGH_MEMORY;
 		}
-		memcpy(value, p_kv->value, the_value_len + 1);
+		memcpy(value, current_value, the_value_len + 1);
 	}
 	return INI_PARSER_CODE_SUCCEED;
 }
@@ -523,11 +637,12 @@ static bool iter_key_value_for_dump(void *data, void *context)
 	}
 	key_value_t *p_kv = (key_value_t *)data;
 	dump_ini_context *dump_ctx = (dump_ini_context *)context;
-	if (0 != (dump_ctx->ret_code = stringbuilder_appendf(dump_ctx->sb, "%s = %s\r\n", p_kv->key, p_kv->value)))
+	const char *current_value = key_value_current_value(p_kv);
+	if (0 != (dump_ctx->ret_code = stringbuilder_appendf(dump_ctx->sb, "%s = %s\r\n", p_kv->key, current_value)))
 	{
 #if (!defined(NDEBUG) || defined(_DEBUG))
 		printf("ERROR[%s:%d]: failed on append %s=%s to stringbuilder. %d",
-			   __FILE__, __LINE__, p_kv->key, p_kv->value, dump_ctx->ret_code);
+			   __FILE__, __LINE__, p_kv->key, current_value, dump_ctx->ret_code);
 #endif // !NDEBUG || _DEBUG
 		ASSERT_ABORT(dump_ctx->ret_code);
 		return false;

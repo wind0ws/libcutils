@@ -166,15 +166,24 @@ int ini_reader_parse_stream(ini_reader reader, void* stream, ini_reader_handler 
 
         lineno++;
 
-        /* If line exceeded INI_MAX_LINE bytes, discard till end of line. */
+        /* If line exceeded INI_MAX_LINE bytes, discard till end of line.
+           Overlong comments are safe to ignore because they carry no config
+           semantics. Non-comment lines still fail to avoid truncated config. */
         if (offset == max_line - 1 && line[offset - 1] != '\n') {
+            char* overlong_start = ini_lskip(line);
+            int overlong_is_comment = strchr(INI_START_COMMENT_PREFIXES, *overlong_start) != NULL;
             while (reader(abyss, sizeof(abyss), stream) != NULL) {
-                if (!error)
-                    error = lineno;
                 abyss_len = strlen(abyss);
                 if (abyss_len > 0 && abyss[abyss_len - 1] == '\n')
                     break;
             }
+            if (!overlong_is_comment && !error)
+                error = lineno;
+#if INI_STOP_ON_FIRST_ERROR
+            if (error)
+                break;
+#endif
+            continue;
         }
 
         start = line;

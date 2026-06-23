@@ -17,6 +17,9 @@
 // don't forget include this file(mem_debug.h) on your source file first line.
 // #define _LCU_MEM_CHECK_FEATURE_ENABLE	 1
 
+// Include diagnostics.h for CRT hook registration
+#include "debug/diagnostics.h"
+
 // Step 1: Define _CRTDBG_MAP_ALLOC early if needed (before any stdlib.h)
 // otherwise it won't tell you leak memory on which file with line number in MSVC.
 #if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE)
@@ -25,10 +28,7 @@
 #include <crtdbg.h>
 #endif
 
-// Step 2: Include diagnostics.h for CRT hook registration
-#include "debug/diagnostics.h"
-
-// Step 3: Windows-specific macros and CRT setup
+// Step 2: Windows-specific macros and CRT setup
 #ifdef _WIN32
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -73,17 +73,6 @@
 #if (!defined(_CRTDBG_MAP_ALLOC) && defined(_LCU_MEM_CHECK_FEATURE_ENABLE) && _LCU_MEM_CHECK_FEATURE_ENABLE)
 // to mark we really use lcu memory check feature
 #define _USE_LCU_MEM_CHECK    1
-
-// Forward declarations to avoid full diagnostics.h dependency
-#ifdef __cplusplus
-extern "C" {
-#endif
-void lcu_diagnostics_init(void);
-void lcu_diagnostics_deinit(void);
-#ifdef __cplusplus
-}
-#endif
-
 #include "mem/allocator.h"
 #include "mem/allocation_tracker.h"
 
@@ -142,17 +131,6 @@ void operator delete[](void *ptr, const char *fileName, const char *funcName, in
 #endif // !_CRTDBG_MAP_ALLOC && _LCU_MEM_CHECK_FEATURE_ENABLE
 
 #ifndef MEM_CHECK_INIT
-// Fallback for non-Debug builds or non-Windows: forward to diagnostics
-// (requires linking with lcu library, unlike the Windows Debug inline version above)
-#ifdef __cplusplus
-extern "C" {
-#endif
-void lcu_diagnostics_init(void);
-void lcu_diagnostics_deinit(void);
-#ifdef __cplusplus
-}
-#endif
-
 #define MEM_CHECK_INIT()   lcu_diagnostics_init()
 #define MEM_CHECK_DEINIT() lcu_diagnostics_deinit()
 #endif // !MEM_CHECK_INIT

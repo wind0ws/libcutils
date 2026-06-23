@@ -2,6 +2,7 @@
 #ifndef LCU_INTEGER_H
 #define LCU_INTEGER_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -34,6 +35,15 @@ extern "C" {
 	 * @return round down number. e.g., 0 -> 0, 1 -> 0, 2 -> 2, 127 -> 64
 	 */
 	uint32_t integer_rounddown_pow_of_two(uint32_t i);
+
+	/**
+	 * @brief add offset to base.
+	 * 
+	 * @param base : base address
+	 * @param offset : offset to add
+	 * @return size_t : base + offset
+	 */
+	size_t integer_add_offset(size_t base, ptrdiff_t offset);
 
 #ifdef __cplusplus
 }

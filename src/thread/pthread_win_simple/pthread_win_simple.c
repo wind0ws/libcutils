@@ -1,3 +1,10 @@
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows threading API.
+ * pthread_win_simple.c implements pthread emulation on Windows using native Win32 APIs
+ * (CreateThread, CreateMutex, CreateEvent, etc.). These system APIs manage internal memory
+ * (thread stacks, kernel objects, synchronization structures) that must not be tracked.
+ * Including mem_debug.h would intercept malloc/free in this layer, breaking the boundary
+ * between our memory tracking and Windows kernel object management. */
+
 #include "thread/pthread_win_simple/pthread_win_simple.h"
 
 #if(defined(_WIN32) && _LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
@@ -154,9 +161,16 @@ int pthread_mutex_unlock(pthread_mutex_t* mutex)
 	{
 		return EINVAL;
 	}
-	if (PTHREAD_MUTEX_INITIALIZER == *mutex)
+	// 识别所有静态初始化器(与 pthread_mutex_lock 第 128 行对齐):
+	// PTHREAD_MUTEX_INITIALIZER = (size_t)-1
+	// PTHREAD_RECURSIVE_MUTEX_INITIALIZER = (size_t)-2
+	// PTHREAD_ERRORCHECK_MUTEX_INITIALIZER = (size_t)-3
+	// 在 size_t 无符号比较下,-3 是最小值,>=-3 即覆盖三者.
+	// 静态初始化器从未被 pthread_mutex_lock 触碰过(lock 是第一次访问时 lazy-init),
+	// 此时 unlock 等价于 "未曾 lock 的 unlock",按 POSIX 通常返回 0(忽略).
+	if (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
 	{
-		return 0;//ignore this unlock operation
+		return 0; // 未初始化的 mutex 上调 unlock,空操作
 	}
 	pthread_mutex_t mx = *mutex;
 	LeaveCriticalSection(&(mx->mHandle));
@@ -167,7 +181,24 @@ int pthread_mutex_unlock(pthread_mutex_t* mutex)
 
 int pthread_cond_init(pthread_cond_t* cond, const pthread_condattr_t* attr)
 {
+	/* CRITICAL: zero-initialize counters before they are observed by waiters/signalers.
+	 * struct pthread_cond_t is typically embedded in caller-allocated memory (often via
+	 * malloc, not calloc). Without explicit zeroing here, mWaiting/mWake/mGeneration hold
+	 * indeterminate values, which causes pthread_cond_signal/broadcast to make wrong
+	 * decisions ("if (cond->mWaiting > cond->mWake)") and produces lost-wakeup deadlocks
+	 * — sporadic in Debug (heap fill 0xCD makes counters equal so the check is harmless),
+	 * frequent in Release (raw heap garbage). */
+	cond->mWaiting = 0;
+	cond->mWake = 0;
+	cond->mGeneration = 0;
 	cond->mSemaphore = CreateSemaphoreW(NULL, 0, 0x7FFFFFFF, NULL);
+	/* L-3 修复: CreateSemaphoreW 失败(资源耗尽等)返回 NULL, 旧实现忽略它并返回 0,
+	 * 后续 pthread_cond_wait/signal 在 NULL 句柄上 WaitForSingleObject/ReleaseSemaphore
+	 * 行为未定义. 失败时返回 ENOMEM, 不残留半初始化的 cond. */
+	if (NULL == cond->mSemaphore)
+	{
+		return ENOMEM;
+	}
 	pthread_mutex_init(&cond->mLock, NULL);
 	return 0;
 }
@@ -254,7 +285,11 @@ int pthread_cond_broadcast(pthread_cond_t* cond)
 int pthread_rwlock_init(pthread_rwlock_t* rwlock, const pthread_rwlockattr_t* attr)
 {
 	pthread_rwlock_t rwl;
-	if (NULL == rwlock || NULL == *rwlock)
+	/* M-3 修复: 移除 || NULL == *rwlock 检查。
+	 * *rwlock 在 init 前持有未初始化值，读它是 UB。
+	 * 正确契约: caller 传入 pthread_rwlock_t* 指针，init 写入句柄。
+	 * 与 pthread_mutex_init (line 97) 对齐：只检查 mutex != NULL。 */
+	if (NULL == rwlock)
 	{
 		return EINVAL;
 	}

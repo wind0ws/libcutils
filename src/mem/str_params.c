@@ -3,6 +3,7 @@
 #endif // __GNUC__
 #include "mem/mem_debug.h"
 #include "mem/asprintf.h"
+#include "mem/allocator.h"
 #include "mem/str_params.h"
 
 #include <errno.h>
@@ -56,7 +57,7 @@ str_params_ptr str_params_create(const char* delimiter)
 {
 	str_params_ptr s = (str_params_ptr)calloc(1, sizeof(struct str_params));
 	if (!s) return NULL;
-	s->map = hashmap_create(16, str_hash_fn, free, free, str_eq, NULL);
+	s->map = hashmap_create(16, str_hash_fn, lcu_free, lcu_free, str_eq, NULL);
 	if (!s->map)
 	{
 		free(s);
@@ -128,11 +129,50 @@ str_params_ptr str_params_create_str(const char* delimiter, const char* param_st
 			key = strdup(kvpair);
 			value = strdup("");
 		}
-		/* we replaced a value */
+		/* P1-9: 检查 strdup/strndup 失败. OOM 时若把 NULL key/value 塞进 hashmap,
+		 * 后续 str_eq->strcmp(NULL,...) 会段错误. 失败则释放已分配的一半并跳过当前 kv. */
+		if (NULL == key || NULL == value)
+		{
+			free(key);
+			free(value);
+			goto label_next_pair;
+		}
+		/* Caller-1 修复：检查 hashmap_put 返回值，处理替换路径的 key 所有权。
+		 * hashmap_put 行为（见 hashmap.c:338-342 及头文件 NOTE(reviewed 2026-06-08)）：
+		 * - old_val == NULL: 新插入成功，map 接管 key 和 value；或插入失败（errno==ENOMEM）
+		 * - old_val != NULL: 替换路径，map 保留旧 key 不接管新 key，只接管新 value
+		 * 参考 str_params_add_str (180-210 行) 的正确模式。 */
+		int saved_errno = errno;
+		int put_errno;
+		size_t size_before = hashmap_size(parms->map);
+		size_t size_after;
+		errno = 0;
 		old_val = hashmap_put(parms->map, key, value);
-		RELEASE_OWNERSHIP(value);
-		RELEASE_OWNERSHIP(old_val);
-		RELEASE_OWNERSHIP(key);
+		put_errno = errno;
+		size_after = hashmap_size(parms->map);
+		errno = saved_errno;
+		if (old_val == NULL)
+		{
+			/* 新插入路径：检查是否因 OOM 失败 */
+			if (put_errno == ENOMEM && size_after == size_before)
+			{
+				/* 插入失败，key/value 所有权未转移，需释放 */
+				free(key);
+				free(value);
+				goto label_next_pair;
+			}
+			/* 新插入成功，map 接管 key 和 value */
+			RELEASE_OWNERSHIP(key);
+			RELEASE_OWNERSHIP(value);
+		}
+		else
+		{
+			/* 替换路径：map 接管新 value（旧 value 已被 value_free_fn 释放），
+			 * 但不接管新 key（保留旧 key），新 key 必须由 caller 释放 */
+			free(key);
+			RELEASE_OWNERSHIP(value);
+			RELEASE_OWNERSHIP(old_val);
+		}
 
 		items++;
 	label_next_pair:
@@ -155,6 +195,9 @@ int str_params_add_str(str_params_ptr params, const char* key, const char* value
 	void* tmp_key = NULL;
 	void* tmp_val = NULL;
 	void* old_val = NULL;
+	size_t size_before = 0;
+	size_t size_after = 0;
+	int put_errno = 0;
 	// strdup and hashmapPut both set errno on failure.
 	// Set errno to 0 so we can recognize whether anything went wrong.
 	int saved_errno = errno;
@@ -169,14 +212,18 @@ int str_params_add_str(str_params_ptr params, const char* key, const char* value
 	{
 		goto clean_up;
 	}
+	size_before = hashmap_size(params->map);
 	old_val = hashmap_put(params->map, tmp_key, tmp_val);
+	put_errno = errno;
+	size_after = hashmap_size(params->map);
 	if (old_val == NULL)
 	{
 		// Did hashmapPut fail?
-		if (errno == ENOMEM)
+		if (put_errno == ENOMEM && size_after == size_before)
 		{
 			goto clean_up;
 		}
+		errno = 0;
 		// For new keys, hashmap takes ownership of tmp_key and tmp_val.
 		RELEASE_OWNERSHIP(tmp_key);
 		RELEASE_OWNERSHIP(tmp_val);
@@ -184,6 +231,7 @@ int str_params_add_str(str_params_ptr params, const char* key, const char* value
 	}
 	else
 	{
+		errno = 0;
 		// For existing keys, hashmap takes ownership of tmp_val.
 		// (It also gives up ownership of old_val,because we set free function to it inside(on hashmap_create).
 		//  hashmap free the existing keys and values automatically)
@@ -192,6 +240,10 @@ int str_params_add_str(str_params_ptr params, const char* key, const char* value
 		old_val = tmp_val = NULL;
 	}
 clean_up:
+	if (put_errno == ENOMEM && size_after == size_before)
+	{
+		errno = put_errno;
+	}
 	if (tmp_key)
 	{
 		free(tmp_key);
@@ -210,7 +262,7 @@ int str_params_add_long(str_params_ptr params, const char* key, long value)
 	char val_str[24];
 	int ret;
 	ret = snprintf(val_str, sizeof(val_str), "%ld", value);
-	if (ret < 0)
+	if (ret < 0 || ret >= (int)sizeof(val_str))
 	{
 		return -EINVAL;
 	}
@@ -227,11 +279,12 @@ int str_params_add_double(str_params_ptr params, const char* key, double value)
 {
 	char val_str[32];
 	int ret;
-	ret = snprintf(val_str, sizeof(val_str), "%.10f", value);
-	if (ret < 0)
+	ret = snprintf(val_str, sizeof(val_str), "%.10f", value);// <-- we keep 10 decimal places to maintain accuracy
+	if (ret < 0 || ret >= (int)sizeof(val_str))
 	{
 		return -EINVAL;
 	}
+	
 	ret = str_params_add_str(params, key, val_str);
 	return ret;
 }
@@ -249,16 +302,17 @@ bool str_params_has_key(str_params_ptr params, const char* key)
 int str_params_get_str(str_params_ptr params, const char* key, char* out_val, size_t out_val_size)
 {
 	char* value = (char*)(hashmap_get(params->map, (void*)key));
-	if (value)
+	if (!value)
 	{
-		if (strlen(value) + 1 > out_val_size)
-		{
-			return -ENOMEM;
-		}
-		strlcpy(out_val, value, out_val_size);
-		return 0;
+		return -ENOENT;
 	}
-	return -ENOENT;
+	
+	if (strlen(value) + 1U > out_val_size)
+	{
+		return -ENOMEM;
+	}
+	strlcpy(out_val, value, out_val_size);
+	return 0;
 }
 
 int str_params_get_long(str_params_ptr params, const char* key, long* out_val)
@@ -282,7 +336,7 @@ int str_params_get_int(str_params_ptr params, const char* key, int* out_val)
 {
 	long long_num;
 	int ret = str_params_get_long(params, key, &long_num);
-	if (ret == 0)
+	if (0 == ret)
 	{
 		*out_val = long_num;
 	}
@@ -322,7 +376,7 @@ typedef struct
 {
 	char* str;
 	str_params_ptr params_ptr;
-}combine_strings_ctx;
+} combine_strings_ctx;
 
 static bool combine_strings(void* key, void* value, void* context)
 {
@@ -333,6 +387,8 @@ static bool combine_strings(void* key, void* value, void* context)
 		combine_ctx->str ? combine_ctx->params_ptr->delimiter : "",
 		(char*)key,
 		(char*)value);
+	/* new_str / combine_ctx->str come from asprintf, which returns an
+	 * ownership-transfer buffer. */
 	if (combine_ctx->str)
 	{
 		free(combine_ctx->str);
@@ -342,6 +398,7 @@ static bool combine_strings(void* key, void* value, void* context)
 		combine_ctx->str = new_str;
 		return true;
 	}
+
 	if (new_str)
 	{
 		free(new_str);
@@ -359,7 +416,32 @@ char* str_params_to_str(str_params_ptr params)
 	   .params_ptr = params,
 	};
 	hashmap_foreach(params->map, combine_strings, &ctx);
-	return (ctx.str != NULL) ? ctx.str : strdup("");
+	if (ctx.str != NULL)
+	{
+		return ctx.str; /* raw-libc buffer from asprintf */
+	}
+	/* ====================================================================
+	 * OWNERSHIP TRANSFER - DO NOT TRACK (empty-map branch)
+	 * ====================================================================
+	 * str_params_to_str must have ONE UNIFORM contract: caller releases
+	 * the returned buffer with free(). The non-empty path returns an asprintf
+	 * buffer (raw libc, after our fix). This empty-map path must ALSO return
+	 * raw libc.
+	 *
+	 * DO NOT use strdup("") here: it routes to lcu_strdup_trace (tracked)
+	 * and would give the caller a tracked pointer on this branch only,
+	 * SPLITTING the contract (non-empty=raw, empty=tracked). The caller's
+	 * free() would crash on the tracked pointer when the allocation tracker
+	 * is active.
+	 *
+	 * KEEP THIS AS lcu_malloc_raw() PERMANENTLY. See ownership_contract_test.c.
+	 * ==================================================================== */
+	char* empty = (char*)lcu_malloc_raw(1U);
+	if (empty)
+	{
+		empty[0] = '\0';
+	}
+	return empty;
 }
 
 static bool dump_entry(void* key, void* value, void* context)

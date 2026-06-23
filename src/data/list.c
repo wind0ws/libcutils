@@ -2,9 +2,23 @@
 * reference https://chromium.googlesource.com/aosp/platform/system/bt/+/refs/heads/master/osi/src/list.c
 */
 
-//#include <assert.h>
+/* CRITICAL: This file does NOT include mem_debug.h to avoid macro expansion conflicts.
+ * list.c uses the allocator abstraction (allocator_t->alloc / allocator_t->free) instead
+ * of direct malloc/free. When mem_debug.h is included, the macro "#define free(p) lcu_free(p)"
+ * causes "allocator->free(list)" to expand into "allocator->lcu_free(list)", but allocator_t
+ * has no "lcu_free" member (only "free"), resulting in compilation failure.
+ * Memory tracking is STILL ACTIVE via the allocator: allocator_calloc routes through
+ * lcu_calloc1 -> lcu_calloc_trace (in allocator.c which includes mem_debug.h), so all
+ * list allocations ARE tracked. This file never calls libc malloc/free directly. */
+
 #include "mem/allocator.h"
 #include "data/list.h"
+
+/* Verified: Memory tracking is active via the allocator abstraction.
+ * All allocations route through allocator_t->alloc (e.g. lcu_calloc1) and
+ * allocator.c includes mem_debug.h, so list allocations ARE tracked by the
+ * debug system. The original "bypasses mem_debug.h -> tracking blind spot"
+ * finding does NOT apply to list.c (it never calls libc malloc/free directly). */
 
 struct list_node_t 
 {
@@ -28,7 +42,7 @@ static list_node_t* list_free_node_(list_t* list, list_node_t* node);
 list_t* list_new_internal(list_free_cb callback, const allocator_t* zeroed_allocator) 
 {
 	list_t* list = (list_t*)zeroed_allocator->alloc(sizeof(list_t));
-	if (list == NULL)
+	if (NULL == list)
 	{
 		return NULL;
 	}
@@ -44,7 +58,7 @@ list_t* list_new(list_free_cb callback)
 
 void list_free(list_t* list) 
 {
-	if (list == NULL)
+	if (NULL == list)
 	{
 		return;
 	}
@@ -54,12 +68,12 @@ void list_free(list_t* list)
 
 bool list_is_empty(const list_t* list) 
 {
-	return list && (list->length == 0);
+	return list && (0 == list->length);
 }
 
 bool list_contains(const list_t* list, const void* data) 
 {
-	if (list == NULL || data == NULL)
+	if (NULL == list || NULL == data)
 	{
 		return false;
 	}
@@ -80,7 +94,7 @@ size_t list_length(const list_t* list)
 
 void* list_front(const list_t* list) 
 {
-	if (list == NULL || list_is_empty(list))
+	if (NULL == list || list_is_empty(list))
 	{
 		return NULL;
 	}
@@ -89,7 +103,7 @@ void* list_front(const list_t* list)
 
 void* list_back(const list_t* list) 
 {
-	if (list == NULL || list_is_empty(list))
+	if (NULL == list || list_is_empty(list))
 	{
 		return NULL;
 	}
@@ -98,7 +112,7 @@ void* list_back(const list_t* list)
 
 list_node_t* list_back_node(const list_t* list) 
 {
-	if (list == NULL || list_is_empty(list))
+	if (NULL == list || list_is_empty(list))
 	{
 		return NULL;
 	}
@@ -107,7 +121,7 @@ list_node_t* list_back_node(const list_t* list)
 
 bool list_insert_after(list_t* list, list_node_t* prev_node, void* data) 
 {
-	if (list == NULL || prev_node == NULL || data == NULL)
+	if (NULL == list || NULL == prev_node || NULL == data)
 	{
 		return false;
 	}
@@ -129,12 +143,12 @@ bool list_insert_after(list_t* list, list_node_t* prev_node, void* data)
 
 bool list_prepend(list_t* list, void* data) 
 {
-	if (list == NULL || data == NULL)
+	if (NULL == list || NULL == data)
 	{
 		return false;
 	}
 	list_node_t* node = (list_node_t*)list->allocator->alloc(sizeof(list_node_t));
-	if (node == NULL)
+	if (NULL == node)
 	{
 		return false;
 	}
@@ -151,7 +165,7 @@ bool list_prepend(list_t* list, void* data)
 
 bool list_append(list_t* list, void* data) 
 {
-	if (list == NULL || data == NULL)
+	if (NULL == list || NULL == data)
 	{
 		return false;
 	}
@@ -162,7 +176,7 @@ bool list_append(list_t* list, void* data)
 	}
 	node->next = NULL;
 	node->data = data;
-	if (list->tail == NULL) 
+	if (NULL == list->tail) 
 	{
 		list->head = node;
 		list->tail = node;
@@ -178,7 +192,7 @@ bool list_append(list_t* list, void* data)
 
 bool list_remove(list_t* list, void* data) 
 {
-	if (list == NULL || data == NULL || list_is_empty(list))
+	if (NULL == list || NULL == data || list_is_empty(list))
 	{
 		return false;
 	}
@@ -210,7 +224,7 @@ bool list_remove(list_t* list, void* data)
 
 void list_clear(list_t* list) 
 {
-	if (list == NULL)
+	if (NULL == list)
 	{
 		return;
 	}
@@ -225,7 +239,7 @@ void list_clear(list_t* list)
 
 list_node_t* list_foreach(const list_t* list, list_iter_cb callback, void* context) 
 {
-	if (list == NULL || callback == NULL)
+	if (NULL == list || NULL == callback)
 	{
 		return NULL;
 	}
@@ -243,16 +257,18 @@ list_node_t* list_foreach(const list_t* list, list_iter_cb callback, void* conte
 
 list_node_t* list_begin(const list_t* list) 
 {
-	if (list == NULL)
+	if (NULL == list)
 	{
 		return NULL;
 	}
 	return list->head;
 }
 
+// 达到列表末尾的迭代器. 当迭代器等于这个值时, 说明已经遍历完整个列表. 
+// 通常用于循环遍历列表. 这个函数一般返回NULL.
 list_node_t* list_end(UNUSED_ATTR const list_t* list) 
 {
-	if (list == NULL)
+	if (NULL == list)
 	{
 		return NULL;
 	}
@@ -261,7 +277,7 @@ list_node_t* list_end(UNUSED_ATTR const list_t* list)
 
 list_node_t* list_next(const list_node_t* node) 
 {
-	if (node == NULL)
+	if (NULL == node)
 	{
 		return NULL;
 	}
@@ -270,7 +286,7 @@ list_node_t* list_next(const list_node_t* node)
 
 void* list_node(const list_node_t* node) 
 {
-	if (node == NULL)
+	if (NULL == node)
 	{
 		return NULL;
 	}
@@ -279,7 +295,7 @@ void* list_node(const list_node_t* node)
 
 static list_node_t* list_free_node_(list_t* list, list_node_t* node) 
 {
-	if (list == NULL || node == NULL)
+	if (NULL == list || NULL == node)
 	{
 		return NULL;
 	}

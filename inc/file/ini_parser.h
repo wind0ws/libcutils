@@ -24,10 +24,10 @@ extern "C" {
 	/**
 	 * @brief callback for foreach ini section-key-value
 	 * 
-	 * @return 0 for continue, otherwise break the chain.
+	 * @return 0 to continue iterating, non-zero to stop iterating.
 	 */
 	typedef int (*ini_parser_handler)(const char* section,
-		const char* name, const char* value, const void* user);
+		const char* key, const char* value, void* user_data);
 
 	// ini parser handle
 	typedef struct _ini_parser *ini_parser_handle;
@@ -75,7 +75,7 @@ extern "C" {
 	 * 
 	 * @return see ini_parser_code_e 
 	 */
-	ini_parser_code_e ini_parser_foreach(ini_parser_handle parser_p, ini_parser_handler handler, void* user);
+	ini_parser_code_e ini_parser_foreach(ini_parser_handle parser_p, ini_parser_handler handler, void* user_data);
 
 	/**
 	 * @brief add or update the section key value.
@@ -157,8 +157,11 @@ extern "C" {
 	 * @brief dump all ini config to string.
 	 *
 	 * The returned pointer should be FREED after use!
-	 * 
+	 *
 	 * @return NULL means error occurred.
+	 *
+	 * @note Ownership of the returned buffer is transferred to the caller.
+	 *       Release it with free().
 	 */
 	char* ini_parser_dump(ini_parser_handle parser_p);
 

@@ -15,6 +15,11 @@
 	limitations under the License.
 */
 
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows API.
+ * semaphore_win_simple.c implements POSIX semaphore emulation on Windows using CreateSemaphore
+ * and other Win32 synchronization APIs. These system functions manage kernel objects with
+ * internal memory that must not be tracked by our allocation layer. */
+
 /*
 	Simple Windows replacement for POSIX semaphores
 	Modified by Daniel Tillett from libpthread <http://github.com/songdongsheng/libpthread>
@@ -107,20 +112,34 @@ static int sem_open_internal(sem_t* sem, const char* name, int oflag, mode_t mod
 		   If the function fails, the return value is -1,
 		   with errno set to indicate the error.
 */
-int sem_init(sem_t* sem, int pshared, unsigned int value) 
+int sem_init(sem_t* sem, int pshared, unsigned int value)
 {
-	char buf[24] = { '\0' };
 	UNUSED(pshared);
 
-	if (sem == NULL || value > (unsigned int)SEM_VALUE_MAX) 
+	if (sem == NULL || value > (unsigned int)SEM_VALUE_MAX)
 	{
 		return lc_set_errno(EINVAL);
 	}
-	//if (pshared != PTHREAD_PROCESS_PRIVATE) {
-	snprintf(buf, sizeof(buf), "Global\\%p", sem);
-	//}
+
+	/* P1-1: 进程内未命名信号量直接 CreateSemaphoreA(name=NULL).
+	 * 修复前: 走 Global\ 命名空间, 普通用户进程缺 SeCreateGlobalPrivilege 会 ACCESS_DENIED,
+	 *         导致 msg_queue_handler / file_logger 整条管线初始化失败.
+	 * 命名信号量(跨进程共享)仍走 sem_open. 保留 GetLastError->errno 映射. */
 	sem->is_internal_malloc = 0;
-	return sem_open_internal(sem, buf, O_CREAT | O_EXCL, 0, value);
+	sem->handle = CreateSemaphoreA(NULL, value, SEM_VALUE_MAX, NULL);
+	if (NULL == sem->handle)
+	{
+		switch (GetLastError())
+		{
+		case ERROR_ACCESS_DENIED:
+			return lc_set_errno(EACCES);
+		case ERROR_NOT_ENOUGH_MEMORY:
+			return lc_set_errno(ENOMEM);
+		default:
+			return lc_set_errno(ENOSPC);
+		}
+	}
+	return 0;
 }
 
 /**

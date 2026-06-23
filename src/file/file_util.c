@@ -1,7 +1,9 @@
 #include "mem/mem_debug.h"
 #include "file/file_util.h"
 #include "mem/strings.h"
+#include "mem/allocator.h" /* for lcu_malloc_raw */
 #include <sys/stat.h>
+#include <limits.h> /* for INT_MAX */
 
 #ifdef _WIN32
 #include <io.h>
@@ -26,7 +28,7 @@
 
 typedef ssize_t (*rw_func_t)(int file_handle, void* buffer, size_t max_char_count);
 
-static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
+static ssize_t pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func);
 
 int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in const size_t folder_path_size)
 {
@@ -46,12 +48,17 @@ int file_util_append_slash_on_path_if_needed(__inout char* folder_path, __in con
 	const char slash_char = (NULL != strstr(folder_path, "\\")) ? '\\' : '/';
 	if (folder_path[path_len - 1] == slash_char)
 	{
+		// 已经以分隔符结尾,可能是 trim 末尾空格之后的位置,需要把 NUL 放到正确位置
+		folder_path[path_len] = '\0';
 		return 0;
 	}
-	const size_t slash_location = (path_len + 1) < folder_path_size ?
-		path_len : (path_len - 1);
-	folder_path[slash_location] = slash_char;
-	folder_path[slash_location + 1] = '\0';
+	// 缓冲不足以追加斜杠 + NUL: 不破坏原数据,返回 -3 让调用方处理
+	if (path_len + 2 > folder_path_size)
+	{
+		return -3;
+	}
+	folder_path[path_len] = slash_char;
+	folder_path[path_len + 1] = '\0';
 	return 0;
 }
 
@@ -71,7 +78,11 @@ int file_util_mkdirs(__in const char* folder_path)
 	}
 	int ret;
 	size_t dir_path_len = strlen(folder_path);
-	if (dir_path_len > MAX_FOLDER_PATH_LEN)
+	/* H-4 修复: 改 > 为 >=，确保 tmp_dir_path 有 NUL terminator 空间。
+	 * 原判断 dir_path_len > MAX_FOLDER_PATH_LEN(256) 允许 256 字节路径,
+	 * 但 tmp_dir_path[256] 会在 i=255 时写满 tmp[0..255]，无 NUL。
+	 * 后续 ACCESS(tmp_dir_path, 0) 读到 tmp[256] 越界。 */
+	if (dir_path_len >= MAX_FOLDER_PATH_LEN)
 	{
 		return -2; // dir too long
 	}
@@ -127,25 +138,28 @@ long file_util_get_size_by_fs(__in FILE* fs)
 	return total_file_size;
 }
 
-int file_util_read(__in int file_handle, __out void* buffer, __in size_t max_char_count)
+ssize_t file_util_read(__in int file_handle, __inout void* buffer, __in size_t max_char_count)
 {
 	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&READ_FUNC);
 }
 
-int file_util_write(__in int file_handle, __in void* buffer, __in size_t max_char_count)
+ssize_t file_util_write(__in int file_handle, __inout void* buffer, __in size_t max_char_count)
 {
 	return pri_internal_rw_file(file_handle, buffer, max_char_count, (rw_func_t)&WRITE_FUNC);
 }
 
-static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
+static ssize_t pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_count, rw_func_t target_func)
 {
-	int cur_char_count = 0;
+	ssize_t cur_char_count = 0;
 	do
 	{
-		int once_op_size = (int)target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
-		if (once_op_size < 1)
+		ssize_t once_op_size = target_func(file_handle, (char*)buffer + cur_char_count, max_char_count - cur_char_count);
+		if (once_op_size < 1) // 0:normal rw complete, otherwise error occurred
 		{
-			//0:normal rw complete, otherwise error occurred
+			if (0 == cur_char_count) // first rw failed, return error code
+			{
+				cur_char_count = once_op_size;
+			}
 			break;
 		}
 		cur_char_count += once_op_size;
@@ -154,46 +168,105 @@ static int pri_internal_rw_file(int file_handle, void* buffer, size_t max_char_c
 }
 
 int file_util_read_txt(__in const char* file_path,
-	__in int (*handle_txt_line_fn)(int line_num, char* txt, void* user_data),
+	__in int (*handle_txt_line_fn)(int line_num, const char* txt, void* user_data),
 	__in void* user_data)
 {
 	int ret = 0;
-	FILE* fp;
 	int line_num;
-	char* p, buf[1024];
+	FILE* fp;
+	char* p;
+	char* line_buf = NULL;
+	size_t buf_capacity = 1024;
+	size_t line_len = 0;
 
-	fp = fopen(file_path, "r");
-	if (NULL == fp)
+	if (NULL == (fp = fopen(file_path, "r")))
 	{
 		return -1;
 	}
-	// if fgets returned not null, it make sure buf end with '\0'
-	for (line_num = 0; NULL != fgets(buf, sizeof(buf), fp); ++line_num) 
+
+	line_buf = (char*)lcu_malloc_raw(buf_capacity);
+	if (NULL == line_buf)
 	{
-		if (NULL == (p = strchr(buf, '\n'))) 
+		fclose(fp);
+		return -1;
+	}
+
+	for (line_num = 0; ; ++line_num)
+	{
+		line_len = 0;
+		/* Read line in chunks, expanding buffer as needed */
+		while (1)
 		{
-			p = buf + strlen(buf);
+			if (NULL == fgets(line_buf + line_len, (int)(buf_capacity - line_len), fp))
+			{
+				/* EOF or error */
+				if (line_len == 0)
+				{
+					goto cleanup_read_txt; /* End of file, exit outer loop */
+				}
+				break; /* Process partial line */
+			}
+
+			line_len += strlen(line_buf + line_len);
+
+			/* Check if we got a complete line (ends with '\n' or EOF) */
+			if (line_len > 0 && line_buf[line_len - 1] == '\n')
+			{
+				break; /* Complete line */
+			}
+			if (feof(fp))
+			{
+				break; /* Last line without newline */
+			}
+
+			/* Line didn't fit, expand buffer and continue reading */
+			size_t new_capacity = buf_capacity * 2;
+			char* new_buf = (char*)lcu_malloc_raw(new_capacity);
+			if (NULL == new_buf)
+			{
+				ret = -1;
+				goto cleanup_read_txt;
+			}
+			memcpy(new_buf, line_buf, line_len);
+			FREE(line_buf);
+			line_buf = new_buf;
+			buf_capacity = new_capacity;
 		}
-		if (p > buf && p[-1] == '\r') 
+
+		/* Trim trailing newline and carriage return */
+		p = line_buf + line_len;
+		if (p > line_buf && p[-1] == '\n')
+		{
+			--p;
+		}
+		if (p > line_buf && p[-1] == '\r')
 		{
 			--p;
 		}
 		*p = '\0';
-		for (p = buf; *p != '\0' && isspace((int)(*p)); ++p) 
+
+		/* Skip leading whitespace */
+		for (p = line_buf; *p != '\0' && isspace((int)(*p)); ++p)
 		{
 			;
 		}
-		if (*p == '\0' /* || *p == '#' */) 
+
+		/* Skip empty lines */
+		if (*p == '\0' /* || *p == '#' */)
 		{
 			continue;
 		}
 
-		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data))) 
+		/* Call handler */
+		if (0 != (ret = (*handle_txt_line_fn)(line_num, p, user_data)))
 		{
-			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, buf);
+			//LOGE("WARNING: cannot handle line[%d]=[%s], skipped", line_num, line_buf);
 			break;
 		}
 	}
+
+cleanup_read_txt:
+	FREE(line_buf);
 	fclose(fp);
 	return ret;
 }
@@ -219,11 +292,28 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 	FILE* fp = fopen(file_path, "rb");
 	if (!fp)
 	{
-		//LOGE("failed on fopen \"%s\"", file_path);
 		return -2;
 	}
-	fseek(fp, 0, SEEK_END);
+	/* P2-4 内部加固 (保留 API 兼容): 检查 fseek/ftell 失败 + INT_MAX 截断风险.
+	 * 不改签名为 size_t 是为了保留 ABI 兼容. */
+	if (0 != fseek(fp, 0, SEEK_END))
+	{
+		fclose(fp);
+		return -2;
+	}
 	const long file_size = ftell(fp);
+	if (file_size < 0)
+	{
+		/* ftell 失败 (管道/特殊文件) */
+		fclose(fp);
+		return -2;
+	}
+	if (file_size > INT_MAX - 1)
+	{
+		/* 文件过大,无法用 int 表达长度 */
+		fclose(fp);
+		return -6;
+	}
 	*out_file_byte_len = (int)file_size;
 	do
 	{
@@ -232,15 +322,35 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 			ret = -3;
 			break;
 		}
-		fseek(fp, 0, SEEK_SET);
-		char* mem = malloc((size_t)file_size + 1);
+		if (0 != fseek(fp, 0, SEEK_SET))
+		{
+			ret = -2;
+			break;
+		}
+		/* ====================================================================
+		 * OWNERSHIP TRANSFER - DO NOT TRACK
+		 * ====================================================================
+		 * file_util_read_all transfers ownership of this buffer to the caller
+		 * via out_alloced_file_data. The caller releases it with free().
+		 * Using lcu_malloc_trace here would return a canary-offset/tracked
+		 * pointer that corrupts the heap when the caller's free() runs while
+		 * the allocation tracker is active.
+		 *
+		 * KEEP THIS AS lcu_malloc_raw() PERMANENTLY. DO NOT change to lcu_malloc_trace.
+		 *
+		 * When mem_debug.h rewrites free to lcu_free, lcu_free's untracked
+		 * fallback still releases this raw buffer correctly.
+		 *
+		 * See: allocator.h, ownership_contract_test.c
+		 * ==================================================================== */
+		char* mem = (char*)lcu_malloc_raw((size_t)file_size + 1);
 		if (!mem)
 		{
 			ret = -4;
 			break;
 		}
 		mem[file_size] = '\0'; // place '\0' for string file
-		if (file_size != fread(mem, 1, file_size, fp))
+		if ((size_t)file_size != fread(mem, 1, (size_t)file_size, fp))
 		{
 			free(mem);
 			ret = -5;
@@ -253,4 +363,3 @@ int file_util_read_all(__in const char* file_path, __out char** out_alloced_file
 	fclose(fp);
 	return ret;
 }
-

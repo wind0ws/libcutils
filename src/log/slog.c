@@ -1,7 +1,7 @@
 #include "log/slog.h"
 #include "mem/strings.h"
 
-//extern 
+// 依赖平台对 int 大小变量赋值的原子性，多线程下不加锁属有意设计
 LogLevel _g_slog_min_level = LOG_LEVEL_VERBOSE;
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
@@ -16,7 +16,7 @@ static slog_config_t g_slog = { NULL };
 
 void slog_set_min_level(LogLevel min_level)
 {
-	if (min_level < LOG_LEVEL_OFF || min_level > LOG_LEVEL_ERROR)
+	if ((int)min_level < (int)LOG_LEVEL_OFF || (int)min_level > (int)LOG_LEVEL_ERROR)
 	{
 		fprintf(stderr, "[slog] (%s:%d) invalid min_level:%d\n", __func__, __LINE__, min_level);
 		return; // invalid min_level
@@ -25,7 +25,7 @@ void slog_set_min_level(LogLevel min_level)
 	_g_slog_min_level = min_level;
 }
 
-LogLevel slog_get_min_level()
+LogLevel slog_get_min_level(void)
 {
 	return _g_slog_min_level;
 }
@@ -36,7 +36,7 @@ LogLevel slog_get_min_level()
 #pragma warning(disable:4996) //for disable freopen warning
 #endif // _WIN32
 
-void slog_stdout2file(char* file_path)
+void slog_stdout2file(const char* file_path)
 {
 	if (NULL == file_path || '\0' == file_path[0])
 	{
@@ -53,6 +53,7 @@ void slog_stdout2file(char* file_path)
 	if (!g_slog.fp_out)
 	{
 		fprintf(stderr, "[slog] (%s:%d) Error: failed on freopen to file(%s)\n", __func__, __LINE__, file_path);
+		freopen(_STDOUT_NODE, "w", stdout);
 	}
 }
 
@@ -78,7 +79,7 @@ void slog_back2stdout()
 
 #endif // !_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT
 
-void __slog_internal_hex_print(int level, const char* tag, const char* chars, size_t chars_count)
+void _slog_internal_hex_print(int level, const char* tag, const char* chars, size_t chars_count)
 {
 	char buf[256];// use small stack size
 	str_char2hex(buf, sizeof(buf), chars, chars_count);

@@ -3,7 +3,7 @@
 #define LOG_TAG "INTEGER_TEST"
 #include "log/logger.h"
 
-int integer_test()
+int integer_test(void)
 {
 	LOGD("is_power_of_two(128) = %d", integer_is_power_of_two(128));
 	LOGD("is_power_of_two(255) = %d", integer_is_power_of_two(255));
@@ -16,3 +16,6 @@ int integer_test()
 	LOGD("rounddown(127) = %d", integer_rounddown_pow_of_two(127));
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(integer_test, "test integer");

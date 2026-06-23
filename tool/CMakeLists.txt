@@ -1,21 +1,33 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 
-project(lcu VERSION 1.8.0 LANGUAGES C CXX)
+project(lcu VERSION 1.9.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
+
+# C2 修复: enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
+enable_testing()
 
 # 添加自定义cmake文件目录
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains)
 include(CheckSymbolExists)
+include(CheckIncludeFile)
 include(macros)
+
+# P2-6: 探测 C11 <threads.h> 可用性 (cross-compile 下 musl/uclibc 可能缺失).
+# 源码侧用 LCU_HAVE_C11_THREADS_H + __has_include 双保险.
+check_include_file("threads.h" LCU_HAVE_C11_THREADS_H)
+if(LCU_HAVE_C11_THREADS_H)
+    add_compile_definitions(LCU_HAVE_C11_THREADS_H=1)
+endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 #set(CMAKE_C_EXTENSIONS FALSE)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(POSITION_INDEPENDENT_CODE TRUE)
 
 
 option(BUILD_STATIC_LIBS "Build the static library" ON)
@@ -29,7 +41,7 @@ IF(WIN32)
 ENDIF(WIN32)
 
 message(STATUS "\n current CMakeLists.txt on => ${CMAKE_CURRENT_LIST_DIR}\n")
-#get prj root dirs, because CMakeLists.txt is in "build" dir, not in root dir. we should back to parent folder.
+#get prj root dir, because CMakeLists.txt is in "tool" dir, not in root dir. we should back to parent folder.
 get_filename_component(PRJ_ROOT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
 message(STATUS "\n CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR}\n PRJ_ROOT_DIR => ${PRJ_ROOT_DIR}\n")
 
@@ -170,6 +182,12 @@ message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 
 set(PRJ_DEMO_SRC_DIR "${PRJ_ROOT_DIR}/src_demo")
 file(GLOB_RECURSE PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp" "${PRJ_DEMO_SRC_DIR}/*.hpp")
+set(LCU_DIAGNOSTICS_PROBE_SRCS
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c"
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_crt_client.c"
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c"
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c")
+list(REMOVE_ITEM PRJ_DEMO_SRCS ${LCU_DIAGNOSTICS_PROBE_SRCS})
 message(STATUS "\n PRJ_DEMO_SRCS => ${PRJ_DEMO_SRCS}\n ")
 #===================== COLLECT SRC END =====================
 
@@ -234,16 +252,16 @@ IF (BUILD_SHARED_LIBS)
   # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
   #set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
   # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-  if(NOT CYGWIN)
-    # This property causes shared libraries on Linux to have the full version
-    # encoded into their final filename.  We disable this on Cygwin because
-    # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
-    # seems to be the default.
-    #
-    # This has no effect with MSVC, on that platform the version info for
-    # the DLL comes from the resource file win32/zlib1.rc
-    set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
-  endif()
+  #if(NOT CYGWIN)
+  #  # This property causes shared libraries on Linux to have the full version
+  #  # encoded into their final filename.  We disable this on Cygwin because
+  #  # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
+  #  # seems to be the default.
+  #  #
+  #  # This has no effect with MSVC, on that platform the version info for
+  #  # the DLL comes from the resource file win32/zlib1.rc
+  #  set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
+  #endif()
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)
@@ -251,12 +269,38 @@ IF (BUILD_SHARED_LIBS)
   list(APPEND target_names ${target_prj_shared})
 ENDIF (BUILD_SHARED_LIBS)
 
-IF (BUILD_DEMO)	
+IF (BUILD_DEMO)
   add_executable(${target_prj_demo}
-  
+
                  ${PRJ_DEMO_SRCS})
+  # demo 内部头（lcu_test_registry.h / lcu_test_args.h / lcu_test_console.h / lcu_test_glob.h）
+  target_include_directories(${target_prj_demo} PRIVATE ${PRJ_DEMO_SRC_DIR})
   list(APPEND target_names ${target_prj_demo})
 ENDIF (BUILD_DEMO)
+
+if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_STATIC_LIBS)
+  add_executable(lcu_diagnostics_probe
+                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c)
+  list(APPEND target_names lcu_diagnostics_probe)
+  set(_lcu_release_static_lib
+      "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}/${CMAKE_STATIC_LIBRARY_PREFIX}${CMAKE_PROJECT_NAME}_a${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  add_executable(lcu_diagnostics_release_static_probe
+                 EXCLUDE_FROM_ALL
+                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c)
+  target_link_libraries(lcu_diagnostics_release_static_probe
+                        PRIVATE "${_lcu_release_static_lib}")
+  list(APPEND target_names lcu_diagnostics_release_static_probe)
+endif()
+
+if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_SHARED_LIBS)
+  add_library(lcu_diagnostics_crt_client SHARED
+              ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_crt_client.c)
+  add_executable(lcu_diagnostics_multicrt_probe
+                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c)
+  list(APPEND target_names
+       lcu_diagnostics_crt_client
+       lcu_diagnostics_multicrt_probe)
+endif()
 
 #==================== DECLARE TARGET END ==================			   
 
@@ -295,9 +339,9 @@ if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) 
   set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${target_prj_demo})
   
   string(APPEND CMAKE_C_FLAGS_RELEASE        " /Ot /MT")
-  string(APPEND CMAKE_C_FLAGS_DEBUG          " /MTd /DEBUG")
+  string(APPEND CMAKE_C_FLAGS_DEBUG          " /MTd")
   string(APPEND CMAKE_CXX_FLAGS_RELEASE      " /Ot /MT")
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /MTd /DEBUG /Zi")
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG        " /MTd /Zi")
   #string(APPEND CMAKE_C_FLAGS_DEBUG   " -fsanitize=address,undefined") 
   #string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fsanitize=address,undefined") 
   
@@ -314,6 +358,17 @@ else()
   #add _GNU_SOURCE for pthread_setname_np
   add_definitions(-D_GNU_SOURCE)
 endif()
+
+# Android 16KB 页对齐: Android 15 起部分 64 位设备改用 16KB 内存页,
+# 链接时需将 max/common-page-size 设为 16384, 否则在 16KB 设备上无法加载 .so.
+# 旧版 NDK(如 r16b) 默认 4KB 需手动指定; NDK r28+ 已默认开启此对齐.
+# 静态库是归档文件无需页对齐, 故只追加到 EXE/SHARED 链接标志.
+if(ANDROID)
+  set(_ANDROID_16K_ALIGN_FLAGS "-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
+  string(APPEND COMMON_EXE_LINKER_FLAGS " ${_ANDROID_16K_ALIGN_FLAGS}")
+  string(APPEND COMMON_SHARED_LINKER_FLAGS " ${_ANDROID_16K_ALIGN_FLAGS}")
+endif()
+
 string(APPEND CMAKE_C_FLAGS   "${COMMON_C_FLGAS}")
 string(APPEND CMAKE_CXX_FLAGS "${COMMON_C_FLGAS} ${COMMON_CXX_FLGAS}")
 string(APPEND CMAKE_EXE_LINKER_FLAGS " ${COMMON_EXE_LINKER_FLAGS}")
@@ -335,6 +390,7 @@ if (WIN32 AND MSVC)
     endforeach ()
 
     foreach(prj_name ${target_names})
+        target_compile_definitions(${prj_name} PRIVATE $<$<CONFIG:Debug>:_DEBUG>)
         set_property(TARGET ${prj_name} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
         set_property(TARGET ${prj_name} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${PRJ_OUTPUT_DIR}")
     endforeach()
@@ -436,14 +492,236 @@ IF (BUILD_DEMO)
     set(demo_link_lib ${target_prj_static})
   else()
     set(demo_link_lib ${target_prj_shared})
-  endif (BUILD_STATIC_LIBS)  
+  endif (BUILD_STATIC_LIBS)
   target_link_libraries( # Specifies the target library.
           ${target_prj_demo}
-  
+
           ${demo_link_lib}
           #${target_prj_static}
           #${pthread-lib}
           #${log-lib}
           )
 ENDIF (BUILD_DEMO)
+
+if(TARGET lcu_diagnostics_probe)
+  target_link_libraries(lcu_diagnostics_probe ${target_prj_static})
+endif()
+if(TARGET lcu_diagnostics_crt_client)
+  target_link_libraries(lcu_diagnostics_crt_client ${target_prj_shared})
+  target_link_libraries(lcu_diagnostics_multicrt_probe
+                        ${target_prj_shared}
+                        lcu_diagnostics_crt_client)
+endif()
 #================SETUP dependencies of build target END==================
+
+#========================== CTest 集成 BEGIN ==========================
+if(BUILD_DEMO)
+    # 扫描 src_demo 下所有源文件，提取 LCU_TEST_REGISTER(name, ...) / LCU_TEST_REGISTER_OPTIONAL(name, ...)
+    file(GLOB_RECURSE _test_srcs "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp")
+    set(_lcu_tests "")
+    set(_lcu_tests_optional "")
+
+    foreach(_file ${_test_srcs})
+        # C3: 只匹配未注释的注册宏（行首允许空白，但不允许 //）
+        file(STRINGS "${_file}" _lines REGEX "^[ \t]*LCU_TEST_REGISTER(_OPTIONAL)?[ \t]*\\(")
+        foreach(_line ${_lines})
+            if(_line MATCHES "LCU_TEST_REGISTER_OPTIONAL[ \t]*\\(([A-Za-z_][A-Za-z0-9_]*)")
+                list(APPEND _lcu_tests_optional "${CMAKE_MATCH_1}")
+            elseif(_line MATCHES "LCU_TEST_REGISTER[ \t]*\\(([A-Za-z_][A-Za-z0-9_]*)")
+                list(APPEND _lcu_tests "${CMAKE_MATCH_1}")
+            endif()
+        endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES _lcu_tests)
+    list(REMOVE_DUPLICATES _lcu_tests_optional)
+
+    # C6: 工作目录设为 deploy，解决 DLL 路径 + 相对路径问题
+    if(CMAKE_CONFIGURATION_TYPES)
+        set(_work_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}")
+    else()
+        set(_work_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    endif()
+    if(NOT _work_dir)
+        set(_work_dir "${CMAKE_BINARY_DIR}")
+    endif()
+
+    # 默认用例：进 ctest 默认运行集
+    foreach(_name ${_lcu_tests})
+        add_test(NAME lcu.${_name} COMMAND ${target_prj_demo} ${_name})
+        set_tests_properties(lcu.${_name} PROPERTIES
+            LABELS "lcu"
+            TIMEOUT 120
+            WORKING_DIRECTORY "${_work_dir}")
+    endforeach()
+
+    option(LCU_ENABLE_OPTIONAL_TESTS "Register opt-in tests such as intentional leak tests" OFF)
+
+    # Optional tests are registered only when explicitly enabled.
+    set(_n_optional 0)
+    if(LCU_ENABLE_OPTIONAL_TESTS)
+        foreach(_name ${_lcu_tests_optional})
+            add_test(NAME lcu.optional.${_name} COMMAND ${target_prj_demo} ${_name})
+            set_tests_properties(lcu.optional.${_name} PROPERTIES
+                LABELS "lcu_optional"
+                TIMEOUT 60
+                WORKING_DIRECTORY "${_work_dir}")
+        endforeach()
+        list(LENGTH _lcu_tests_optional _n_optional)
+    endif()
+
+    # 慢用例单独加长 timeout
+    foreach(_slow time_util_test file_logger_test)
+        if("${_slow}" IN_LIST _lcu_tests)
+            set_tests_properties(lcu.${_slow} PROPERTIES TIMEOUT 300)
+        endif()
+    endforeach()
+
+    # 写共享文件/目录的用例：加 RESOURCE_LOCK 防止并行冲突
+    if("file_logger_test" IN_LIST _lcu_tests)
+        set_tests_properties(lcu.file_logger_test PROPERTIES RESOURCE_LOCK "log_dir")
+    endif()
+
+    # 多线程/共享 logger 的用例：RUN_SERIAL 串行化
+    foreach(_serial posix_thread_test thpool_test msg_queue_handler_test)
+        if("${_serial}" IN_LIST _lcu_tests)
+            set_tests_properties(lcu.${_serial} PROPERTIES RUN_SERIAL TRUE)
+        endif()
+    endforeach()
+
+    list(LENGTH _lcu_tests _n_default)
+    list(LENGTH _lcu_tests_optional _n_optional_discovered)
+    message(STATUS "CTest: ${_n_default} default tests + ${_n_optional} optional tests registered (discovered ${_n_optional_discovered}, LCU_ENABLE_OPTIONAL_TESTS=${LCU_ENABLE_OPTIONAL_TESTS})")
+endif()
+#========================== CTest 集成 END ==========================
+
+set(_lcu_custom_mem_check_enabled OFF)
+if(CMAKE_C_FLAGS MATCHES "_LCU_MEM_CHECK_FEATURE_ENABLE" OR
+   CMAKE_CXX_FLAGS MATCHES "_LCU_MEM_CHECK_FEATURE_ENABLE")
+    set(_lcu_custom_mem_check_enabled ON)
+endif()
+
+if(TARGET lcu_diagnostics_probe)
+    set(_diagnostics_probe_work_dir
+        "${CMAKE_BINARY_DIR}/diagnostics_tests/$<CONFIG>/assert_config")
+    add_test(
+        NAME lcu.diagnostics.assert_config
+        COMMAND ${CMAKE_COMMAND}
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_probe>"
+            "-DMODE=assert_config"
+            "-DWORK_DIR=${_diagnostics_probe_work_dir}"
+            "-DEXPECT_EXIT=nonzero"
+            "-DEXPECT_STDERR=ASSERT"
+            "-DEXPECT_LOG_COUNT=1"
+            "-DEXPECT_LOG=ASSERT"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_diagnostics_probe.cmake")
+    set_tests_properties(lcu.diagnostics.assert_config PROPERTIES
+        LABELS "lcu_diagnostics"
+        TIMEOUT 10)
+
+    function(add_lcu_diagnostics_probe_test _mode _stderr _stdout _log_count _log)
+        set(_probe_args
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_probe>"
+            "-DMODE=${_mode}"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/$<CONFIG>/${_mode}"
+            "-DEXPECT_EXIT=zero"
+            "-DEXPECT_LOG_COUNT=${_log_count}")
+        if(NOT "${_stderr}" STREQUAL "-")
+            list(APPEND _probe_args "-DEXPECT_STDERR=${_stderr}")
+        endif()
+        if(NOT "${_stdout}" STREQUAL "-")
+            list(APPEND _probe_args "-DEXPECT_STDOUT=${_stdout}")
+        endif()
+        if(NOT "${_log}" STREQUAL "-")
+            list(APPEND _probe_args "-DEXPECT_LOG=${_log}")
+        endif()
+        add_test(
+            NAME lcu.diagnostics.${_mode}
+            COMMAND ${CMAKE_COMMAND} ${_probe_args}
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_diagnostics_probe.cmake")
+        set_tests_properties(lcu.diagnostics.${_mode} PROPERTIES
+            CONFIGURATIONS Debug
+            LABELS "lcu_diagnostics"
+            TIMEOUT 15)
+    endfunction()
+
+    if(NOT _lcu_custom_mem_check_enabled)
+        add_lcu_diagnostics_probe_test(crt_warn
+            "diagnostics probe CRT warning" - 1 "diagnostics probe CRT warning")
+        add_lcu_diagnostics_probe_test(crt_leak
+            "Detected memory leaks" - 1 "Detected memory leaks")
+    endif()
+    add_lcu_diagnostics_probe_test(primary_write
+        "primary diagnostic" - 1 "primary diagnostic")
+    add_lcu_diagnostics_probe_test(concurrency
+        "secondary diagnostic" "concurrency probe passed" 1 "secondary diagnostic")
+    add_lcu_diagnostics_probe_test(retention
+        - "retention probe passed" 32 -)
+endif()
+
+if(TARGET lcu_diagnostics_release_static_probe)
+    add_test(
+        NAME lcu.diagnostics.release_static_debug_client
+        COMMAND ${CMAKE_COMMAND}
+            "-DBUILD_DIR=${CMAKE_BINARY_DIR}"
+            "-DRELEASE_TARGET=${target_prj_static}"
+            "-DDEBUG_TARGET=lcu_diagnostics_release_static_probe"
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_release_static_probe>"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/release_static_debug_client"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_release_static_debug_client_probe.cmake")
+    set_tests_properties(lcu.diagnostics.release_static_debug_client PROPERTIES
+        CONFIGURATIONS Debug
+        LABELS "lcu_diagnostics"
+        TIMEOUT 300)
+endif()
+
+if(TARGET lcu_diagnostics_multicrt_probe AND
+   NOT _lcu_custom_mem_check_enabled)
+    add_test(
+        NAME lcu.diagnostics.multicrt
+        COMMAND ${CMAKE_COMMAND}
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_multicrt_probe>"
+            "-DMODE=multicrt"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/$<CONFIG>/multicrt"
+            "-DEXPECT_EXIT=zero"
+            "-DEXPECT_STDERR=CRT warning"
+            "-DEXPECT_STDOUT=multi CRT probe passed"
+            "-DEXPECT_LOG_COUNT=1"
+            "-DEXPECT_LOG=client DLL CRT warning"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_diagnostics_probe.cmake")
+    set_tests_properties(lcu.diagnostics.multicrt PROPERTIES
+        CONFIGURATIONS Debug
+        LABELS "lcu_diagnostics"
+        TIMEOUT 15)
+endif()
+
+if(TARGET lcu_diagnostics_probe AND _lcu_custom_mem_check_enabled)
+    add_test(
+        NAME lcu.diagnostics.tracker_leak
+        COMMAND ${CMAKE_COMMAND}
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_probe>"
+            "-DMODE=tracker_leak"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/$<CONFIG>/tracker_leak"
+            "-DEXPECT_EXIT=zero"
+            "-DEXPECT_STDERR=MEMORY_LEAK"
+            "-DEXPECT_LOG_COUNT=1"
+            "-DEXPECT_LOG=MEMORY_LEAK"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_diagnostics_probe.cmake")
+    set_tests_properties(lcu.diagnostics.tracker_leak PROPERTIES
+        LABELS "lcu_diagnostics"
+        TIMEOUT 15)
+
+    add_test(
+        NAME lcu.diagnostics.tracker_corruption
+        COMMAND ${CMAKE_COMMAND}
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_probe>"
+            "-DMODE=tracker_corruption"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/$<CONFIG>/tracker_corruption"
+            "-DEXPECT_EXIT=nonzero"
+            "-DEXPECT_STDERR=MEMORY_CORRUPTION"
+            "-DEXPECT_LOG_COUNT=1"
+            "-DEXPECT_LOG=MEMORY_CORRUPTION"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_diagnostics_probe.cmake")
+    set_tests_properties(lcu.diagnostics.tracker_corruption PROPERTIES
+        LABELS "lcu_diagnostics"
+        TIMEOUT 15)
+endif()

@@ -54,7 +54,7 @@ static int url_decoder_test()
 	return decode_ret > 0 ? 0 : decode_ret;
 }
 
-int url_encoder_decoder_test()
+int url_encoder_decoder_test(void)
 {
 	int ret;
 	do 
@@ -69,3 +69,5 @@ int url_encoder_decoder_test()
 	
 	return ret;
 }
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(url_encoder_decoder_test, "test url encoder/decoder");

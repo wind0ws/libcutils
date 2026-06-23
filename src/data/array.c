@@ -18,51 +18,59 @@
  *
  ******************************************************************************/
 
+#include "mem/mem_debug.h"
 #include "data/array.h"
-#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include "common_macro.h"
 #define LOG_TAG "lcu_array"
 #include "log/xlog.h"
 
-struct array_t 
+struct array_t
 {
     size_t element_size;
     size_t length;
     size_t capacity;
-    uint8_t* data;
+    uint8_t *data;
     uint8_t internal_storage[];
 };
 
-#define  DEFAULT_INIT_ELEMENTS_CAPACITY  16
-static bool grow(array_t* array);
+#define DEFAULT_INIT_ELEMENTS_CAPACITY 16
+static bool grow(array_t *array);
 
-array_t* array_new(size_t element_size) 
+array_t *array_new(size_t element_size)
 {
     return array_new_with_init_capacity(element_size, DEFAULT_INIT_ELEMENTS_CAPACITY);
 }
 
-array_t* array_new_with_init_capacity(size_t element_size, size_t init_capacity)
+array_t *array_new_with_init_capacity(size_t element_size, size_t init_capacity)
 {
-	if (init_capacity < 4)
-	{
+    /* NOTE(reviewed 2026-06-08): element_size * init_capacity (and grow()'s
+     * new_capacity * element_size) are not overflow-checked. This is a known
+     * hardening gap, NOT an active bug: array.h documents element_size > 0 as a
+     * caller precondition, there is no overflow-safety contract, and this code
+     * has no internal callers. If array is ever exposed to attacker-controlled
+     * sizes, add: reject element_size == 0 and check
+     * init_capacity <= (SIZE_MAX - sizeof(array_t)) / element_size. Tracked as
+     * D-2 in .ai/review-2026-06-08.md. */
+    if (init_capacity < 4)
+    {
         init_capacity = 4;
-	}
-	array_t* array = (array_t*)calloc(1, sizeof(array_t) + element_size * init_capacity);
+    }
+    array_t *array = (array_t *)calloc(1, sizeof(array_t) + element_size * init_capacity);
     if (array == NULL)
     {
         return NULL;
     }
-	array->element_size = element_size;
-	array->capacity = init_capacity;
-	array->data = array->internal_storage;
-	return array;
+    array->element_size = element_size;
+    array->capacity = init_capacity;
+    array->data = array->internal_storage;
+    return array;
 }
 
-void array_free(array_t* array) 
+void array_free(array_t *array)
 {
-    if (!array) 
+    if (!array)
     {
         return;
     }
@@ -73,37 +81,37 @@ void array_free(array_t* array)
     free(array);
 }
 
-void* array_ptr(const array_t* array) 
+void *array_ptr(const array_t *array)
 {
     return array_at(array, 0);
 }
 
-void* array_at(const array_t* array, size_t index) 
+void *array_at(const array_t *array, size_t index)
 {
     ASSERT(array != NULL);
     ASSERT(index < array->length);
     return array->data + (index * array->element_size);
 }
 
-size_t array_length(const array_t* array) 
+size_t array_length(const array_t *array)
 {
     ASSERT(array != NULL);
     return array->length;
 }
 
-bool array_append_value(array_t* array, uint32_t value)
+bool array_append_value(array_t *array, uint32_t value)
 {
     return array_append_ptr(array, &value);
 }
 
-bool array_append_ptr(array_t* array, void* data) 
+bool array_append_ptr(array_t *array, void *data)
 {
     ASSERT(array != NULL);
     ASSERT(data != NULL);
-    if (array->length == array->capacity && !grow(array)) 
+    if (array->length == array->capacity && !grow(array))
     {
-        TLOGE(LOG_TAG, "%s unable to grow array past current capacity of %zu elements of size %zu.",
-            __func__, array->capacity, array->element_size);
+        LOGE("%s unable to grow array past current capacity of %zu elements of size %zu.",
+             __func__, array->capacity, array->element_size);
         return false;
     }
     ++array->length;
@@ -111,16 +119,16 @@ bool array_append_ptr(array_t* array, void* data)
     return true;
 }
 
-static bool grow(array_t* array) 
+static bool grow(array_t *array)
 {
     const size_t new_capacity = array->capacity + (array->capacity / 2);
     const bool is_moving = (array->data == array->internal_storage);
-    void* new_data = realloc(is_moving ? NULL : array->data, new_capacity * array->element_size);
-    if (!new_data) 
+    void *new_data = realloc(is_moving ? NULL : array->data, new_capacity * array->element_size);
+    if (!new_data)
     {
         return false;
     }
-    if (is_moving) 
+    if (is_moving)
     {
         memcpy(new_data, array->internal_storage, array->length * array->element_size);
     }

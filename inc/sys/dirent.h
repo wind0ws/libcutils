@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LCU_DIRENT_WRAPPER_H
-#define LCU_DIRENT_WRAPPER_H
+#ifndef LCU_DIRENT_H
+#define LCU_DIRENT_H
 
 #ifdef _WIN32
 #pragma warning(push)
@@ -11,4 +11,4 @@
 #include <dirent.h>
 #endif // _WIN32
 
-#endif // !LCU_DIRENT_WRAPPER_H
+#endif // !LCU_DIRENT_H

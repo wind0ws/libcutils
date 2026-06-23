@@ -67,10 +67,13 @@ static int testcase()
 	return 0;
 }
 
-int list_test()
+int list_test(void)
 {
 	LOGD(" --> list test begin");
 	int code = testcase();
 	LOGD(" <-- list test end. %d", code);
 	return code;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(list_test, "test list");

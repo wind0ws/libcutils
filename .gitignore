@@ -1,11 +1,65 @@
+*.iml
+.gradle
+.svn
+#ignore temp doc
+~$*.doc*
+~$*.xls*
+~$*.ppt*
+/local.properties
+local.properties
+.externalNativeBuild
+.cxx
 .DS_Store
-cmake-build-debug/
-cmake-build-release/
 .idea/
 .vs/
 .vscode/
+.kotlin/
+.temp/
+.tmp/
+.ai/review/
+*.local.md
+# AI 会话级 plan/review 产物，不进版本库（superpowers 等 skill 默认落点）
+docs/plans/
+docs/superpowers/
+__pycache__/
+/build
+/captures
+CMakeFiles
+cmake-build-*/
+**/build/cmake-*/
+*.suo
+*.sdf
+*.vcxproj.user
+*.bak
+*.opensdf
+*.ipch
+out/
 tool/backup/
 tool/output/
 tool/out/
-tool/deploy/
-tool/build/
+tool/build*/
+tool/temp/
+tool/deploy/*.pcm
+tool/deploy/audio/
+tool/deploy/*archive*/
+tool/deploy/debug/
+tool/deploy/release/
+tool/deploy/bin*/
+tool/deploy/out*/
+tool/deploy/src*/
+tool/deploy/inc*/
+tool/deploy/doc*/
+tool/deploy/temp*/
+# ignore all sub-dirs and files under res
+tool/deploy/res/*
+# ignore generated license file.
+device_license.dat
+
+# 本地工具链配置文件（按需启用，不进版本库）
+tool/cmake/toolchains/*.cmake
+tool/cmake/toolchains/*.sh
+
+# 测试运行时生成的产物
+basic_test.txt
+*.log
+build_*/

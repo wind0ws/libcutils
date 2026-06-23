@@ -5,7 +5,7 @@
 #define LOG_TAG "BASIC_TEST"
 #include "log/logger.h"
 
-int basic_test()
+int basic_test(void)
 {
 	LOGD_TRACE(" *** Welcome *** ");
 	FILE* fp_test = fopen("basic_test.txt", "wb");
@@ -19,3 +19,5 @@ int basic_test()
 	LOGD("test finished...");
 	return 0;
 }
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(basic_test, "simple fwrite test case");

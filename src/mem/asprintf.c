@@ -1,4 +1,28 @@
+#include "mem/mem_debug.h"
 #include "mem/asprintf.h"
+
+/* ============================================================================
+ * OWNERSHIP TRANSFER - DO NOT TRACK
+ * ============================================================================
+ * asprintf/vasprintf are STANDARD POSIX/GNU function names with a universal
+ * contract: the returned buffer (*strp) is released by the caller with free().
+ *
+ * We undo the mem_debug.h malloc/free rewrite here so this implementation uses
+ * raw libc malloc/free. Using lcu_malloc_trace would return a canary-offset/
+ * tracked pointer that corrupts the heap when the caller's free() runs while
+ * the allocation tracker is active.
+ *
+ * DO NOT remove these #undef lines. DO NOT change malloc() to lcu_malloc_trace.
+ *
+ * See: allocator.h (lcu_malloc_raw/lcu_free untracked fallback),
+ * ownership_contract_test.c
+ * ============================================================================ */
+#ifdef malloc
+#undef malloc
+#endif
+#ifdef free
+#undef free
+#endif
 
 #ifdef __GNUC__
 int vscprintf(const char* format, va_list ap)

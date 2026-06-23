@@ -5,7 +5,7 @@
 #define LOG_TAG "BASE64_TEST"
 #include "log/logger.h"
 
-int base64_test()
+int base64_test(void)
 {
 	//helllo, 你好！
 	const char plain_utf8_str[] = { 0x68,0x65,0x6C,0x6C,0x6C,0x6F,0x2C,0x20,0xE4,0xBD,0xA0,0xE5,0xA5,0xBD,0xEF,0xBC,0x81,0x00 };
@@ -38,3 +38,6 @@ int base64_test()
 	free(decode_buf);
 	return 0;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(base64_test, "test base64");

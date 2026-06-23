@@ -37,7 +37,7 @@ static void* multithreaded_main(void* args)
 #pragma warning(push)
 #pragma warning(disable:4996) //for disable scanf warning
 #endif // _WIN32
-int mplite_test()
+int mplite_test(void)
 {
 	size_t alloc_counter;
 	size_t buffer_size;
@@ -147,3 +147,6 @@ int mplite_test()
 #ifdef _WIN32
 #pragma warning(pop)  
 #endif // _WIN32
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(mplite_test, "test mem-pool");

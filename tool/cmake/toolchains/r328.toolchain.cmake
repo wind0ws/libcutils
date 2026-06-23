@@ -1,27 +1,38 @@
 
-set(CMAKE_SYSTEM_NAME Linux)
 set(UNIX TRUE CACHE BOOL "")
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_VERSION 1)  # this one not so much
 set(PLATFORM r328)
 
 #R328 STAGING_DIR. (required by toolchain gcc)
-#set(ENV{STAGING_DIR} /mnt/d/env/r328/sdk_target)
+#set(ENV{STAGING_DIR} "/mnt/d/env/r328/sdk_target")
+#message("STAGING_DIR: $ENV{STAGING_DIR}")
 
-# compiler
-set(CROSS_TOOLCHAIN_BIN_DIR "/mnt/d/env/r328/toolchain-sunxi-musl/toolchain/bin")
-set(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_BIN_DIR}/arm-openwrt-linux-gcc")
-set(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_BIN_DIR}/arm-openwrt-linux-g++")
-set(CMAKE_STRIP "${CROSS_TOOLCHAIN_BIN_DIR}/arm-openwrt-linux-strip")
-# sysroot location
-#set(MYSYSROOT /path/to/sysroots/cortexa7-vfp-neon-telechips-linux-gnueabi)
-set(MYSYSROOT "/mnt/d/env/r328/sdk_target")
+set(CROSS_TOOLCHAIN_DIR "/mnt/d/env/toolchains/r328/toolchain-sunxi-musl/toolchain")
+set(CROSS_TOOLCHAIN_PATH_PREFIX "${CROSS_TOOLCHAIN_DIR}/bin/arm-openwrt-linux-")
+
+set(CROSS_SYS_ROOT "${CROSS_TOOLCHAIN_DIR}/../../sdk_target")
+
+#set compiler location
+set(CMAKE_C_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}gcc")
+set(CMAKE_CXX_COMPILER "${CROSS_TOOLCHAIN_PATH_PREFIX}g++")
+set(CMAKE_AR "${CROSS_TOOLCHAIN_PATH_PREFIX}ar")
+set(CMAKE_LINKER "${CROSS_TOOLCHAIN_PATH_PREFIX}ld")
+set(CMAKE_RANLIB "${CROSS_TOOLCHAIN_PATH_PREFIX}ranlib")
+set(CMAKE_NM "${CROSS_TOOLCHAIN_PATH_PREFIX}nm")
+set(CMAKE_OBJDUMP "${CROSS_TOOLCHAIN_PATH_PREFIX}objdump")
+set(CMAKE_OBJCOPY "${CROSS_TOOLCHAIN_PATH_PREFIX}objcopy")
+set(CMAKE_STRIP "${CROSS_TOOLCHAIN_PATH_PREFIX}strip")
+
+
 # compiler/linker flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --sysroot=${MYSYSROOT}" CACHE INTERNAL "" FORCE)
-set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} --sysroot=${MYSYSROOT}" CACHE INTERNAL "" FORCE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --sysroot=${MYSYSROOT}" CACHE INTERNAL "" FORCE)
-set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} --sysroot=${MYSYSROOT}" CACHE INTERNAL "" FORCE)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --sysroot=${CROSS_SYS_ROOT}" CACHE INTERNAL "" FORCE)
+set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} --sysroot=${CROSS_SYS_ROOT}" CACHE INTERNAL "" FORCE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --sysroot=${CROSS_SYS_ROOT}" CACHE INTERNAL "" FORCE)
+set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} --sysroot=${CROSS_SYS_ROOT}" CACHE INTERNAL "" FORCE)
+
 # cmake built-in settings to use find_xxx() functions
-set(CMAKE_FIND_ROOT_PATH "${MYSYSROOT}")
+set(CMAKE_FIND_ROOT_PATH "${CROSS_SYS_ROOT}")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-

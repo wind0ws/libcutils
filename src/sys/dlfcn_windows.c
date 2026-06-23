@@ -19,6 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with Windows DLL API.
+ * dlfcn_windows.c implements POSIX dlopen/dlsym emulation on Windows using LoadLibrary,
+ * GetProcAddress, and FreeLibrary. These system APIs manage DLL lifecycle and internal
+ * structures (module handles, export tables, loader locks) that must not be intercepted
+ * by our memory tracking layer. The Windows loader manages its own memory for loaded modules. */
+
 #ifdef _WIN32
 
 #ifdef _DEBUG

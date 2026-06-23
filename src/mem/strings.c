@@ -1,5 +1,11 @@
 #include "mem/strings.h"
 #include <malloc.h>
+#include <stdint.h>  /* for SIZE_MAX */
+
+/* CRITICAL: This file does NOT include mem_debug.h to avoid macro expansion breaking
+ * the strndup function definition (Windows system function implementation).
+ * strreplace returns ownership to the caller, so it uses raw libc malloc (the
+ * caller frees with libc free); it does NOT use a tracked allocator. */
 
 #ifdef _WIN32
 char* strndup(const char* s, size_t n)
@@ -105,6 +111,14 @@ size_t strlcat(char* dst, const char* src, size_t size)
 char* strreplace(char const* const original,
 	char const* const pattern, char const* const replacement)
 {
+	/* Input validation: prevent NULL dereference and empty pattern infinite loop.
+	 * Empty pattern causes strstr to always return the haystack without advancing,
+	 * leading to infinite patcnt loop and subsequent undersized allocation. */
+	if (!original || !pattern || !replacement || !pattern[0])
+	{
+		return NULL;
+	}
+
 	size_t const replen = strlen(replacement);
 	size_t const patlen = strlen(pattern);
 	size_t const orilen = strlen(original);
@@ -119,15 +133,48 @@ char* strreplace(char const* const original,
 		++patcnt;
 	}
 
-	// allocate memory for the new string
-	size_t const retlen = orilen + patcnt * (replen - patlen);
-	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
-	if (NULL != returned)
+	/* Overflow check: when replen > patlen, the expansion patcnt * (replen - patlen)
+	 * can overflow size_t on 32-bit platforms with large inputs, resulting in malloc
+	 * allocating an undersized buffer followed by memcpy heap overflow. */
+	size_t retlen;
+	if (replen > patlen)
 	{
+		size_t const expand_per = replen - patlen;
+		if (patcnt > SIZE_MAX / expand_per || orilen > SIZE_MAX - patcnt * expand_per)
+		{
+			return NULL;  // Would overflow
+		}
+		retlen = orilen + patcnt * expand_per;
+	}
+	else
+	{
+		// replen <= patlen: shrinking or equal, no overflow risk
+		retlen = orilen + patcnt * (replen - patlen);
+	}
+
+	/* ========================================================================
+	 * OWNERSHIP TRANSFER - DO NOT TRACK
+	 * ========================================================================
+	 * strreplace returns this buffer to the caller who releases it with free().
+	 * Using lcu_malloc_trace here would return a canary-offset/tracked pointer
+	 * that would not be compatible with a plain libc free.
+	 *
+	 * KEEP THIS AS RAW LIBC malloc() PERMANENTLY. DO NOT change to lcu_malloc_trace.
+	 *
+	 * See: allocator.h (lcu_malloc_raw/lcu_free untracked fallback),
+	 * ownership_contract_test.c
+	 * ======================================================================== */
+	char* const returned = (char*)malloc(sizeof(char) * (retlen + 1));
+	do
+	{
+		if (NULL == returned)
+		{
+			break;
+		}
 		//memset(returned, '\0', sizeof(char) * (retlen + 1));
 		returned[0] = '\0';
 		// copy the original string, 
-		// replacing all the instances of the pattern
+		// replacing all the instances of the pattern.
 		char* retptr = returned;
 		for (oriptr = original; (patloc = strstr(oriptr, pattern)); oriptr = patloc + patlen)
 		{
@@ -142,19 +189,23 @@ char* strreplace(char const* const original,
 			retptr += replen;
 		}
 		// copy the rest of the string.
-		strcpy(retptr, oriptr);
-	}
+        size_t remaining_len = strlen(oriptr);
+        memcpy(retptr, oriptr, remaining_len + 1U); /* +1 for null terminator */
+	} while (0);
 	return returned;
 }
 
-void strsplit(char* recv_splited_str[], size_t* p_splited_nums, const char *src_str, const char* delimiter)
+/* strsplit mutates src_str by replacing delimiter bytes with NUL (strtok_r behavior).
+ * The parameter is now truthfully declared as non-const. Callers must pass writable buffers.
+ * Returned token pointers alias into src_str; src_str must remain valid for token lifetime. */
+void strsplit(char* recv_splited_str[], size_t* p_splited_nums, char *src_str, const char* delimiter)
 {
 	char* token = NULL;
 	char* token_ctx = NULL;
 	size_t recv_ptrs_size = *p_splited_nums;
 	*p_splited_nums = 0;
 
-	token = strtok_r((char *)src_str, delimiter, &token_ctx);
+	token = strtok_r(src_str, delimiter, &token_ctx);
 	while (token && *p_splited_nums < recv_ptrs_size)
 	{
 		recv_splited_str[*p_splited_nums] = token;
@@ -168,6 +219,12 @@ void strtrim(char *s, const char *cset)
 {
 	char* start, * end, * sp, * ep;
 	size_t len;
+
+	/* P2-11: 空串/NULL 保护. 修复前 s+strlen(s)-1 在空串时下溢为 s-1 (指针越界 UB). */
+	if (NULL == s || '\0' == s[0])
+	{
+		return;
+	}
 
 	sp = start = s;
 	ep = end = s + strlen(s) - 1;
@@ -201,6 +258,13 @@ size_t str_char2hex(char* out_hex_str, size_t out_hex_str_capacity,
 {
 #define ONE_HEX_STR_SIZE (3U)
 	size_t len_hex_str = 0U;
+	/* P1-8: 入口校验 capacity 下限.
+	 * 修复前: capacity==0 时 out_hex_str[0]='\0' 越界写;
+	 *         capacity ∈ {1,2} 时 capacity/3-1U 下溢为 SIZE_MAX, for 循环失控越界写. */
+	if (NULL == out_hex_str || out_hex_str_capacity < (ONE_HEX_STR_SIZE + 1U))
+	{
+		return 0U;
+	}
 	out_hex_str[0] = '\0';
 
 	if (chars_count * ONE_HEX_STR_SIZE >= out_hex_str_capacity)

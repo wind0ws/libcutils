@@ -24,6 +24,9 @@
 #define __success(expr) 
 #endif
 
+// calcuate auto cover buf read offset by bytes position
+#define AUTO_COVER_BUF_CALC_READ_OFFSET(bytes_position) (uint32_t)((bytes_position) % (UINT32_MAX))
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus

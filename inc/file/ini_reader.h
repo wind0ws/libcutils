@@ -2,7 +2,7 @@
 
 SPDX-License-Identifier: BSD-3-Clause
 
-Copyright (C) 2009-2020, Ben Hoyt
+Copyright (C) 2009-2025, Ben Hoyt
 
 inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
@@ -47,7 +47,13 @@ extern "C" {
 #endif
 #endif
 
-/* Typedef for prototype of handler function. */
+/* Typedef for prototype of handler function.
+
+   Note that even though the value parameter has type "const char*", the user
+   may cast to "char*" and modify its content, as the value is not used again
+   after the call to ini_reader_handler. This is not true of section and name --
+   those must not be modified.
+*/
 #if INI_HANDLER_LINENO
 typedef int (*ini_reader_handler)(void* user, const char* section,
                            const char* name, const char* value,
@@ -86,15 +92,26 @@ INI_API int ini_reader_parse_stream(ini_reader reader, void* stream, ini_reader_
                      void* user);
 
 /* Same as ini_reader_parse(), but takes a zero-terminated string with the INI data
-instead of a file. Useful for parsing INI data from a network socket or
-already in memory. */
+   instead of a file. Useful for parsing INI data from a network socket or
+   which is already in memory. */
 INI_API int ini_reader_parse_string(const char* string, ini_reader_handler handler, void* user);
+
+/* Same as ini_reader_parse_string(), but takes a string and its length, avoiding
+   strlen(). Useful for parsing INI data from a network socket or which is
+   already in memory, or interfacing with C++ std::string_view. */
+INI_API int ini_reader_parse_string_length(const char* string, size_t length, ini_reader_handler handler, void* user);
 
 /* Nonzero to allow multi-line value parsing, in the style of Python's
    configparser. If allowed, ini_reader_parse() will call the handler with the same
-   name for each subsequent line parsed. */
+   name for each subsequent line parsed.
+
+   Disabled by default in libcutils: with multi-line on, an indented line such
+   as "   port=8080" following a "host=..." line is swallowed as a continuation
+   of host's value instead of being parsed as its own key, so the indented key
+   silently disappears. Turning it off makes leading-whitespace lines fall
+   through to the normal name=value branch. */
 #ifndef INI_ALLOW_MULTILINE
-#define INI_ALLOW_MULTILINE 1
+#define INI_ALLOW_MULTILINE 0
 #endif
 
 /* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of
@@ -145,7 +162,7 @@ INI_API int ini_reader_parse_string(const char* string, ini_reader_handler handl
 
 /* Stop parsing on first error (default is to keep parsing). */
 #ifndef INI_STOP_ON_FIRST_ERROR
-#define INI_STOP_ON_FIRST_ERROR 0
+#define INI_STOP_ON_FIRST_ERROR 1
 #endif
 
 /* Nonzero to call the handler at the start of each new section (with

@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-	typedef struct __msg_queue* msg_queue;
+	typedef struct _msg_queue* msg_queue;
 
 	/**
 	 * @brief create msg_queue.

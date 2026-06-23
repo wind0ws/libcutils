@@ -5,6 +5,12 @@
 //if your os(for example, RTOS) not support freopen stdout, enable this macro
 //#define _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT  1
 
+#ifdef __cplusplus
+#define _LOG_NULL nullptr /* NULL keyword for cpp */ 
+#else
+#define _LOG_NULL NULL   /* NULL keyword for c   */ 
+#endif // __cplusplus
+
 #ifndef _PRINTF_FUNC
 #include <stdio.h>
 #define _PRINTF_FUNC printf

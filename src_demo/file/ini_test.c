@@ -11,15 +11,16 @@ static const char* test_ini_str = "\
 [config]\r\n\
 #this is comment\r\n\
 #number=1\r\n\
-nNum1 = 6\r\n\
+# 测试key前面多个空格\r\n\
+ nNum1 = 6\r\n\
 test=\r\n\
 #中文注释以及没有return符\n\
-nNum2 = 2\n\
+  nNum2 = 2\n\
 #test double number\r\n\
 nNum3=0.035\r\n\
 # 测试16进制数字解析\r\n\
 nNum4 = 0xFF\n\
-nNUm5 = 0Xff\n\
+nNum5 = 0Xff\n\
 \r\n\
 [config2]\r\n\
 #test true false\r\n\
@@ -35,6 +36,252 @@ path= /sdcard/Android/data/  \r\n\
 #test empty value \r\n\
 run_mode =  \r\n\
 \r\n";
+
+static ini_parser_handle create_parser_from_string(void)
+{
+	ini_parser_handle parser = ini_parser_parse_str(test_ini_str);
+	ASSERT(parser);
+	return parser;
+}
+
+static void test_ini_parser_is_file_path(void)
+{
+	ASSERT(true == ini_parser_is_file_path("C:/tmp/config.ini"));
+	ASSERT(true == ini_parser_is_file_path("relative/path/config.ini"));
+	ASSERT(false == ini_parser_is_file_path("[config]\nkey=value"));
+	ASSERT(false == ini_parser_is_file_path(NULL));
+}
+
+static void test_ini_parser_create_destroy(void)
+{
+	ini_parser_handle parser = ini_parser_create();
+	ASSERT(parser);
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_has_section(parser, "missing"));
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_put_string(parser, NULL, "key", "value"));
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_put_string(parser, "section", NULL, "value"));
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_get_string(parser, NULL, "key", NULL, 0));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "section", "key", "value"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_has_section_key(parser, "section", "key"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_destroy(&parser));
+	ASSERT(NULL == parser);
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_destroy(&parser));
+	ASSERT(NULL == ini_parser_parse_file(NULL));
+	const char* non_exist_path = "__ini_parser_non_exist__.ini";
+	remove(non_exist_path);
+	ASSERT(NULL == ini_parser_parse_file(non_exist_path));
+}
+
+typedef struct
+{
+	int count;
+	int stop_after;
+} foreach_counter_t;
+
+static int counting_handler(const char* section, const char* key, const char* value, void* user)
+{
+	UNUSED(section);
+	UNUSED(key);
+	UNUSED(value);
+	foreach_counter_t* ctx = (foreach_counter_t*)user;
+	if (ctx)
+	{
+		ctx->count++;
+		if (ctx->stop_after > 0 && ctx->count >= ctx->stop_after)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void test_ini_parser_foreach_behavior(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	foreach_counter_t ctx = {0, 0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_foreach(parser, counting_handler, &ctx));
+	ASSERT(ctx.count > 0);
+	foreach_counter_t early_stop = {0, 1};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_foreach(parser, counting_handler, &early_stop));
+	ASSERT(early_stop.count == 1);
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_basic_rw(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "config", "added_key", "value1"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "config", "added_key", "value2"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "new_section", "new_key", "new_value"));
+	char value_buf[32] = {0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "config", "added_key", value_buf, sizeof(value_buf)));
+	ASSERT(strcmp(value_buf, "value2") == 0);
+	char small_buf[4] = {0};
+	ASSERT(INI_PARSER_CODE_NO_ENOUGH_MEMORY == ini_parser_get_string(parser, "config", "added_key", small_buf, sizeof(small_buf)));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_get_string(parser, "config", "missing", value_buf, sizeof(value_buf)));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_has_section(parser, "config"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_has_section_key(parser, "new_section", "new_key"));
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_numeric(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	double dbl_val = 0.0;
+	float flt_val = 0.0f;
+	int int_val = 0;
+	long nnum2_long = 0;
+	long long hex_val = 0;
+	long long hex_val2 = 0;
+	bool bool_val = false;
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_double(parser, "config", "nNum3", &dbl_val));
+	ASSERT(dbl_val > 0.03 && dbl_val < 0.04);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_float(parser, "config", "nNum3", &flt_val));
+	ASSERT(flt_val > 0.03f && flt_val < 0.04f);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_int(parser, "config", "nNum1", &int_val));
+	ASSERT(int_val == 6);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_long(parser, "config", "nNum2", &nnum2_long));
+	ASSERT(nnum2_long == 2);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_long_long(parser, "config", "nNum4", &hex_val));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_long_long(parser, "config", "nNum5", &hex_val2));
+	ASSERT(hex_val == hex_val2);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_bool(parser, "config2", "auto_start", &bool_val));
+	ASSERT(false == bool_val);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_bool(parser, "config2", "enable_state", &bool_val));
+	ASSERT(true == bool_val);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_bool(parser, "config2", "number_bool_state", &bool_val));
+	ASSERT(false == bool_val);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "config2", "invalid_bool", "maybe"));
+	ASSERT(INI_PARSER_CODE_FAILED == ini_parser_get_bool(parser, "config2", "invalid_bool", &bool_val));
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_dump_api(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	char small_mem[8] = {0};
+	size_t small_size = sizeof(small_mem);
+	ASSERT(INI_PARSER_CODE_NO_ENOUGH_MEMORY == ini_parser_dump_to_mem(parser, small_mem, &small_size));
+	char mem_area[1024] = {0};
+	size_t mem_size = sizeof(mem_area);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_dump_to_mem(parser, mem_area, &mem_size));
+	ASSERT(strlen(mem_area) + 1U == mem_size);
+	char* dumped = ini_parser_dump(parser);
+	ASSERT(dumped);
+	ASSERT(NULL != strstr(dumped, "[config]"));
+	free(dumped);
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_delete_ops(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_delete_by_section_key(parser, "config", "not_exist"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_delete_by_section_key(parser, "config", "test"));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_has_section_key(parser, "config", "test"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_delete_section(parser, "config4"));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_has_section(parser, "config4"));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_delete_section(parser, "config4"));
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_save_and_parse_file(void)
+{
+	const char* tmp_file = "ini_parser_test_output.ini";
+	ini_parser_handle parser = create_parser_from_string();
+	remove(tmp_file);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_save(parser, tmp_file));
+	ini_parser_handle file_parser = ini_parser_parse_file(tmp_file);
+	ASSERT(file_parser);
+	char buffer[64] = {0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(file_parser, "config", "nNum1", buffer, sizeof(buffer)));
+	ASSERT(strcmp(buffer, "6") == 0);
+	ini_parser_destroy(&file_parser);
+	remove(tmp_file);
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_error_paths(void)
+{
+	ini_parser_handle parser = create_parser_from_string();
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_get_string(parser, NULL, NULL, NULL, 0));
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_put_string(NULL, "config", "key", "value"));
+	ASSERT(INI_PARSER_CODE_INVALID_PARAM == ini_parser_delete_by_section_key(NULL, "config", "key"));
+	ini_parser_destroy(&parser);
+}
+
+static void test_ini_parser_key_trim_dedup(void)
+{
+	char buf[64] = {0};
+
+	/* 场景1: put_string API 传入带空格的 key，应与 trim 后的 key 去重 */
+	ini_parser_handle parser = ini_parser_create();
+	ASSERT(parser);
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "key1", "v1"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", " key1 ", "v2"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "key1", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "v2") == 0);
+
+	/* 场景2: 大小写不敏感去重 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "MyKey", "aaa"));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, "sec", "mykey", "bbb"));
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "MyKey", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "bbb") == 0);
+	/* 场景3: section 的 trim 去重 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_put_string(parser, " sec ", "skey", "s1"));
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "sec", "skey", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "s1") == 0);
+
+	/* 场景4: get/delete 时传入带空格的 key 也能命中 */
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_has_section_key(parser, " sec ", " key1 "));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_delete_by_section_key(parser, " sec ", " key1 "));
+	ASSERT(INI_PARSER_CODE_NOT_FOUND_SECTION_KEY == ini_parser_has_section_key(parser, "sec", "key1"));
+	ini_parser_destroy(&parser);
+
+	/* 场景5: 通过 INI 字符串解析，相同 key 不同空格写法应去重 */
+	static const char* trim_ini = "[section]\r\nname = first\r\n name = second\r\n";
+	ini_parser_handle parser2 = ini_parser_parse_str(trim_ini);
+	ASSERT(parser2);
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser2, "section", "name", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "second") == 0);
+	ini_parser_destroy(&parser2);
+}
+
+static void test_ini_parser_indented_keys(void)
+{
+	/* 回归测试: 验证 INI_ALLOW_MULTILINE=0 后，缩进 key 能独立解析而不会被吞入上一行。
+	 * 修复前: INI_ALLOW_MULTILINE=1 时，"   port=8080" 因前导空格被当作 host 的多行续值，
+	 * port key 消失。修复后应正常解析 host/port 两个独立 key。 */
+	static const char* indented_ini = "\
+[server]\r\n\
+host = 192.168.1.1\r\n\
+   port = 8080\r\n\
+  timeout = 30\r\n\
+name=main\r\n";
+
+	ini_parser_handle parser = ini_parser_parse_str(indented_ini);
+	ASSERT(parser);
+
+	char buf[64] = {0};
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "host", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "192.168.1.1") == 0);
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "port", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "8080") == 0);  /* 修复前此断言失败: port 被吞入 host 的续值，查询返回 NOT_FOUND */
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "timeout", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "30") == 0);
+
+	memset(buf, 0, sizeof(buf));
+	ASSERT(INI_PARSER_CODE_SUCCEED == ini_parser_get_string(parser, "server", "name", buf, sizeof(buf)));
+	ASSERT(strcmp(buf, "main") == 0);
+
+	ini_parser_destroy(&parser);
+}
 
 /**
  * ini parse callback
@@ -74,120 +321,30 @@ static int ini_reader_test()
 	return ret;
 }
 
-//==============================================================
-
-static int my_ini_parser_handler(const char* section,
-	const char* key, const char* value, const void* user)
-{
-	LOGD("[%s] %s=%s", section, key, value);
-	return 0;
-}
-
 static int ini_parser_test()
 {
-	ini_parser_code_e err;
-	char buffer[256] = { 0 };
-	ini_parser_handle parser = ini_parser_parse_str(test_ini_str);
-	if (!parser)
-	{
-		LOGE("failed parse ini string");
-		return 1;
-	}
-	LOGD("now foreach ini. %p", parser);
-	err = ini_parser_foreach(parser, my_ini_parser_handler, NULL);
-	ASSERT(err == INI_PARSER_CODE_SUCCEED);
-	LOGD("foreach section done. %d", err);
-
-	err = ini_parser_has_section(parser, "config");
-	LOGD("have \"config\" section: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
-	ASSERT(err == INI_PARSER_CODE_SUCCEED);
-
-	err = ini_parser_has_section_key(parser, "config", "test");
-	LOGD("have \"[config] test\" section_key: %s", err == INI_PARSER_CODE_SUCCEED ? "true" : "false");
-	ASSERT(err == INI_PARSER_CODE_SUCCEED);
-
-	double nNum = 0.0;
-	err = ini_parser_get_double(parser, "config", "nNum3", &nNum);
-	if (err == INI_PARSER_CODE_SUCCEED)
-	{
-		LOGI("succeed get nNum3=%.3f", nNum);
-	}
-	else
-	{
-		LOGE("failed get nNum3.  %d", err);
-	}
-	float num3 = 0.0f;
-	err = ini_parser_get_float(parser, "config", "nNum3", &num3);
-	LOGI("%d get nNum3=%.3f", err, num3);
-
-	long long num4 = 0, num5 = 0;
-	err = ini_parser_get_long_long(parser, "config", "nNum4", &num4);
-	ASSERT(INI_PARSER_CODE_SUCCEED == err);
-	LOGI("num4=%lld", num4);
-	err = ini_parser_get_long_long(parser, "config", "nNum5", &num5);
-	ASSERT(INI_PARSER_CODE_SUCCEED == err);
-	LOGI("num5=%lld", num5);
-	ASSERT(num4 == num5);
-
-	buffer[0] = 'a';
-	buffer[1] = '\0';
-	err = ini_parser_get_string(parser, "config", "test", buffer, sizeof(buffer));
-	LOGI("%d get test=%s", err, buffer);
-	ASSERT(buffer[0] == '\0');// because \"test\" have empty value.
-
-	bool bool_result = true;
-	err = ini_parser_get_bool(parser, "config2", "auto_start", &bool_result);
-	LOGI("%d get auto_start=%d", err, bool_result);
-	ASSERT(bool_result == false);
-
-	err = ini_parser_get_bool(parser, "config2", "enable_state", &bool_result);
-	LOGI("%d get enable_state=%d", err, bool_result);
-	ASSERT(bool_result == true);
-
-	err = ini_parser_get_bool(parser, "config2", "number_bool_state", &bool_result);
-	LOGI("%d get number_bool_state=%d", err, bool_result);
-	ASSERT(bool_result == false);
-
-	err = ini_parser_get_string(parser, "config3", "path", buffer, sizeof(buffer));
-	if (err == INI_PARSER_CODE_SUCCEED)
-	{
-		LOGI("succeed get path=%s", buffer);
-	}
-	else
-	{
-		LOGE("failed(%d) get path", err);
-	}
-
-	size_t buffer_mem_size = sizeof(buffer);
-	if (INI_PARSER_CODE_SUCCEED == ini_parser_dump_to_mem(parser, buffer, &buffer_mem_size))
-	{
-		LOGD("dump ini(%zu): \n%s", buffer_mem_size, buffer);
-	}
-	else
-	{
-		LOGE("failed of dump ini to mem");
-	}
-
-	err = ini_parser_put_string(parser, "config", "new_key", "new_value");
-	LOGD("%s on put new config", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
-	err = ini_parser_delete_by_section_key(parser, "config", "test");
-	LOGD("%s on delete [config] test", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
-	err = ini_parser_delete_section(parser, "config4");
-	LOGD("%s on delete [config4]", err == INI_PARSER_CODE_SUCCEED ? "succeed" : "failed");
-
-	//dump string should free after use.
-	char* ini_dump = ini_parser_dump(parser);
-	ASSERT(ini_dump);
-	if (ini_dump)
-	{
-		LOGI("succeed dump ini:\n%s", ini_dump);
-		free(ini_dump);
-	}
-	err = ini_parser_save(parser, "d:/test.ini");
-	ASSERT(err == INI_PARSER_CODE_SUCCEED);
-
-	ini_parser_destroy(&parser);
-	ASSERT(NULL == parser);
+	LOGD("  -> run ini_parser_is_file_path tests");
+	test_ini_parser_is_file_path();
+	LOGD("  -> run ini_parser_create_destroy tests");
+	test_ini_parser_create_destroy();
+	LOGD("  -> run ini_parser_foreach tests");
+	test_ini_parser_foreach_behavior();
+	LOGD("  -> run ini_parser_basic_rw tests");
+	test_ini_parser_basic_rw();
+	LOGD("  -> run ini_parser_numeric tests");
+	test_ini_parser_numeric();
+	LOGD("  -> run ini_parser_dump_api tests");
+	test_ini_parser_dump_api();
+	LOGD("  -> run ini_parser_delete_ops tests");
+	test_ini_parser_delete_ops();
+	LOGD("  -> run ini_parser_save_and_parse_file tests");
+	test_ini_parser_save_and_parse_file();
+	LOGD("  -> run ini_parser_error_paths tests");
+	test_ini_parser_error_paths();
+	LOGD("  -> run ini_parser_key_trim_dedup tests");
+	test_ini_parser_key_trim_dedup();
+	LOGD("  -> run ini_parser_indented_keys tests");
+	test_ini_parser_indented_keys();
 	return 0;
 }
 
@@ -208,3 +365,6 @@ int ini_test()
 	LOGD("  <-- ini_parser_test result: %d", ret);
 	return ret;
 }
+
+#include "lcu_test_registry.h"
+LCU_TEST_REGISTER(ini_test, "test ini");

@@ -1,307 +1,400 @@
+/*
+ * 注：本文件保留为 .cpp 而非 .c，是为了让 mem_debug.h 在 C++ 模式下
+ * 重载 operator new/delete[] 生效，从而支持 memleak_test 测试项
+ * (验证 new/delete 内存泄漏检测能力)。
+ * 见 inc/mem/mem_debug.h:91-127。
+ */
 #include "mem/mem_debug.h"
 #include "common_macro.h"
-#include "mem/strings.h"
-#include "thread/posix_thread.h"
+#include "lcu_test_registry.h"
+#include "lcu_test_args.h"
+#include "lcu_test_console.h"
+#include "lcu_test_glob.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LOG_TAG "MAIN"
 #include "log/logger.h"
 #include "log/file_logger.h"
-#include "lcu.h"             /* for lcu_get_version */
-#include <locale.h>          /* for setlocale */
-#ifdef _WIN32
-#include <conio.h>           /* for kbhit */
-#endif // _WIN32
+#include "lcu.h"
+#include "time/time_util.h"
 
-#define KB_TIMEOUT      (5)   // seconds
+#define KB_TIMEOUT (5)
 
-typedef int (*func_prototype_test_case_t)();
-#define DECLARE_TEST_FUNC(func_name) extern int func_name()
+/* ======================== file_logger 顺序依赖包装 ======================== */
 
-#define RUN_TEST(func_name) do                                                            \
-{                                                                                         \
-   LOGD("\n%s\n--> %s() executing...\n", LOG_STAR_LINE, #func_name);                      \
-   int ret_##func_name = func_name();                                                     \
-   LOGD("\n<-- %s() finished with %d\n%s\n", #func_name, ret_##func_name, LOG_STAR_LINE); \
-   ASSERT_ABORT(0 == ret_##func_name);                                                    \
-} while (0)
+EXTERN_C_START
+extern int file_logger_test_begin(void);
+extern int file_logger_test_end(void);
+extern int time_util_test(void);
+extern int allocator_test(void);
+EXTERN_C_END
+
+#if (_LCU_LOGGER_TYPE_XLOG != LCU_LOGGER_SELECTOR)
+#error "FILE_LOGGER only support XLOG!"
+#endif
+
+static int file_logger_test_impl(void)
+{
+    int ret = file_logger_test_begin();
+    if (ret != 0)
+    {
+        return ret;
+    }
+    ret = time_util_test();
+    if (ret != 0)
+    {
+        file_logger_test_end();
+        return ret;
+    }
+    ret = file_logger_test_end();
+    return ret;
+}
+
+extern "C" {
+int file_logger_test(void)
+{
+    return file_logger_test_impl();
+}
+LCU_TEST_REGISTER(file_logger_test, "test file logger");
+}
+
+/* ======================== memleak_test (opt-in，故意 leak) ======================== */
+
+static int memleak_test_impl(void)
+{
+    int ret = allocator_test();
+    char *leak_mem = new char[16];
+    memset(leak_mem, 0xFF, 16);
+    LOGD("leak_mem=0x%p, leak_mem[0]=%d", &leak_mem[0], leak_mem[0]);
+    /* 故意不 delete[] leak_mem，验证检测能力 */
+    return ret;
+}
+
+extern "C" {
+int memleak_test(void)
+{
+    return memleak_test_impl();
+}
+LCU_TEST_REGISTER_OPTIONAL(memleak_test, "test mem leak detection (intentionally leaks, opt-in only)");
+}
+
+/* ======================== 测试运行核心 ======================== */
+
+#define LOG_STAR_LINE_LOCAL "************************************************************"
 
 typedef struct
 {
-	func_prototype_test_case_t p_func;
-	const char* str_description;
-} test_case_t;
+    const lcu_test_entry_t *entry;
+    int ret;
+    double duration_sec;
+} lcu_test_result_t;
 
-static void setup_console();
-static int run_test_case_from_user();
-static int memleak_test();
+static lcu_test_result_t g_results[256];
+static int g_result_count = 0;
 
-EXTERN_C_START
-
-DECLARE_TEST_FUNC(allocator_test);
-
-#define TEST_FILE_LOGGER (0)
-#if(_LCU_LOGGER_TYPE_XLOG != LCU_LOGGER_SELECTOR && 0 != TEST_FILE_LOGGER)
-#error "FILE_LOGGER only support XLOG!"
-#endif
-DECLARE_TEST_FUNC(file_logger_test_begin);
-DECLARE_TEST_FUNC(file_logger_test_end);
-DECLARE_TEST_FUNC(ini_test);
-
-DECLARE_TEST_FUNC(posix_thread_test);
-DECLARE_TEST_FUNC(basic_test);
-DECLARE_TEST_FUNC(autocover_buffer_test);
-DECLARE_TEST_FUNC(mplite_test);
-DECLARE_TEST_FUNC(file_util_test);
-DECLARE_TEST_FUNC(thpool_test);
-DECLARE_TEST_FUNC(string_test);
-DECLARE_TEST_FUNC(time_util_test);
-
-DECLARE_TEST_FUNC(url_encoder_decoder_test);
-DECLARE_TEST_FUNC(base64_test);
-DECLARE_TEST_FUNC(str_params_test);
-DECLARE_TEST_FUNC(msg_queue_handler_test);
-DECLARE_TEST_FUNC(integer_test);
-DECLARE_TEST_FUNC(list_test);
-
-EXTERN_C_END
-
-static test_case_t g_all_test_cases[] =
+static int run_cases(const lcu_test_entry_t **cases, int count,
+                     bool fail_fast, lcu_test_stats_t *stats)
 {
-	{ ini_test, "test ini" },
-	{ basic_test, "simple fwrite test case" },
-	{ autocover_buffer_test, "test auto-cover buffer" },
-	{ mplite_test, "test mem-pool" },
-	{ file_util_test, "test file util" },
-	{ posix_thread_test, "test posix_thread_test and xlog"},
-	{ thpool_test, "test thread pool" },
-	{ string_test, "test string op" },
-	{ time_util_test, "test time op" },
-	{ url_encoder_decoder_test, "test url encoder/decoder" },
-	{ base64_test, "test base64" },
-	{ str_params_test, "test string params" },
-	{ msg_queue_handler_test, "test msg queue handler" },
-	{ integer_test, "test integer" },
-	{ list_test, "test list" },
-};
+    g_result_count = 0;
+    int last_failure = 0;
 
+    uint64_t total_start = 0;
+    time_util_query_performance_ms(&total_start);
 
-#define TEST_SAVE_LOG    (0)
+    for (int i = 0; i < count && i < (int)(sizeof(g_results) / sizeof(g_results[0])); ++i)
+    {
+        const lcu_test_entry_t *e = cases[i];
+        fprintf(stderr, "\n==> [%d/%d] Run %s: %s\n", i + 1, count, e->name, e->description);
+        LOGI("==> [%d/%d] Run %s: %s", i + 1, count, e->name, e->description);
+        LOGD("\n%s\n--> %s() executing...\n", LOG_STAR_LINE_LOCAL, e->name);
 
-#if( TEST_SAVE_LOG && 0 == TEST_FILE_LOGGER )
-#ifdef _WIN32
-#define LOG_PATH ("d:/mylog.log")
-#else
-#define LOG_PATH ("mylog.log")
-#endif // _WIN32
-#define STDOUT2FILE() do{ fprintf(stderr, "\n ==> redirect print to file \n"); LOG_STD2FILE(LOG_PATH); } while(0)
-#define BACK2STDOUT() do{ LOG_BACK2STD(); fprintf(stderr, "\n <== now redirect print to console \n"); } while(0)
-#else
-#define STDOUT2FILE() do { } while (0)
-#define BACK2STDOUT() do { } while (0)
-#endif
+        uint64_t case_start = 0;
+        time_util_query_performance_ms(&case_start);
+        int ret = e->fn();
+        uint64_t case_end = 0;
+        time_util_query_performance_ms(&case_end);
+        double dur = (double)(case_end - case_start) / 1000.0;
+
+        LOGD("\n<-- %s() finished with %d (%.3fs)\n%s\n", e->name, ret, dur, LOG_STAR_LINE_LOCAL);
+        fprintf(stderr, "<== [%d/%d] %s: %s (%.3fs)\n", i + 1, count, e->name,
+                ret == 0 ? "PASS" : "FAIL", dur);
+
+        g_results[g_result_count].entry = e;
+        g_results[g_result_count].ret = ret;
+        g_results[g_result_count].duration_sec = dur;
+        ++g_result_count;
+
+        if (ret == 0)
+        {
+            ++stats->passed;
+        }
+        else
+        {
+            ++stats->failed;
+            last_failure = ret;
+            if (fail_fast)
+            {
+                LOGE("--fail-fast: stopping after %s failed (ret=%d)", e->name, ret);
+                break;
+            }
+        }
+    }
+
+    uint64_t total_end = 0;
+    time_util_query_performance_ms(&total_end);
+    stats->elapsed_sec = (double)(total_end - total_start) / 1000.0;
+    return last_failure;
+}
+
+static void print_summary(const lcu_test_stats_t *stats)
+{
+    fprintf(stderr, "\n%s\n", LOG_STAR_LINE_LOCAL);
+    fprintf(stderr, "Summary: %d passed, %d failed, %d skipped, %.3fs total\n",
+            stats->passed, stats->failed, stats->skipped, stats->elapsed_sec);
+    if (stats->failed > 0)
+    {
+        fprintf(stderr, "\nFailed cases:\n");
+        for (int i = 0; i < g_result_count; ++i)
+        {
+            if (g_results[i].ret != 0)
+            {
+                fprintf(stderr, "  [FAIL] %s (ret=%d, %.3fs)\n",
+                        g_results[i].entry->name, g_results[i].ret, g_results[i].duration_sec);
+            }
+        }
+    }
+    fprintf(stderr, "%s\n", LOG_STAR_LINE_LOCAL);
+}
+
+static void write_junit_report(const char *path, const lcu_test_stats_t *stats)
+{
+    FILE *fp = fopen(path, "w");
+    if (!fp)
+    {
+        LOGE("failed to open junit file: %s", path);
+        return;
+    }
+    int total = stats->passed + stats->failed + stats->skipped;
+    fprintf(fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    fprintf(fp, "<testsuite name=\"lcu_demo\" tests=\"%d\" failures=\"%d\" skipped=\"%d\" time=\"%.3f\">\n",
+            total, stats->failed, stats->skipped, stats->elapsed_sec);
+    for (int i = 0; i < g_result_count; ++i)
+    {
+        const lcu_test_result_t *r = &g_results[i];
+        fprintf(fp, "  <testcase classname=\"lcu\" name=\"%s\" time=\"%.3f\">",
+                r->entry->name, r->duration_sec);
+        if (r->ret != 0)
+        {
+            fprintf(fp, "<failure message=\"ret=%d\"/>", r->ret);
+        }
+        fprintf(fp, "</testcase>\n");
+    }
+    fprintf(fp, "</testsuite>\n");
+    fclose(fp);
+    LOGI("junit report written: %s", path);
+}
+
+/* ======================== 模式分发 ======================== */
+
+static void dispatch_list(void)
+{
+    size_t count = lcu_test_registry_count();
+    fprintf(stdout, "Registered %zu test cases:\n", count);
+    size_t i = 0;
+    for (const lcu_test_entry_t *e = lcu_test_registry_head(); e; e = e->next, ++i)
+    {
+        fprintf(stdout, "  %02zu  %-32s%s  %s\n",
+                i, e->name,
+                e->exclude_from_all ? " [opt-in]" : "         ",
+                e->description);
+    }
+    fprintf(stdout, "\nNote: [opt-in] cases are NOT included in --all, run them by name explicitly.\n");
+    fprintf(stdout, "      Numeric index is no longer supported since v1.9.0, use names only.\n");
+}
+
+/* B2: ALL/FILTER 不受 64 上限限制，使用 256 静态数组（注册总数远低于此） */
+static int collect_all(const lcu_test_entry_t **out, int max)
+{
+    int n = 0;
+    for (const lcu_test_entry_t *cur = lcu_test_registry_head(); cur && n < max; cur = cur->next)
+    {
+        if (!cur->exclude_from_all)
+        {
+            out[n++] = cur;
+        }
+    }
+    return n;
+}
+
+static int collect_filter(const char *pattern, const lcu_test_entry_t **out, int max)
+{
+    int n = 0;
+    for (const lcu_test_entry_t *cur = lcu_test_registry_head(); cur && n < max; cur = cur->next)
+    {
+        if (lcu_glob_match(pattern, cur->name))
+        {
+            out[n++] = cur;
+        }
+    }
+    return n;
+}
+
+static int collect_by_name(const lcu_test_run_options_t *opts,
+                           const lcu_test_entry_t **out, int max)
+{
+    int n = 0;
+    for (int i = 0; i < opts->name_count && n < max; ++i)
+    {
+        const char *arg = opts->names[i];
+        const lcu_test_entry_t *e = lcu_test_registry_find_by_name(arg);
+        if (!e)
+        {
+            /* D1: 数字参数给友好提示 */
+            bool all_digits = (arg[0] != '\0');
+            for (const char *p = arg; *p; ++p)
+            {
+                if (*p < '0' || *p > '9')
+                {
+                    all_digits = false;
+                    break;
+                }
+            }
+            if (all_digits)
+            {
+                fprintf(stderr,
+                    "error: '%s' looks like a numeric index, "
+                    "which is no longer supported since v1.9.0. "
+                    "Use --list to see test names.\n",
+                    arg);
+            }
+            else
+            {
+                fprintf(stderr, "error: unknown test '%s' (use --list to see available)\n", arg);
+            }
+            return -1;
+        }
+        out[n++] = e;
+    }
+    return n;
+}
+
+/* runner 回调（给 console 用） */
+static int main_runner(const lcu_test_entry_t **cases, int count,
+                       bool fail_fast, lcu_test_stats_t *stats)
+{
+    return run_cases(cases, count, fail_fast, stats);
+}
+
+/* ======================== main ======================== */
 
 EXTERN_C
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-	int ret = 0;
-	MEM_CHECK_INIT();
-	lcu_global_init();
-	setup_console();
-	LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
+    int ret = 0;
+    MEM_CHECK_INIT();
+    lcu_global_init();
+    lcu_console_setup();
+    LOGI("hello world: LCU_VER:%s\n", lcu_get_version());
 
-	bool is_press_kb = true; // default status is true for unix
-#if _WIN32
-	LOGI("after %d seconds, it will run automatically."  
-		 "if you want to choose test case, just press any key", KB_TIMEOUT);
-	clock_t tstart = clock();
-	int pressed_char = 'y';                   // default key press
-	while ((clock() - tstart) / CLOCKS_PER_SEC < KB_TIMEOUT)
-	{
-		if ((is_press_kb = (0 != _kbhit())))
-		{
-			pressed_char = _getch();
-			break;
-		}
-		usleep(500000);
-	}
-	//if (tolower(pressed_char) == 'y')
-	//	printf("you pressed y\n");
-#endif //_WIN32
+    lcu_test_run_options_t opts;
+    if (lcu_test_parse_args(argc, argv, &opts) != 0)
+    {
+        ret = 255;
+        goto EXIT_CLEANUP;
+    }
 
-#if TEST_FILE_LOGGER
-	ASSERT(file_logger_test_begin() == 0);
-#endif
-	STDOUT2FILE();
+    if (opts.mode == LCU_TEST_MODE_HELP)
+    {
+        lcu_test_print_help(argv[0] ? argv[0] : "lcu_demo");
+        goto EXIT_CLEANUP;
+    }
+    if (opts.mode == LCU_TEST_MODE_LIST)
+    {
+        dispatch_list();
+        goto EXIT_CLEANUP;
+    }
 
-	do
-	{
-		//ASSERT_ABORT(1 == 0);
-		if (is_press_kb)
-		{
-			ret = run_test_case_from_user();
-			break;
-		}
-		
-#if TEST_SAVE_LOG
-		fprintf(stderr, "\n  ====auto run test case====  \n");
-#endif // TEST_SAVE_LOG
-		LOGI("  ====auto run test case====  ");
-		//RUN_TEST(memleak_test);//this will report mem leak.
-		//RUN_TEST(file_util_test);
-		//RUN_TEST(ini_test);
-		//RUN_TEST(basic_test);
-		//RUN_TEST(autocover_buffer_test);
-		//RUN_TEST(mplite_test);
-		//RUN_TEST(thpool_test);
-		//RUN_TEST(string_test);
-		//RUN_TEST(time_util_test);
-		RUN_TEST(posix_thread_test);
-		//RUN_TEST(url_encoder_decoder_test);
-		//RUN_TEST(base64_test);
-		//RUN_TEST(str_params_test);
-		//RUN_TEST(msg_queue_handler_test);
-		//RUN_TEST(integer_test);
-		//RUN_TEST(list_test);
-	} while (0);
+    {
+        const lcu_test_entry_t *cases[256];
+        int case_count = 0;
+        lcu_test_stats_t stats = {0, 0, 0, 0.0};
 
-#if TEST_FILE_LOGGER
-	ASSERT(file_logger_test_end() == 0);
-#endif
-	BACK2STDOUT();
+        switch (opts.mode)
+        {
+        case LCU_TEST_MODE_ALL:
+            case_count = collect_all(cases, (int)(sizeof(cases) / sizeof(cases[0])));
+            break;
+        case LCU_TEST_MODE_FILTER:
+            case_count = collect_filter(opts.filter, cases, (int)(sizeof(cases) / sizeof(cases[0])));
+            if (case_count == 0)
+            {
+                fprintf(stderr, "no tests matched filter '%s'\n", opts.filter);
+                ret = 255;
+                goto EXIT_CLEANUP;
+            }
+            break;
+        case LCU_TEST_MODE_BY_NAME:
+            case_count = collect_by_name(&opts, cases, (int)(sizeof(cases) / sizeof(cases[0])));
+            if (case_count < 0)
+            {
+                ret = 255;
+                goto EXIT_CLEANUP;
+            }
+            break;
+        case LCU_TEST_MODE_DEFAULT:
+        default:
+        {
+            /* H3: 默认行为兼容旧版（只跑 time_util_test） */
+            if (lcu_console_wait_interrupt(KB_TIMEOUT))
+            {
+                int menu_ret = lcu_console_run_from_menu(main_runner, opts.fail_fast, &stats);
+                if (menu_ret >= 0)
+                {
+                    print_summary(&stats);
+                    if (opts.junit_path)
+                    {
+                        write_junit_report(opts.junit_path, &stats);
+                    }
+                }
+                ret = stats.failed > 254 ? 254 : stats.failed;
+                goto EXIT_CLEANUP;
+            }
+            LOGI("  ====smoke test (time_util_test)====  ");
+            const lcu_test_entry_t *smoke = lcu_test_registry_find_by_name("time_util_test");
+            if (smoke)
+            {
+                cases[0] = smoke;
+                case_count = 1;
+            }
+            else
+            {
+                LOGE("smoke test 'time_util_test' not registered!");
+                ret = 1;
+                goto EXIT_CLEANUP;
+            }
+            break;
+        }
+        }
 
-	LOGI("...bye bye...  %d\n", ret);
+        if (case_count > 0)
+        {
+            run_cases(cases, case_count, opts.fail_fast, &stats);
+            print_summary(&stats);
+            if (opts.junit_path)
+            {
+                write_junit_report(opts.junit_path, &stats);
+            }
+            ret = stats.failed > 254 ? 254 : stats.failed;
+        }
+    }
 
-	LOG_GLOBAL_CLEANUP(NULL);
-	lcu_global_cleanup();
-	MEM_CHECK_DEINIT();
-	return ret;
-}
-
-static int memleak_test()
-{
-	int ret = allocator_test();
-	char* leak_mem = new char[16];
-	memset(leak_mem, 0xFF, 16);
-	//memset(leak_mem, 0xFF, 18); // will report memory corruption
-	LOGD("leak_mem=0x%p, leak_mem[0]=%d", &leak_mem[0], leak_mem[0]);
-	//delete[] leak_mem;
-	return ret;
-}
-
-static void setup_console()
-{
-#ifdef _WIN32
-	// set locale for support Chinese filename/output.
-	// should also add /utf-8 option to compiler and make sure your source file save as utf-8.
-	setlocale(LC_CTYPE, ".utf8");
-	//FILE* f = fopen(u8"D:\\迅雷下载\\你好.txt", "rb");//ok
-	//ASSERT_ABORT(f);
-	//fclose(f);
-	//LOGD("你好");
-
-	//_CrtSetBreakAlloc(99);
-#endif // _WIN32
-	LOG_GLOBAL_INIT(NULL);
-	LOG_SET_MIN_LEVEL(LOG_LEVEL_VERBOSE);
-#if(_LCU_LOGGER_TYPE_XLOG == LCU_LOGGER_SELECTOR)
-	xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
-	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL);
-	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL | LOG_FORMAT_WITH_TID);
-	//xlog_set_format(LOG_FORMAT_WITH_TIMESTAMP);
-	//xlog_set_format(LOG_FORMAT_WITH_TAG_LEVEL);
-	//xlog_set_format(LOG_FORMAT_RAW);
-#endif // XLOG
-}
-
-static int get_testcase_from_kb(int* p_testcases, int test_case_size)
-{
-	char buffer[1024] = { 0 };
-	int retry_counter = 0;
-	do 
-	{
-		fprintf(stderr, "%s please input your choose: ", retry_counter > 1 ? "invalid input, retry." : "");
-		if (!fgets(buffer, sizeof(buffer) - 1, stdin))
-		{
-			fprintf(stderr, "failed on get run info");
-			return -1;
-		}
-		++retry_counter;
-	} while (buffer[0] == '\n' || buffer[0] > ('0' + 9));
-	fprintf(stderr, "your choose is: %s\n", buffer);
-	size_t str_len = strlen(buffer);
-	if (str_len < 1) return -2;
-	char* p_str_end = buffer + strlen(buffer);
-	char* p_loc = NULL;
-	if (NULL != (p_loc = strchr(buffer, '\n')))
-	{
-		*p_loc = '\0'; // remove \n
-	}
-	char* str_start = buffer;
-	int case_count = 0;
-	while (case_count < test_case_size)
-	{
-		if (NULL != (p_loc = strchr(str_start, ' ')))
-		{
-			*p_loc = '\0'; // cut string
-		}
-		char* end_ptr = NULL;
-		int num = (int)strtol(str_start, &end_ptr, 10);
-		if (end_ptr == str_start)
-		{
-			break; // no parse performed
-		}
-		p_testcases[case_count] = num;
-		fprintf(stderr, "you select test cases[%d]=%d\n", case_count, p_testcases[case_count]);
-		++case_count;
-		if (p_loc == NULL || (str_start = p_loc + 1) >= p_str_end)
-		{
-			break; // no string need continue parsing
-		}
-	}
-	return case_count;
-}
-
-static void show_menu_test_case()
-{
-	char str_menu[4096] = { 0 };
-	size_t str_len = 0;
-	size_t buffer_left_len;
-	for (size_t i = 0; (buffer_left_len = sizeof(str_menu) - 1 - str_len) > 0
-		&& i < (sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0])); ++i)
-	{
-		str_len += snprintf(str_menu + str_len, buffer_left_len, "  %02zu : %s\n", i, g_all_test_cases[i].str_description);
-	}
-	fprintf(stderr, "input test case numbers (split by space),\n press enter to submit task:\n%s\n", str_menu);
-}
-
-static int run_test_case_from_user()
-{
-	int ret = 0;
-	int test_cases[64] = { -1 };
-	int test_case_count = 0;
-	show_menu_test_case();
-	if ((test_case_count = get_testcase_from_kb(test_cases, sizeof(test_cases) / sizeof(test_cases[0]))) < 1)
-	{
-		fprintf(stderr, "failed on get test cases\n");
-		ret = 1;
-	}
-	fprintf(stderr, "you selected test case count=%d\n    Please wait...\n", test_case_count);
-	int all_available_case_count = sizeof(g_all_test_cases) / sizeof(g_all_test_cases[0]);
-	int case_number;
-	for (int i = 0; i < test_case_count && (case_number = test_cases[i]) >= 0 
-		&& case_number < all_available_case_count; ++i)
-	{
-		test_case_t* p_case = &g_all_test_cases[case_number];
-		fprintf(stderr, "\n\n==> Now Run testcase[%d]: %s\n", i, p_case->str_description);
-		LOGI("==> Now Run testcase[%d]: %s\n", i, p_case->str_description);
-		ret = p_case->p_func();
-		LOGI("<== End Run testcase[%d]: %s, ret=%d\n", i, p_case->str_description, ret);
-		fprintf(stderr, "\n<== End Run testcase[%d]: %s, ret=%d\n\n", i, p_case->str_description, ret);
-		if (ret)
-		{
-			LOGE("failed(%d) run last test case, break", ret);
-			break;
-		}
-	}
-	return ret;
+EXIT_CLEANUP:
+    LOGI("...bye bye...  %d\n", ret);
+    LOG_GLOBAL_CLEANUP(NULL);
+    lcu_global_cleanup();
+    MEM_CHECK_DEINIT();
+    return ret;
 }

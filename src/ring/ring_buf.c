@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "ring/ring_buf.h"
 #include <string.h>
 #include <malloc.h>
@@ -7,12 +8,19 @@
 #define RING_BUF_TAKE_MIN(a, b) ((a) > (b) ? (b) : (a))
 
 #define _RING_LOG_TAG        "R_BUF"
-
+#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#ifdef _DEBUG
 #define RING_LOGV(fmt,...)    SLOGV(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGD(fmt,...)    SLOGD(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGI(fmt,...)    SLOGI(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
 #define RING_LOGW(fmt,...)    SLOGW(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
-#define RING_LOGE(fmt,...)    SLOGE(_RING_LOG_TAG, fmt, ##__VA_ARGS__)
+#else
+#define RING_LOGV(fmt,...)
+#define RING_LOGD(fmt,...)
+#define RING_LOGI(fmt,...)
+#define RING_LOGW(fmt,...)
+// #define RING_LOGE(fmt,...)
+#endif // _DEBUG
 
 struct __ring_buf_t 
 {

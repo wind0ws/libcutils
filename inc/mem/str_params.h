@@ -34,10 +34,10 @@ void str_params_destroy(str_params_ptr params);
  */
 void str_params_del(str_params_ptr params, const char *key);
 
-int str_params_add_str(str_params_ptr params, const char *key,const char *value);
-int str_params_add_long(str_params_ptr params, const char* key, long value);
+int str_params_add_str(str_params_ptr params, const char *key, const char *value);
+int str_params_add_long(str_params_ptr params, const char *key, long value);
 int str_params_add_int(str_params_ptr params, const char *key, int value);
-int str_params_add_double(str_params_ptr params, const char* key, double value);
+int str_params_add_double(str_params_ptr params, const char *key, double value);
 int str_params_add_float(str_params_ptr params, const char *key, float value);
 
 /**
@@ -50,15 +50,17 @@ bool str_params_has_key(str_params_ptr params, const char *key);
  *  If 'key' isn't in the params, then return -ENOENT (-2) and leave 'out_val' untouched.
  */
 int str_params_get_str(str_params_ptr params, const char *key, char *out_val, size_t out_val_size);
-int str_params_get_long(str_params_ptr params, const char* key, long* out_val);
+int str_params_get_long(str_params_ptr params, const char *key, long *out_val);
 int str_params_get_int(str_params_ptr params, const char *key, int *out_val);
-int str_params_get_double(str_params_ptr params, const char* key, double* out_val);
+int str_params_get_double(str_params_ptr params, const char *key, double *out_val);
 int str_params_get_float(str_params_ptr params, const char *key, float *out_val);
 
 /**
  * combine key value pair params to string.
  * the return string is malloc on heap, so you should free after use!
  * or memory leak will occur!
+ *
+ * @note Ownership is transferred to the caller. Release it with free().
  */
 char *str_params_to_str(str_params_ptr params);
 

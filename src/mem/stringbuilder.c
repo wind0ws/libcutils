@@ -1,3 +1,4 @@
+#include "mem/mem_debug.h"
 #include "mem/stringbuilder.h"
 #include "common_macro.h"
 #include <stdlib.h>
@@ -62,16 +63,23 @@ static int sb_ensure_space(stringbuilder_t* sb, size_t string_len)
 	{
 		return 0; // buf size is already enough.
 	}
-	size_t should_alloc_buf_size = sb->allocated;
-	while (should_alloc_buf_size < sb->length + string_len + 1U)
+	/* Check for overflow before calculation */
+	if (sb->length > SIZE_MAX - string_len - 1U)
 	{
-		should_alloc_buf_size <<= 1;
-		if (0 == should_alloc_buf_size)
+		return -2; /* Overflow would occur */
+	}
+	size_t required_size = sb->length + string_len + 1U;
+	size_t should_alloc_buf_size = sb->allocated;
+	while (should_alloc_buf_size < required_size)
+	{
+		/* Check for overflow before left shift */
+		if (should_alloc_buf_size > SIZE_MAX / 2)
 		{
-			/* wow, what a huge string! */
-			//--should_alloc_buf_size;
-			return -3;
+			/* Can't double anymore, try to allocate exact size */
+			should_alloc_buf_size = required_size;
+			break;
 		}
+		should_alloc_buf_size <<= 1;
 	}
 
 	void* new_buf = realloc(sb->buffer, should_alloc_buf_size);
@@ -140,8 +148,13 @@ int stringbuilder_appendf(stringbuilder_t* sb, const char* format, ...)
 
 	va_start(va, format);
 	// first we get the string length that will write. ('\0' is not belong of the length)
-	size_t len = vsnprintf(NULL, 0, format, va);
+	int len_result = vsnprintf(NULL, 0, format, va);
 	va_end(va);
+	if (len_result < 0)
+	{
+		return -2; /* vsnprintf error */
+	}
+	size_t len = (size_t)len_result;
 	if (len < 1)
 	{
 		return -2;

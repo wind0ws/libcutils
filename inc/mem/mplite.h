@@ -175,6 +175,13 @@ MPLITE_API void *mplite_malloc(mplite_t *handle, const int nBytes);
  */
 MPLITE_API void mplite_free(mplite_t *handle, const void *pPrior);
 
+/**
+ * @brief Allocate and zero-initialize memory blocks
+ * @param[in,out] handle Pointer to an initialized @ref mplite_t object
+ * @param[in] nBytes Number of bytes to allocate
+ * @return Non-NULL pointer to allocated memory on success, NULL otherwise
+ * @note This function is equivalent to mplite_malloc followed by memset to zero
+ */
 MPLITE_API void* mplite_calloc(mplite_t* handle, const int nBytes);
 
 /**
@@ -192,10 +199,17 @@ MPLITE_API void* mplite_calloc(mplite_t* handle, const int nBytes);
 MPLITE_API void *mplite_realloc(mplite_t *handle, const void *pPrior,
                                 const int nBytes);
 
-
+/**
+ * @brief Resize an existing memory allocation without moving it
+ * @param[in,out] handle Pointer to an initialized @ref mplite_t object
+ * @param[in] pPrior Existing allocated memory
+ * @param[in] nBytes New allocation size in bytes
+ * @return @ref MPLITE_OK on success, @ref MPLITE_ERR_INVPAR if parameters are invalid
+ * @note This function differs from mplite_realloc in that it will only resize
+ *       the allocation if it can be done in-place without moving the memory block
+ */
 MPLITE_API int mplite_resize(mplite_t *handle, const void *pPrior,
                              const int nBytes);
-
 
 /**
  * @brief Round up a request size to the next valid allocation size.
@@ -208,23 +222,33 @@ MPLITE_API int mplite_roundup(mplite_t *handle, const int n);
 
 /**
  * @brief Print the statistics of the memory pool object
- * @param[in,out] handle Pointer to an initialized @ref mplite_t object
+ * @param[in] handle Pointer to an initialized @ref mplite_t object
  * @param[in] logfunc Non-NULL log function of the caller. Refer to
- *                    @ref mplite_logfunc_t for the prototype of this function.
+ *                    @ref mplite_putsfunc_t for the prototype of this function.
  */
 MPLITE_API void mplite_print_stats(const mplite_t * const handle,
                                    const mplite_putsfunc_t logfunc);
 
 /**
- * @brief Macro to return the number of times mplite_malloc() has been called.
+ * @def mplite_alloc_count(handle)
+ * @brief Get total allocation count
+ * @param handle mplite instance
+ * @return Number of successful allocations
  */
 #define mplite_alloc_count(handle)    (((handle) != NULL)? (handle)->nAlloc : 0)
 
-
-/* return the largest available block size */
+/**
+ * @brief Get the largest available contiguous memory block size
+ * @param[in] handle Pointer to an initialized @ref mplite_t object
+ * @return Size in bytes of the largest available block
+ */
 MPLITE_API int mplite_maxmem(mplite_t *handle);
 
-/* return the total available memory */
+/**
+ * @brief Get total available free memory
+ * @param[in] handle Pointer to an initialized @ref mplite_t object
+ * @return Total free memory in bytes
+ */
 MPLITE_API int mplite_freemem(mplite_t *handle);
 
 #ifdef __cplusplus

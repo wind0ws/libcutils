@@ -58,6 +58,8 @@
 #error "You should define \"_LOG_INIT/DEINIT_IMPL\" first, did you forget to include implement?"
 #elif(!defined(_LOG_SET_MIN_LEVEL_IMPL) || !defined(_LOG_GET_MIN_LEVEL_IMPL))
 #error "You should define \"_LOG_SET/GET_MIN_LEVEL_IMPL\""
+#elif(!defined(_LOG_SET_FORMAT_IMPL) || !defined(_LOG_GET_FORMAT_IMPL))
+#error "You should define \"_LOG_SET/GET_FORMAT_IMPL\""
 #elif(!defined(_LOG_STD2FILE_IMPL) || !defined(_LOG_BACK2STD_IMPL))
 #error "You should define \"_LOG_STD2FILE/BACK2STD_IMPL\""
 #elif(!defined(_LOGV_IMPL) || !defined(_LOGV_TRACE_IMPL))
@@ -72,6 +74,8 @@
 #define LOG_GLOBAL_CLEANUP(params)   _LOG_DEINIT_IMPL(params)
 #define LOG_SET_MIN_LEVEL(min_level) _LOG_SET_MIN_LEVEL_IMPL(min_level)
 #define LOG_GET_MIN_LEVEL()          _LOG_GET_MIN_LEVEL_IMPL()
+#define LOG_SET_FORMAT(format)       _LOG_SET_FORMAT_IMPL(format)
+#define LOG_GET_FORMAT()             _LOG_GET_FORMAT_IMPL()
 #define LOG_STD2FILE(file_path)      _LOG_STD2FILE_IMPL(file_path)
 #define LOG_BACK2STD()               _LOG_BACK2STD_IMPL()
 

@@ -33,6 +33,8 @@ extern "C" {
  * MSVC does not implement these, thus we implement them here
  * GNU-C-compatible compilers implement these with the same names, 
  * thus we don't have to do anything
+ *
+ * Returned buffers are released with free().
  */
 #ifdef _MSC_VER
     int vasprintf(char** strp, const char* format, va_list ap);

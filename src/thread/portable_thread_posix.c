@@ -1,3 +1,10 @@
+/* CRITICAL: This file does NOT include mem_debug.h to avoid conflicts with pthread platform API.
+ * portable_thread_posix.c is a thin wrapper around POSIX pthread functions (pthread_create,
+ * pthread_mutex_init, sem_init, etc.). These system APIs manage their own internal memory
+ * (thread stacks, mutex structures, semaphore objects) which must not be intercepted by
+ * our tracking layer. Including mem_debug.h would redirect malloc/free calls in this file,
+ * potentially breaking pthread implementation assumptions about memory management. */
+
 #if (1)
 //#if(defined(HAVE_PTHREAD_H))
 

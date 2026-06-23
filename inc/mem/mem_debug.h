@@ -19,13 +19,16 @@
 
 // Step 1: Define _CRTDBG_MAP_ALLOC early if needed (before any stdlib.h)
 // otherwise it won't tell you leak memory on which file with line number in MSVC.
-#if defined(_WIN32) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE)
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE)
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
 #endif
 
-// Step 2: Windows-specific macros and CRT setup
+// Step 2: Include diagnostics.h for CRT hook registration
+#include "debug/diagnostics.h"
+
+// Step 3: Windows-specific macros and CRT setup
 #ifdef _WIN32
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -34,17 +37,7 @@
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif // !__PRETTY_FUNCTION__
 
-#if (defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE))
-// Forward declarations for diagnostics (avoid full header dependency)
-#ifdef __cplusplus
-extern "C" {
-#endif
-void lcu_diagnostics_init(void);
-void lcu_diagnostics_deinit(void);
-#ifdef __cplusplus
-}
-#endif
-
+#if (defined(_MSC_VER) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE))
 #pragma warning(push)
 #pragma warning(disable : 5105)
 #include <windows.h>
@@ -54,27 +47,10 @@ void lcu_diagnostics_deinit(void);
 #define __MYDEBUG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new __MYDEBUG_NEW
 
-// Inline CRT configuration - no linking dependency on diagnostics.c
-// Works with any Debug/Release library build (header-only implementation)
-// Also calls diagnostics_init to enable log file output (optional, no-op if unavailable)
-#define MEM_CHECK_INIT()                                                                   \
-	do                                                                                     \
-	{                                                                                      \
-		lcu_diagnostics_init();                                                            \
-		_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);             \
-		_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);                                \
-		_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);            \
-		_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);                               \
-		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);           \
-		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);                              \
-		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);                     \
-	} while (0)
+// Register this translation unit's Debug CRT with diagnostics.
+#define MEM_CHECK_INIT() lcu_diagnostics_register_current_crt()
 
-#define MEM_CHECK_DEINIT() \
-	do                     \
-	{                      \
-		lcu_diagnostics_deinit(); \
-	} while (0)
+#define MEM_CHECK_DEINIT() lcu_diagnostics_unregister_current_crt()
 #endif // _DEBUG && !_LCU_MEM_CHECK_FEATURE_ENABLE
 #endif // _WIN32
 

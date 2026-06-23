@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(lcu VERSION 1.8.0 LANGUAGES C CXX)
+project(lcu VERSION 1.9.0 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # C2 修复: enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
@@ -185,7 +185,8 @@ file(GLOB_RECURSE PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*
 set(LCU_DIAGNOSTICS_PROBE_SRCS
     "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c"
     "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_crt_client.c"
-    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c")
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c"
+    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c")
 list(REMOVE_ITEM PRJ_DEMO_SRCS ${LCU_DIAGNOSTICS_PROBE_SRCS})
 message(STATUS "\n PRJ_DEMO_SRCS => ${PRJ_DEMO_SRCS}\n ")
 #===================== COLLECT SRC END =====================
@@ -281,6 +282,14 @@ if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_STATIC_LIBS)
   add_executable(lcu_diagnostics_probe
                  ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c)
   list(APPEND target_names lcu_diagnostics_probe)
+  set(_lcu_release_static_lib
+      "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}/${CMAKE_STATIC_LIBRARY_PREFIX}${CMAKE_PROJECT_NAME}_a${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  add_executable(lcu_diagnostics_release_static_probe
+                 EXCLUDE_FROM_ALL
+                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c)
+  target_link_libraries(lcu_diagnostics_release_static_probe
+                        PRIVATE "${_lcu_release_static_lib}")
+  list(APPEND target_names lcu_diagnostics_release_static_probe)
 endif()
 
 if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_SHARED_LIBS)
@@ -647,6 +656,22 @@ if(TARGET lcu_diagnostics_probe)
         "secondary diagnostic" "concurrency probe passed" 1 "secondary diagnostic")
     add_lcu_diagnostics_probe_test(retention
         - "retention probe passed" 32 -)
+endif()
+
+if(TARGET lcu_diagnostics_release_static_probe)
+    add_test(
+        NAME lcu.diagnostics.release_static_debug_client
+        COMMAND ${CMAKE_COMMAND}
+            "-DBUILD_DIR=${CMAKE_BINARY_DIR}"
+            "-DRELEASE_TARGET=${target_prj_static}"
+            "-DDEBUG_TARGET=lcu_diagnostics_release_static_probe"
+            "-DPROBE=$<TARGET_FILE:lcu_diagnostics_release_static_probe>"
+            "-DWORK_DIR=${CMAKE_BINARY_DIR}/diagnostics_tests/release_static_debug_client"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_release_static_debug_client_probe.cmake")
+    set_tests_properties(lcu.diagnostics.release_static_debug_client PROPERTIES
+        CONFIGURATIONS Debug
+        LABELS "lcu_diagnostics"
+        TIMEOUT 300)
 endif()
 
 if(TARGET lcu_diagnostics_multicrt_probe AND

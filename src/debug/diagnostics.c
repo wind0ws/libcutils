@@ -23,7 +23,7 @@ typedef struct lcu_diagnostics_file_entry
 	FILETIME last_write;
 } lcu_diagnostics_file_entry_t;
 
-#ifdef _DEBUG
+#if defined(_MSC_VER)
 typedef struct lcu_diagnostics_crt_entry
 {
 	lcu_diagnostics_crt_api_t api;
@@ -33,7 +33,7 @@ typedef struct lcu_diagnostics_crt_entry
 static SRWLOCK g_crt_lock = SRWLOCK_INIT;
 static lcu_diagnostics_crt_entry_t g_crt_entries[LCU_DIAGNOSTICS_MAX_CRTS];
 static size_t g_crt_count = 0;
-#endif
+#endif // defined(_MSC_VER)
 
 static INIT_ONCE g_sink_once = INIT_ONCE_STATIC_INIT;
 static wchar_t g_log_path[MAX_PATH];
@@ -41,10 +41,10 @@ static wchar_t g_started_env[96];
 static HANDLE g_process_write_mutex = NULL;
 static HANDLE g_primary_semaphore = NULL;
 
-#ifdef _DEBUG
+#if defined(_MSC_VER)
 static int __cdecl lcu_diagnostics_crt_hook(int report_type, char *message, int *return_value);
 static int __cdecl lcu_diagnostics_crt_hook_wide(int report_type, wchar_t *message, int *return_value);
-#endif
+#endif // defined(_MSC_VER)
 
 static unsigned long long lcu_diagnostics_hash_wide(const wchar_t *text)
 {
@@ -372,7 +372,7 @@ static void lcu_diagnostics_abort_now(void)
 	TerminateProcess(GetCurrentProcess(), 3);
 }
 
-#ifdef _DEBUG
+#if defined(_MSC_VER)
 static const char *lcu_diagnostics_report_category(int report_type)
 {
 	switch (report_type)
@@ -427,6 +427,17 @@ static int __cdecl lcu_diagnostics_crt_hook_wide(int report_type, wchar_t *messa
 	return 0;
 }
 
+static int lcu_diagnostics_crt_api_valid(const lcu_diagnostics_crt_api_t *api)
+{
+	return api &&
+		api->set_report_mode &&
+		api->set_report_file &&
+		api->set_report_hook &&
+		api->set_debug_flag &&
+		api->dump_memory_leaks &&
+		api->set_abort_behavior;
+}
+
 static int lcu_diagnostics_crt_equal(const lcu_diagnostics_crt_api_t *left,
 	const lcu_diagnostics_crt_api_t *right)
 {
@@ -445,7 +456,10 @@ static void lcu_diagnostics_configure_crt(lcu_diagnostics_crt_entry_t *entry)
 	api->set_report_mode(_CRT_WARN, _CRTDBG_MODE_FILE);
 	api->set_report_file(_CRT_WARN, _CRTDBG_FILE_STDERR);
 	api->set_report_hook(_CRT_RPTHOOK_INSTALL, lcu_diagnostics_crt_hook);
-	api->set_report_hook_wide(_CRT_RPTHOOK_INSTALL, lcu_diagnostics_crt_hook_wide);
+	if (api->set_report_hook_wide)
+	{
+		api->set_report_hook_wide(_CRT_RPTHOOK_INSTALL, lcu_diagnostics_crt_hook_wide);
+	}
 	api->set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 	debug_flags = api->set_debug_flag(_CRTDBG_REPORT_FLAG);
 	api->set_debug_flag(debug_flags | _CRTDBG_ALLOC_MEM_DF |
@@ -460,7 +474,10 @@ static void lcu_diagnostics_release_crt(lcu_diagnostics_crt_entry_t *entry)
 	debug_flags = api->set_debug_flag(_CRTDBG_REPORT_FLAG);
 	api->set_debug_flag(debug_flags & ~_CRTDBG_LEAK_CHECK_DF);
 	api->dump_memory_leaks();
-	api->set_report_hook_wide(_CRT_RPTHOOK_REMOVE, lcu_diagnostics_crt_hook_wide);
+	if (api->set_report_hook_wide)
+	{
+		api->set_report_hook_wide(_CRT_RPTHOOK_REMOVE, lcu_diagnostics_crt_hook_wide);
+	}
 	api->set_report_hook(_CRT_RPTHOOK_REMOVE, lcu_diagnostics_crt_hook);
 }
 
@@ -509,50 +526,31 @@ static void lcu_diagnostics_unregister_crt_entry(const lcu_diagnostics_crt_api_t
 	}
 }
 
-static lcu_diagnostics_crt_api_t lcu_diagnostics_local_crt_api(void)
-{
-	return lcu_diagnostics_current_crt_api();
-}
-
 void lcu_diagnostics_register_crt(const lcu_diagnostics_crt_api_t *crt_api)
 {
-	lcu_diagnostics_crt_api_t local_api;
-
-	if (!crt_api || !crt_api->set_report_mode)
+	if (!lcu_diagnostics_crt_api_valid(crt_api))
 	{
 		return;
 	}
 	lcu_diagnostics_ensure_sink();
-	local_api = lcu_diagnostics_local_crt_api();
 
 	AcquireSRWLockExclusive(&g_crt_lock);
 	lcu_diagnostics_register_crt_entry(crt_api);
-	if (!lcu_diagnostics_crt_equal(crt_api, &local_api))
-	{
-		lcu_diagnostics_register_crt_entry(&local_api);
-	}
 	ReleaseSRWLockExclusive(&g_crt_lock);
 }
 
 void lcu_diagnostics_unregister_crt(const lcu_diagnostics_crt_api_t *crt_api)
 {
-	lcu_diagnostics_crt_api_t local_api;
-
-	if (!crt_api || !crt_api->set_report_mode)
+	if (!lcu_diagnostics_crt_api_valid(crt_api))
 	{
 		return;
 	}
-	local_api = lcu_diagnostics_local_crt_api();
 
 	AcquireSRWLockExclusive(&g_crt_lock);
 	lcu_diagnostics_unregister_crt_entry(crt_api);
-	if (!lcu_diagnostics_crt_equal(crt_api, &local_api))
-	{
-		lcu_diagnostics_unregister_crt_entry(&local_api);
-	}
 	ReleaseSRWLockExclusive(&g_crt_lock);
 }
-#endif // defined(_WIN32) && defined(_DEBUG)
+#endif // defined(_MSC_VER)
 
 void lcu_diagnostics_init(void)
 {

@@ -30,7 +30,6 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('windows','android','linux','linaro7.5.0')]
     [string[]] $Platforms = @('windows','android','linux','linaro7.5.0'),
     [ValidateSet('Release','Debug','MinSizeRel','RelWithDebInfo')]
     [string]   $BuildType = 'Release',
@@ -47,6 +46,31 @@ function Write-Section([string]$msg) {
     Write-Host ("=" * 70) -ForegroundColor Cyan
     Write-Host "  $msg" -ForegroundColor Cyan
     Write-Host ("=" * 70) -ForegroundColor Cyan
+}
+
+# 校验平台名: 内建 windows/android/linux 直通; 其余查 toolchain 文件存在性
+function Test-Platform([string]$platform) {
+    if ($platform -in @('windows','android','linux')) { return $true }
+    $tc = Join-Path $ToolDir "cmake\toolchains\$platform.toolchain.cmake"
+    return (Test-Path $tc)
+}
+
+# 列出全部可用平台 (内建 + toolchains 目录)，用于报错提示
+function Get-AvailablePlatforms {
+    $builtin = @('windows','android','linux')
+    $tcDir = Join-Path $ToolDir "cmake\toolchains"
+    $tc = @()
+    if (Test-Path $tcDir) {
+        $tc = Get-ChildItem $tcDir -Filter "*.toolchain.cmake" |
+              ForEach-Object { $_.Name -replace '\.toolchain\.cmake$','' }
+    }
+    return ($builtin + $tc) | Sort-Object -Unique
+}
+
+# 平台 -> 产物目录前缀 glob (windows 实际目录是 windows<年份>_，故用 windows*)
+function Get-PlatformGlob([string]$platform) {
+    if ($platform -eq 'windows') { return 'windows*_*' }
+    return "${platform}_*"
 }
 
 # 校验 WSL 发行版存在 (wsl -l 输出为 UTF-16LE)
@@ -95,13 +119,36 @@ function Build-Platform([string]$platform) {
     }
 }
 
-# ---- 预检 ----
+# ---- 平台校验 ----
 Write-Section "libcutils 一键发版  type=$BuildType  platforms=$($Platforms -join ',')"
 
-$needWsl = $Platforms | Where-Object { $_ -in @('linux','linaro7.5.0') }
+$invalid = @($Platforms | Where-Object { -not (Test-Platform $_) })
+if ($invalid.Count -gt 0) {
+    $avail = Get-AvailablePlatforms
+    throw "无效平台: $($invalid -join ', ')。可用平台: $($avail -join ', ')"
+}
+
+# ---- 构建前清理对应平台旧产物目录 ----
+$typeDir = $BuildType.ToLower()
+$deployTypeDir = Join-Path (Join-Path $ToolDir 'deploy') $typeDir
+if (Test-Path $deployTypeDir) {
+    foreach ($p in $Platforms) {
+        $glob = Get-PlatformGlob $p
+        $old = @(Get-ChildItem $deployTypeDir -Directory -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -like $glob })
+        if ($old.Count -gt 0) {
+            Write-Host "清理旧产物 ($p): $($old.Name -join ', ')" -ForegroundColor DarkGray
+            $old | Remove-Item -Recurse -Force
+        }
+    }
+}
+
+# ---- WSL 预检 ----
+$needWsl = $Platforms | Where-Object { $_ -notin @('windows','android') }
 if ($needWsl) {
     if (-not (Test-WslDistro $Distro)) {
-        throw "WSL 发行版 '$Distro' 不存在。可用列表: $((& wsl.exe -l -q 2>$null) -join ' ')"
+        $dl = (& wsl.exe -l -q 2>$null) -replace "`0","" -split "`r?`n" | Where-Object { $_.Trim() }
+        throw "WSL 发行版 '$Distro' 不存在。可用列表: $($dl -join ', ')"
     }
     Write-Host "WSL 发行版 '$Distro' 就绪 (用于: $($needWsl -join ', '))" -ForegroundColor Green
 }

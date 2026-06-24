@@ -1,13 +1,13 @@
 ﻿<#
 .SYNOPSIS
-  libcutils 一键发版编排器 (windows / linux / android / linaro7.5.0)。
+  libcutils 一键发版编排器 (windows / linux / android / 任意 toolchain 交叉平台)。
 
 .DESCRIPTION
   复用 tool/ 下既有子脚本:
     windows      -> deploy_for_windows.bat  (cmd, pthread_mode=1=posix, VS 自动探测)
     android      -> deploy_for_android.bat  (cmd, ninja+NDK)
     linux        -> deploy_for_linux.sh     (WSL bash, m64+m32)
-    linaro7.5.0  -> make_cross_platform.sh  (WSL bash, 交叉编译)
+    其他平台     -> make_cross_platform.sh  (WSL bash, 交叉编译, 依赖 cmake/toolchains/<平台>.toolchain.cmake)
   默认全部 Release。构建产物落到 tool/deploy/<type>/<platform>_<abi>/,
   头文件落到 tool/deploy/inc/。完成后可打包成 tar.gz 归档。
 
@@ -51,7 +51,7 @@ function Write-Section([string]$msg) {
 # 校验平台名: 内建 windows/android/linux 直通; 其余查 toolchain 文件存在性
 function Test-Platform([string]$platform) {
     if ($platform -in @('windows','android','linux')) { return $true }
-    $tc = Join-Path $ToolDir "cmake\toolchains\$platform.toolchain.cmake"
+    $tc = Join-Path (Join-Path $ToolDir "cmake\toolchains") "$platform.toolchain.cmake"
     return (Test-Path $tc)
 }
 
@@ -112,10 +112,10 @@ function Build-Platform([string]$platform) {
         'linux' {
             return (Invoke-WslBash $Distro "dos2unix -q deploy_for_linux.sh make_cross_platform.sh setup_env.sh; chmod +x ./deploy_for_linux.sh; ./deploy_for_linux.sh $BuildType")
         }
-        'linaro7.5.0' {
-            return (Invoke-WslBash $Distro "dos2unix -q make_cross_platform.sh setup_env.sh; chmod +x ./make_cross_platform.sh; ./make_cross_platform.sh linaro7.5.0 $BuildType")
+        default {
+            # 任意 toolchain 交叉平台 (linaro7.5.0 / hisi_a7 / r328 ...)
+            return (Invoke-WslBash $Distro "dos2unix -q make_cross_platform.sh setup_env.sh; chmod +x ./make_cross_platform.sh; ./make_cross_platform.sh $platform $BuildType")
         }
-        default { throw "unknown platform: $platform" }
     }
 }
 

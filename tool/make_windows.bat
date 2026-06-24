@@ -113,6 +113,13 @@ if "%WIN_YEAR%"=="" (
 )
 set WIN_PLATFORM=windows%WIN_YEAR%
 @echo PLATFORM=%WIN_PLATFORM%
+:: VS2015 special-case: Win64 must append " Win64" to the generator name.
+:: VS2015 has no host=x64 default and is not used with -A here; VS2017/2019/2022
+:: default to x64 so NEW_VS_ARCH stays empty. See gen_vs_project.bat notes.
+if "%BUILD_ABI%"=="Win64" if "%WIN_YEAR%"=="2015" (
+  set VS_VER="Visual Studio 14 2015 Win64"
+  set NEW_VS_ARCH=""
+)
 title=%BUILD_ABI%
 set BUILD_DIR=.\build\build_%BUILD_ABI%
 @echo Your BUILD_DIR=%BUILD_DIR%

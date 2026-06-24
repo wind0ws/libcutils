@@ -210,16 +210,21 @@ if (-not $NoPackage) {
     $tarName = "lcu_${ver}_${typeDir}_${stamp}.tar.gz"
     $tarPath = Join-Path $archiveDir $tarName
 
-    # 只打包本次构建的平台目录 + 公共 inc/
-    $abiMap = @{ 'windows' = @('windows_x32','windows_x64'); 'linux' = @('linux_x32','linux_x64'); 'android' = @('android_armeabi-v7a','android_arm64-v8a','android_x86','android_x86_64'); 'linaro7.5.0' = @('linaro7.5.0_x64') }
+    # 扫描每个平台实际产出的目录 (前缀匹配，windows 用 windows*)
+    $deployScanDir = Join-Path $deployDir $typeDir
     $relItems = @("inc")
     foreach ($p in $Platforms) {
-        foreach ($abi in $abiMap[$p]) {
-            $candidate = Join-Path $deployDir (Join-Path $typeDir $abi)
-            if (Test-Path $candidate) { $relItems += "$typeDir/$abi" }
+        $glob = Get-PlatformGlob $p
+        $matched = @(Get-ChildItem $deployScanDir -Directory -ErrorAction SilentlyContinue |
+                     Where-Object { $_.Name -like $glob } |
+                     ForEach-Object { "$typeDir/$($_.Name)" })
+        if ($matched.Count -gt 0) {
+            $relItems += $matched
+            Write-Host "  $p -> $($matched -join ', ')" -ForegroundColor DarkGray
+        } else {
+            Write-Host "  WARN: 平台 $p 无产物目录，跳过" -ForegroundColor Yellow
         }
     }
-    Write-Host "归档内容: $($relItems -join ', ')" -ForegroundColor DarkGray
     # 切到 deploy/ 内执行 tar,归档输出也用相对路径,避免 Windows bsdtar 把 'E:' 误判为远程主机
     Push-Location $deployDir
     try {

@@ -16,6 +16,7 @@ local.properties
 .kotlin/
 .temp/
 .tmp/
+.codegraph
 .ai/review/
 *.local.md
 # AI 会话级 plan/review 产物，不进版本库（superpowers 等 skill 默认落点）

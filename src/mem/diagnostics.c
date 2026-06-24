@@ -1,4 +1,4 @@
-#include "debug/diagnostics.h"
+#include "mem/diagnostics.h"
 
 #include <stdarg.h>
 #include <stdio.h>

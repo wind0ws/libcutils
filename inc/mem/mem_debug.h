@@ -2,7 +2,8 @@
  * include this header file at your source file first line.
  * On Windows Debug builds, CRT reports are written to stderr and the local
  * diagnostics log without opening modal dialog boxes.
- * On other platform, it will use allocator to trace memory.
+ * On other platforms, define _LCU_MEM_CHECK_FEATURE_ENABLE=1 to use the LCU
+ * allocator tracker.
  *
  * Note: memory debugging slows the program. Enable it only when needed.
  *       use it if your program memory keep growing.
@@ -12,49 +13,42 @@
 #ifndef LCU_MEM_DEBUG_H
 #define LCU_MEM_DEBUG_H
 
-// define this macro(_LCU_MEM_CHECK_FEATURE_ENABLE = 1) will enable memory check feature
-// suggest user add it to compiler on build if you really want to debug memory.
-// don't forget include this file(mem_debug.h) on your source file first line.
+// Define this macro(_LCU_MEM_CHECK_FEATURE_ENABLE = 1) to enable the LCU
+// allocator tracker. Prefer adding it to compiler flags when you really want
+// tracker-based memory debugging. Do not forget to include this file first.
 // #define _LCU_MEM_CHECK_FEATURE_ENABLE	 1
 
-// Include diagnostics.h for CRT hook registration
-#include "debug/diagnostics.h"
-
-// Step 1: Define _CRTDBG_MAP_ALLOC early if needed (before any stdlib.h)
-// otherwise it won't tell you leak memory on which file with line number in MSVC.
-#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE)
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
+/*
+ * Select the implementation explicitly. Do not infer this from
+ * _CRTDBG_MAP_ALLOC: callers may define that macro themselves, and MSVC Debug
+ * still needs to use CRT diagnostics when _LCU_MEM_CHECK_FEATURE_ENABLE=0.
+ */
+#if defined(_LCU_MEM_CHECK_FEATURE_ENABLE) && ((_LCU_MEM_CHECK_FEATURE_ENABLE + 0) != 0)
+#define _LCU_MEM_DEBUG_IMPL_USE_LCU_TRACKER 1
+#else
+#define _LCU_MEM_DEBUG_IMPL_USE_LCU_TRACKER 0
 #endif
 
-// Step 2: Windows-specific macros and CRT setup
-#ifdef _WIN32
-#ifndef __func__
-#define __func__ __FUNCTION__
-#endif // !__func__
-#ifndef __PRETTY_FUNCTION__
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-#endif // !__PRETTY_FUNCTION__
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && !_LCU_MEM_DEBUG_IMPL_USE_LCU_TRACKER
+#define _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT 1
+#else
+#define _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT 0
+#endif
 
-#if (defined(_MSC_VER) && defined(_DEBUG) && !defined(_LCU_MEM_CHECK_FEATURE_ENABLE))
-#pragma warning(push)
-#pragma warning(disable : 5105)
-#include <windows.h>
-#pragma warning(pop)
+/*
+ * MSVC CRT prelude: this must stay before diagnostics.h and before any other
+ * header that can include <stdlib.h>. Otherwise _CRTDBG_MAP_ALLOC is too late
+ * and malloc leaks lose the client source file/line in the CRT report.
+ */
+#if _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT
+#ifndef _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAP_ALLOC
+#endif
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif // _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT
 
-// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the allocations to be of _CLIENT_BLOCK type
-#define __MYDEBUG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
-#define new __MYDEBUG_NEW
-
-// Register this translation unit's Debug CRT with diagnostics.
-#define MEM_CHECK_INIT() lcu_diagnostics_register_current_crt()
-
-#define MEM_CHECK_DEINIT() lcu_diagnostics_unregister_current_crt()
-#endif // _DEBUG && !_LCU_MEM_CHECK_FEATURE_ENABLE
-#endif // _WIN32
-
-// common header
+// Common headers must be included before the macro rewrite section below.
 #ifdef __cplusplus
 #include <cstdlib>
 #include <cstddef>
@@ -70,7 +64,30 @@
 #endif // __cplusplus
 #include <malloc.h>
 
-#if (!defined(_CRTDBG_MAP_ALLOC) && defined(_LCU_MEM_CHECK_FEATURE_ENABLE) && _LCU_MEM_CHECK_FEATURE_ENABLE)
+// Include diagnostics.h exactly once after the MSVC CRT prelude.
+#include "mem/diagnostics.h"
+
+#ifdef _WIN32
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif // !__func__
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif // !__PRETTY_FUNCTION__
+#endif // _WIN32
+
+#if _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT
+// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the allocations to be of _CLIENT_BLOCK type
+#define _LCU_MEM_DEBUG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
+// Macro rewrites intentionally come after all includes above.
+#define new _LCU_MEM_DEBUG_NEW
+
+// Register this translation unit's Debug CRT with diagnostics.
+#define MEM_CHECK_INIT()   lcu_diagnostics_register_current_crt()
+#define MEM_CHECK_DEINIT() lcu_diagnostics_unregister_current_crt()
+#endif // _LCU_MEM_DEBUG_IMPL_USE_MSVC_CRT
+
+#if _LCU_MEM_DEBUG_IMPL_USE_LCU_TRACKER
 // to mark we really use lcu memory check feature
 #define _USE_LCU_MEM_CHECK    1
 #include "mem/allocator.h"
@@ -100,6 +117,7 @@ void operator delete[](void *ptr) noexcept;
 void operator delete(void *ptr, const char *fileName, const char *funcName, int line) noexcept;
 void operator delete[](void *ptr, const char *fileName, const char *funcName, int line) noexcept;
 
+// Macro rewrites intentionally come after all includes above.
 #define new new (__FILE__, __func__, __LINE__)
 #endif // __cplusplus
 
@@ -121,14 +139,14 @@ void operator delete[](void *ptr, const char *fileName, const char *funcName, in
 #if (defined(free) || defined(malloc) || defined(calloc) || defined(realloc) || defined(strdup) || defined(strndup))
 #error "free/malloc/calloc/realloc/strdup/strndup is defined. you should put \"mem_debug.h\" on your source file first line."
 #endif
-#define free(p) lcu_free(p)
-#define malloc(s) lcu_malloc_trace(s, __FILE__, __func__, __LINE__)
-#define calloc(c, s) lcu_calloc_trace(c, s, __FILE__, __func__, __LINE__)
-#define realloc(p, s) lcu_realloc_trace(p, s, __FILE__, __func__, __LINE__)
-#define strdup(p) lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
-#define strndup(p, s) lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
+#define free(p)        lcu_free(p)
+#define malloc(s)      lcu_malloc_trace(s, __FILE__, __func__, __LINE__)
+#define calloc(c, s)   lcu_calloc_trace(c, s, __FILE__, __func__, __LINE__)
+#define realloc(p, s)  lcu_realloc_trace(p, s, __FILE__, __func__, __LINE__)
+#define strdup(p)      lcu_strdup_trace(p, __FILE__, __func__, __LINE__)
+#define strndup(p, s)  lcu_strndup_trace(p, s, __FILE__, __func__, __LINE__)
 
-#endif // !_CRTDBG_MAP_ALLOC && _LCU_MEM_CHECK_FEATURE_ENABLE
+#endif // _LCU_MEM_DEBUG_IMPL_USE_LCU_TRACKER
 
 #ifndef MEM_CHECK_INIT
 #define MEM_CHECK_INIT()   lcu_diagnostics_init()

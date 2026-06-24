@@ -14,7 +14,7 @@
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  接口层: debug/diagnostics.h                                    │
+│  接口层: mem/diagnostics.h                                    │
 │                                                                 │
 │  【跨平台通用 API】                                              │
 │  • lcu_diagnostics_init()        - 初始化日志系统               │
@@ -32,7 +32,7 @@
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  实现层: debug/diagnostics.c                                    │
+│  实现层: mem/diagnostics.c                                    │
 │                                                                 │
 │  【日志基础设施】                                                │
 │  • 多进程安全日志文件 (.diagnostics.log)                         │
@@ -155,7 +155,7 @@ mem_debug.h  ──可选调用──>  diagnostics.h/c
 
 **注释**：
 1. **CRT 钩子可选** - 需手动调用 `lcu_diagnostics_register_current_crt()`
-2. **diagnostics 可用** - 通过 `#include "debug/diagnostics.h"` + `lcu_diagnostics_writef()`
+2. **diagnostics 可用** - 通过 `#include "mem/diagnostics.h"` + `lcu_diagnostics_writef()`
 
 ### 4.2 mem_debug.h 的宏展开
 
@@ -273,7 +273,7 @@ int main() {
 
 ```c
 #include "mem/mem_debug.h"
-#include "debug/diagnostics.h"  // 显式依赖
+#include "mem/diagnostics.h"  // 显式依赖
 
 int main() {
     MEM_CHECK_INIT();

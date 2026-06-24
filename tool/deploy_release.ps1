@@ -1,13 +1,13 @@
 ﻿<#
 .SYNOPSIS
-  libcutils 一键发版编排器 (windows / linux / android / linaro7.5.0)。
+  libcutils 一键发版编排器 (windows / linux / android / 任意 toolchain 交叉平台)。
 
 .DESCRIPTION
   复用 tool/ 下既有子脚本:
     windows      -> deploy_for_windows.bat  (cmd, pthread_mode=1=posix, VS 自动探测)
     android      -> deploy_for_android.bat  (cmd, ninja+NDK)
     linux        -> deploy_for_linux.sh     (WSL bash, m64+m32)
-    linaro7.5.0  -> make_cross_platform.sh  (WSL bash, 交叉编译)
+    其他平台     -> make_cross_platform.sh  (WSL bash, 交叉编译, 依赖 cmake/toolchains/<平台>.toolchain.cmake)
   默认全部 Release。构建产物落到 tool/deploy/<type>/<platform>_<abi>/,
   头文件落到 tool/deploy/inc/。完成后可打包成 tar.gz 归档。
 
@@ -30,7 +30,6 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('windows','android','linux','linaro7.5.0')]
     [string[]] $Platforms = @('windows','android','linux','linaro7.5.0'),
     [ValidateSet('Release','Debug','MinSizeRel','RelWithDebInfo')]
     [string]   $BuildType = 'Release',
@@ -47,6 +46,31 @@ function Write-Section([string]$msg) {
     Write-Host ("=" * 70) -ForegroundColor Cyan
     Write-Host "  $msg" -ForegroundColor Cyan
     Write-Host ("=" * 70) -ForegroundColor Cyan
+}
+
+# 校验平台名: 内建 windows/android/linux 直通; 其余查 toolchain 文件存在性
+function Test-Platform([string]$platform) {
+    if ($platform -in @('windows','android','linux')) { return $true }
+    $tc = Join-Path (Join-Path $ToolDir "cmake\toolchains") "$platform.toolchain.cmake"
+    return (Test-Path $tc)
+}
+
+# 列出全部可用平台 (内建 + toolchains 目录)，用于报错提示
+function Get-AvailablePlatforms {
+    $builtin = @('windows','android','linux')
+    $tcDir = Join-Path $ToolDir "cmake\toolchains"
+    $tc = @()
+    if (Test-Path $tcDir) {
+        $tc = Get-ChildItem $tcDir -Filter "*.toolchain.cmake" |
+              ForEach-Object { $_.Name -replace '\.toolchain\.cmake$','' }
+    }
+    return ($builtin + $tc) | Sort-Object -Unique
+}
+
+# 平台 -> 产物目录前缀 glob (windows 实际目录是 windows<年份>_，故用 windows*)
+function Get-PlatformGlob([string]$platform) {
+    if ($platform -eq 'windows') { return 'windows*_*' }
+    return "${platform}_*"
 }
 
 # 校验 WSL 发行版存在 (wsl -l 输出为 UTF-16LE)
@@ -88,20 +112,43 @@ function Build-Platform([string]$platform) {
         'linux' {
             return (Invoke-WslBash $Distro "dos2unix -q deploy_for_linux.sh make_cross_platform.sh setup_env.sh; chmod +x ./deploy_for_linux.sh; ./deploy_for_linux.sh $BuildType")
         }
-        'linaro7.5.0' {
-            return (Invoke-WslBash $Distro "dos2unix -q make_cross_platform.sh setup_env.sh; chmod +x ./make_cross_platform.sh; ./make_cross_platform.sh linaro7.5.0 $BuildType")
+        default {
+            # 任意 toolchain 交叉平台 (linaro7.5.0 / hisi_a7 / r328 ...)
+            return (Invoke-WslBash $Distro "dos2unix -q make_cross_platform.sh setup_env.sh; chmod +x ./make_cross_platform.sh; ./make_cross_platform.sh $platform $BuildType")
         }
-        default { throw "unknown platform: $platform" }
     }
 }
 
-# ---- 预检 ----
+# ---- 平台校验 ----
 Write-Section "libcutils 一键发版  type=$BuildType  platforms=$($Platforms -join ',')"
 
-$needWsl = $Platforms | Where-Object { $_ -in @('linux','linaro7.5.0') }
+$invalid = @($Platforms | Where-Object { -not (Test-Platform $_) })
+if ($invalid.Count -gt 0) {
+    $avail = Get-AvailablePlatforms
+    throw "无效平台: $($invalid -join ', ')。可用平台: $($avail -join ', ')"
+}
+
+# ---- 构建前清理对应平台旧产物目录 ----
+$typeDir = $BuildType.ToLower()
+$deployTypeDir = Join-Path (Join-Path $ToolDir 'deploy') $typeDir
+if (Test-Path $deployTypeDir) {
+    foreach ($p in $Platforms) {
+        $glob = Get-PlatformGlob $p
+        $old = @(Get-ChildItem $deployTypeDir -Directory -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -like $glob })
+        if ($old.Count -gt 0) {
+            Write-Host "清理旧产物 ($p): $($old.Name -join ', ')" -ForegroundColor DarkGray
+            $old | Remove-Item -Recurse -Force
+        }
+    }
+}
+
+# ---- WSL 预检 ----
+$needWsl = $Platforms | Where-Object { $_ -notin @('windows','android') }
 if ($needWsl) {
     if (-not (Test-WslDistro $Distro)) {
-        throw "WSL 发行版 '$Distro' 不存在。可用列表: $((& wsl.exe -l -q 2>$null) -join ' ')"
+        $dl = (& wsl.exe -l -q 2>$null) -replace "`0","" -split "`r?`n" | Where-Object { $_.Trim() }
+        throw "WSL 发行版 '$Distro' 不存在。可用列表: $($dl -join ', ')"
     }
     Write-Host "WSL 发行版 '$Distro' 就绪 (用于: $($needWsl -join ', '))" -ForegroundColor Green
 }
@@ -163,16 +210,21 @@ if (-not $NoPackage) {
     $tarName = "lcu_${ver}_${typeDir}_${stamp}.tar.gz"
     $tarPath = Join-Path $archiveDir $tarName
 
-    # 只打包本次构建的平台目录 + 公共 inc/
-    $abiMap = @{ 'windows' = @('windows_x32','windows_x64'); 'linux' = @('linux_x32','linux_x64'); 'android' = @('android_armeabi-v7a','android_arm64-v8a','android_x86','android_x86_64'); 'linaro7.5.0' = @('linaro7.5.0_x64') }
+    # 扫描每个平台实际产出的目录 (前缀匹配，windows 用 windows*)
+    $deployScanDir = Join-Path $deployDir $typeDir
     $relItems = @("inc")
     foreach ($p in $Platforms) {
-        foreach ($abi in $abiMap[$p]) {
-            $candidate = Join-Path $deployDir (Join-Path $typeDir $abi)
-            if (Test-Path $candidate) { $relItems += "$typeDir/$abi" }
+        $glob = Get-PlatformGlob $p
+        $matched = @(Get-ChildItem $deployScanDir -Directory -ErrorAction SilentlyContinue |
+                     Where-Object { $_.Name -like $glob } |
+                     ForEach-Object { "$typeDir/$($_.Name)" })
+        if ($matched.Count -gt 0) {
+            $relItems += $matched
+            Write-Host "  $p -> $($matched -join ', ')" -ForegroundColor DarkGray
+        } else {
+            Write-Host "  WARN: 平台 $p 无产物目录，跳过" -ForegroundColor Yellow
         }
     }
-    Write-Host "归档内容: $($relItems -join ', ')" -ForegroundColor DarkGray
     # 切到 deploy/ 内执行 tar,归档输出也用相对路径,避免 Windows bsdtar 把 'E:' 误判为远程主机
     Push-Location $deployDir
     try {

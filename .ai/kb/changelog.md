@@ -123,7 +123,7 @@
 - **动机**:`diagnostics.h` 在 Windows Debug 下先包含 `<stdlib.h>`,导致 `mem_debug.h` 后定义的 `_CRTDBG_MAP_ALLOC` 失效(CRT malloc/free 宏替换必须在首次包含 stdlib.h 前定义),内存泄漏无法报告文件名/行号
 - **改动**:`mem_debug.h` 在需要时先定义 `_CRTDBG_MAP_ALLOC` 并包含 `<stdlib.h>/<crtdbg.h>`,再包含 `diagnostics.h`(仅一处,L28);`diagnostics.h` 顶层不再包含标准库,在 CRT API 区域按需包含并通过 `_CRTDBG_H_` 守卫避免重复;`diagnostics.c:554` 补齐 `#endif` 注释
 - **影响**:Windows Debug 下 MSVC CRT 内存泄漏检测现可正确报告位置;包含结构清晰(单点 include),其他平台不受影响
-- **关联**:`inc/mem/mem_debug.h`、`inc/debug/diagnostics.h`、`src/debug/diagnostics.c`
+- **关联**:`inc/mem/mem_debug.h`、`inc/mem/diagnostics.h`、`src/mem/diagnostics.c`
 
 ### 17. mem_debug.h 移除 diagnostics.h 依赖 — 2026-06-22
 - **动机**:Debug 客户端包含 `mem_debug.h` 链接 Release lcu 库时 LNK2001(`lcu_diagnostics_register_current_crt` 未定义);根因:`mem_debug.h` 包含 `diagnostics.h` 导致必须匹配库编译配置,违背轻量头文件设计
@@ -136,3 +136,15 @@
 - **改动**:`ini_reader` 默认改为 heap+realloc、`INI_MAX_LINE` 提升到 64KiB, 超长注释行丢弃继续、超长配置行失败; `ini_parser` value 改为内联 256B + 超长堆分配; 新增 `*_with_diagnostics` API。
 - **影响**:支持长注释/长 value, 避免 value 静默截断; 旧 parse API 保持兼容, 新 API 可返回行号/reader_code/message。
 - **关联**:`inc/file/ini_reader.h`,`src/file/ini_reader.c`,`inc/file/ini_parser.h`,`src/file/ini_parser.c`,`src_demo/file/ini_test.c`
+
+### 19. deploy_release 多平台编译支持 — 2026-06-24
+- **动机**:需一键编译任意第三方交叉平台(linaro7.5.0/hisi_a7 等),Windows 需覆盖本机全部 VS 版本。
+- **改动**:`deploy_release.ps1` 平台白名单改动态校验(查 `toolchains/<name>.toolchain.cmake`),非 win/android 统一走 `make_cross_platform.sh`(WSL);构建前清理+扫描式打包取代硬编码 abiMap;`deploy_for_windows.bat` 探测全部已装 VS 逐个编译;`make_windows.bat` 注入 `-DPLATFORM=windows<年份>`。
+- **影响**:输出目录带 VS 年份(`windows2022_x32` 等);新增平台零脚本改动即被支持。
+- **关联**:`tool/deploy_release.ps1`,`tool/deploy_for_windows.bat`,`tool/make_windows.bat`,`tool/deploy_release.bat`
+
+### 20. 修复 diagnostics 探针未随重构迁移导致跨平台构建失败 — 2026-06-24
+- **动机**:WSL/gcc 构建报 `crtdbg.h: No such file`;根因:commit 2433504 重构只迁移库模块,4 个 MSVC 专属 demo 探针仍留在 `src_demo/debug/`,而 CMake 的 `REMOVE_ITEM`/`add_executable` 已全部改引用 `src_demo/mem/` → 路径不匹配致剔除静默失效,探针被扫进跨平台 demo 目标(MSVC 下亦因找不到源文件 configure 失败)。
+- **改动**:`git mv` 4 个探针(`diagnostics_probe/crt_client/multicrt_probe/release_static_probe.c`)`debug/`→`mem/`,使真实路径与 CMake 引用对齐;未改源码,守卫与剔除逻辑本就正确。
+- **影响**:Linux 跨平台构建恢复(探针正确剔除、`PRJ_DEMO_SRCS` 不再含 diagnostics);MSVC 探针目标 configure 不再缺源文件。
+- **关联**:`src_demo/mem/diagnostics_*.c`,`tool/CMakeLists.txt:185-189,282-299`

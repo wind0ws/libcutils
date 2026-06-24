@@ -1,23 +1,21 @@
 EXPORTS
-	
-	xlog_auto_level_up @1
-	xlog_set_default_tag @4
-	xlog_set_timezone @5
-	xlog_set_user_callback @6
-	xlog_set_min_level @7
-	xlog_get_min_level @8
-	xlog_set_target @9
-	xlog_get_target @10
-	xlog_set_format @11
-	xlog_get_format @12
-	xlog_set_flush_mode @13
-	xlog_get_flush_mode @14
-	__xlog_internal_print @15
-	__xlog_internal_hex_print @16
-	
-	lcu_get_version @18
-	lcu_init @19
-	lcu_deinit @20
-	
-	
+	lcu_get_version                     @1
+	lcu_init                            @2
+	lcu_deinit                          @3
+	lcu_diagnostics_register_crt        @4
+	lcu_diagnostics_unregister_crt      @5
+	xlog_auto_level_up                  @6
+	xlog_set_default_tag                @7
+	xlog_set_timezone                   @8
+	xlog_set_user_callback              @9
+	xlog_set_min_level                  @10
+	xlog_get_min_level                  @11
+	xlog_set_target                     @12
+	xlog_get_target                     @13
+	xlog_set_format                     @14
+	xlog_get_format                     @15
+	xlog_set_flush_mode                 @16
+	xlog_get_flush_mode                 @17
+	__xlog_internal_print               @18
+	__xlog_internal_hex_print           @19
 	

@@ -9,7 +9,7 @@
 #include <stdio.h>          /* for FILE                          */
 #include <assert.h>         /* for assert                        */
 #include <sys/types.h>      /* for ssize_t                       */
-#include "debug/diagnostics.h"
+#include "mem/diagnostics.h"
 
 #if(defined(__linux__) || defined(__ANDROID__))
 #include <sys/cdefs.h>      /* for __BEGIN_DECLS / __END_DECLS   */

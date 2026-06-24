@@ -100,6 +100,26 @@ if "%BUILD_ABI%" EQU "Win64" set NEW_VS_ARCH="" & goto label_main
 
 :label_main
 @echo Your BUILD_ABI=%BUILD_ABI%, NEW_VS_ARCH=%NEW_VS_ARCH:"=%
+:: 从 VS_VER 映射 VS 发布年份，构造 PLATFORM 名 (输出目录 windows<年份>_<abi>)
+:: VS_VER 形如 "Visual Studio 17 2022"，auto-detect 与外部显式传参均为此格式
+set WIN_YEAR=
+echo %VS_VER% | findstr /C:"17 2022" >nul && set WIN_YEAR=2022
+echo %VS_VER% | findstr /C:"16 2019" >nul && set WIN_YEAR=2019
+echo %VS_VER% | findstr /C:"15 2017" >nul && set WIN_YEAR=2017
+echo %VS_VER% | findstr /C:"14 2015" >nul && set WIN_YEAR=2015
+if "%WIN_YEAR%"=="" (
+  @echo ERROR: cannot map VS_VER=%VS_VER% to a release year
+  @exit /b 3
+)
+set WIN_PLATFORM=windows%WIN_YEAR%
+@echo PLATFORM=%WIN_PLATFORM%
+:: VS2015 special-case: Win64 must append " Win64" to the generator name.
+:: VS2015 has no host=x64 default and is not used with -A here; VS2017/2019/2022
+:: default to x64 so NEW_VS_ARCH stays empty. See gen_vs_project.bat notes.
+if "%BUILD_ABI%"=="Win64" if "%WIN_YEAR%"=="2015" (
+  set VS_VER="Visual Studio 14 2015 Win64"
+  set NEW_VS_ARCH=""
+)
 title=%BUILD_ABI%
 set BUILD_DIR=.\build\build_%BUILD_ABI%
 @echo Your BUILD_DIR=%BUILD_DIR%
@@ -115,7 +135,7 @@ set "CMAKE_EXTEND_ARGS=%CMAKE_EXTEND_ARGS% -DPRJ_WIN_PTHREAD_MODE=%WIN_PTHREAD_M
 @echo make_windows-CMAKE_EXTEND_ARGS=%CMAKE_EXTEND_ARGS:"=%
 :: VS2019 添加 arch 方式与其他版本不同，默认不加 -A 选项就是Win64(而且不能显式的添加Win64)
 :: 小提示：%VAR% 最后面加的 :"=  是为了去除变量两边的双引号的，如果要保留就不要加
-%CMAKE_BIN% -G %VS_VER% %NEW_VS_ARCH:"=% -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
+%CMAKE_BIN% -G %VS_VER% %NEW_VS_ARCH:"=% -DPLATFORM=%WIN_PLATFORM% -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
 ::%CMAKE_BIN% -G "Visual Studio 16 2019" -A Win32 -H.\ -B%BUILD_DIR:"=% %CMAKE_EXTEND_ARGS:"=%
 
 set ERR_CODE=%ERRORLEVEL%

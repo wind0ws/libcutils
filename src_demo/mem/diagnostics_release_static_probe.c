@@ -1,5 +1,10 @@
 #include "mem/mem_debug.h"
 
+/* This file intentionally models a client translation unit:
+ * - the client includes mem_debug.h first,
+ * - the client is built as Debug,
+ * - the client links the Release lcu_static library.
+ * The leaked malloc below must report this source file via _CRTDBG_MAP_ALLOC. */
 #include <crtdbg.h>
 #include <stdlib.h>
 #include <string.h>

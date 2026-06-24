@@ -183,10 +183,10 @@ message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 set(PRJ_DEMO_SRC_DIR "${PRJ_ROOT_DIR}/src_demo")
 file(GLOB_RECURSE PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp" "${PRJ_DEMO_SRC_DIR}/*.hpp")
 set(LCU_DIAGNOSTICS_PROBE_SRCS
-    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c"
-    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_crt_client.c"
-    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c"
-    "${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c")
+    "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_probe.c"
+    "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_crt_client.c"
+    "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_multicrt_probe.c"
+    "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_release_static_probe.c")
 list(REMOVE_ITEM PRJ_DEMO_SRCS ${LCU_DIAGNOSTICS_PROBE_SRCS})
 message(STATUS "\n PRJ_DEMO_SRCS => ${PRJ_DEMO_SRCS}\n ")
 #===================== COLLECT SRC END =====================
@@ -280,13 +280,13 @@ ENDIF (BUILD_DEMO)
 
 if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_STATIC_LIBS)
   add_executable(lcu_diagnostics_probe
-                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_probe.c)
+                 ${PRJ_DEMO_SRC_DIR}/mem/diagnostics_probe.c)
   list(APPEND target_names lcu_diagnostics_probe)
   set(_lcu_release_static_lib
       "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}/${CMAKE_STATIC_LIBRARY_PREFIX}${CMAKE_PROJECT_NAME}_a${CMAKE_STATIC_LIBRARY_SUFFIX}")
   add_executable(lcu_diagnostics_release_static_probe
                  EXCLUDE_FROM_ALL
-                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_release_static_probe.c)
+                 ${PRJ_DEMO_SRC_DIR}/mem/diagnostics_release_static_probe.c)
   target_link_libraries(lcu_diagnostics_release_static_probe
                         PRIVATE "${_lcu_release_static_lib}")
   list(APPEND target_names lcu_diagnostics_release_static_probe)
@@ -294,9 +294,9 @@ endif()
 
 if(WIN32 AND MSVC AND BUILD_DEMO AND BUILD_SHARED_LIBS)
   add_library(lcu_diagnostics_crt_client SHARED
-              ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_crt_client.c)
+              ${PRJ_DEMO_SRC_DIR}/mem/diagnostics_crt_client.c)
   add_executable(lcu_diagnostics_multicrt_probe
-                 ${PRJ_DEMO_SRC_DIR}/debug/diagnostics_multicrt_probe.c)
+                 ${PRJ_DEMO_SRC_DIR}/mem/diagnostics_multicrt_probe.c)
   list(APPEND target_names
        lcu_diagnostics_crt_client
        lcu_diagnostics_multicrt_probe)

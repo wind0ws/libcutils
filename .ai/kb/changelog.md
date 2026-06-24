@@ -142,3 +142,9 @@
 - **改动**:`deploy_release.ps1` 平台白名单改动态校验(查 `toolchains/<name>.toolchain.cmake`),非 win/android 统一走 `make_cross_platform.sh`(WSL);构建前清理+扫描式打包取代硬编码 abiMap;`deploy_for_windows.bat` 探测全部已装 VS 逐个编译;`make_windows.bat` 注入 `-DPLATFORM=windows<年份>`。
 - **影响**:输出目录带 VS 年份(`windows2022_x32` 等);新增平台零脚本改动即被支持。
 - **关联**:`tool/deploy_release.ps1`,`tool/deploy_for_windows.bat`,`tool/make_windows.bat`,`tool/deploy_release.bat`
+
+### 20. 修复 diagnostics 探针未随重构迁移导致跨平台构建失败 — 2026-06-24
+- **动机**:WSL/gcc 构建报 `crtdbg.h: No such file`;根因:commit 2433504 重构只迁移库模块,4 个 MSVC 专属 demo 探针仍留在 `src_demo/debug/`,而 CMake 的 `REMOVE_ITEM`/`add_executable` 已全部改引用 `src_demo/mem/` → 路径不匹配致剔除静默失效,探针被扫进跨平台 demo 目标(MSVC 下亦因找不到源文件 configure 失败)。
+- **改动**:`git mv` 4 个探针(`diagnostics_probe/crt_client/multicrt_probe/release_static_probe.c`)`debug/`→`mem/`,使真实路径与 CMake 引用对齐;未改源码,守卫与剔除逻辑本就正确。
+- **影响**:Linux 跨平台构建恢复(探针正确剔除、`PRJ_DEMO_SRCS` 不再含 diagnostics);MSVC 探针目标 configure 不再缺源文件。
+- **关联**:`src_demo/mem/diagnostics_*.c`,`tool/CMakeLists.txt:185-189,282-299`

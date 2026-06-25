@@ -41,6 +41,11 @@ $ErrorActionPreference = 'Stop'
 $ToolDir = $PSScriptRoot
 Set-Location $ToolDir
 
+# 处理通过 -File 传递的逗号分隔字符串 (bat 脚本会把 "a,b,c" 当成单个字符串传入)
+if ($Platforms.Count -eq 1 -and $Platforms[0] -match ',') {
+    $Platforms = $Platforms[0] -split ',' | ForEach-Object { $_.Trim() }
+}
+
 function Write-Section([string]$msg) {
     Write-Host ""
     Write-Host ("=" * 70) -ForegroundColor Cyan

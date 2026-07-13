@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(lcu VERSION 1.9.1 LANGUAGES C CXX)
+project(lcu VERSION 1.9.2 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
 # C2 修复: enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
@@ -117,11 +117,19 @@ ENDIF(DEFINED PLATFORM_ABI)
 string(TOLOWER "${PLATFORM}" PLATFORM_TOLOWER)
 string(TOLOWER "${PLATFORM_ABI}" PLATFORM_ABI_TOLOWER)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_TOLOWER)
-# get PLATFORM info on code
-add_definitions(-D_PLATFORM=${PLATFORM} -D_PLATFORM_ABI=${PLATFORM_ABI})
+# define platform-specific macro for conditional compilation (e.g. _PLATFORM_ARMV7_UCLIBC)
+string(TOUPPER "${PLATFORM}" PLATFORM_TOUPPER)
+string(REPLACE "-" "_" PLATFORM_TOUPPER "${PLATFORM_TOUPPER}")
 
-set(ALL_CONFIG_TYPES "DEBUG" "RELEASE" "RELWITHDEBINFO" "MINSIZEREL")
-foreach(cfg ${ALL_CONFIG_TYPES})
+# define PLATFORM info macro on code
+add_compile_definitions(
+  _PLATFORM="${PLATFORM}"
+  _PLATFORM_ABI="${PLATFORM_ABI}"
+  _PLATFORM_${PLATFORM_TOUPPER}=1
+)
+
+set(_ALL_CONFIG_TYPES "DEBUG" "RELEASE" "RELWITHDEBINFO" "MINSIZEREL")
+foreach(cfg ${_ALL_CONFIG_TYPES})
   if (DEFINED DEPLOY_DIR)
     message(STATUS "you defined DEPLOY_DIR => ${DEPLOY_DIR}")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${cfg} ${DEPLOY_DIR})
@@ -173,10 +181,77 @@ file(COPY ${GENERATE_H_FILES} DESTINATION ${PRJ_OUTPUT_DIR}/inc/config/)
 #===================== PUBLISH HEADER END =====================
 
 #===================== COLLECT SRC BEGIN =====================
-#collect src to "PRJ_SRCS" 
+#collect src to "PRJ_SRCS"
 #aux_source_directory(${PRJ_ROOT_DIR}/src PRJ_SRCS)
 set(PRJ_SRC_DIR "${PRJ_ROOT_DIR}/src")
 file(GLOB_RECURSE PRJ_SRCS "${PRJ_SRC_DIR}/*.c" "${PRJ_SRC_DIR}/*.cpp" "${PRJ_SRC_DIR}/*.hpp" "${PRJ_SRC_DIR}/*.cxx")
+
+#--------------------- 平台适配层 (src/port/<group>/) 编译期隔离 ---------------------
+# 契约: src/port/<group>/ 下的代码含平台特定的强符号(如 uClibc 的 stat/ctype),
+# 只对该类平台正确, 在其他平台会污染甚至踩坏系统 libc。故此处默认从 PRJ_SRCS 排除
+# **所有** src/port/**, 再仅把当前 ${PLATFORM} 映射到的 port 分组目录加回。
+#
+# 映射规则(PRJ_PORT_GROUPS: "PLATFORM 值 -> port 子目录名"):
+#   - 多个平台可共享一个分组(如两个 uClibc 交叉平台共用 src/port/uclibc/, 因其
+#     struct stat/ctype ABI 已实测同源);
+#   - 未在映射表内的平台, 不启用任何 port 目录。
+# 单一真相源: 命中某分组时, 除把该目录源码加入编译外, 还自动定义
+#   LCU_PORT_GROUP_<GROUP大写>=1 传给代码层。代码层(port_anchor.c 调度 + 各 group
+#   实现文件的自门控)据此生效, 无需再各自维护 _PLATFORM_* 平台宏列表 —— 平台到分组
+#   的映射只在本表维护一处。
+# 新增平台适配:
+#   a) 若与既有分组同源 → 在 PRJ_PORT_GROUPS 加一行 "<PLATFORM> uclibc" 即可, 零新增
+#      文件、代码零改动(自动命中已有的 LCU_PORT_GROUP_UCLIBC);
+#   b) 若是全新一类 → 建 src/port/<newgroup>/*.c(内部用 LCU_PORT_GROUP_<NEWGROUP>
+#      自门控) + 加 "<PLATFORM> <newgroup>" 映射 + 在 port_anchor.c 增一个调度块。
+set(PRJ_PORT_GROUPS
+    "armv7_uclibc uclibc"
+    "gcc12_uclibc uclibc")
+
+file(GLOB_RECURSE PRJ_PORT_ALL_SRCS "${PRJ_SRC_DIR}/port/*.c" "${PRJ_SRC_DIR}/port/*.cpp" "${PRJ_SRC_DIR}/port/*.cxx")
+if(PRJ_PORT_ALL_SRCS)
+  # port_anchor.c 是"平台无关"的调度中心(直接位于 src/port/ 下, 不属任何 group 子目录),
+  # 必须始终编译: 它内部按 CMake 传入的 LCU_PORT_GROUP_* 宏自动调度; 无匹配平台时其
+  # lcu_port_anchor() 退化为空函数。故先从"待排除的 port 源码"里剔除它, 避免被误删。
+  set(PRJ_PORT_ANCHOR_SRCS "${PRJ_SRC_DIR}/port/port_anchor.c")
+  list(REMOVE_ITEM PRJ_PORT_ALL_SRCS ${PRJ_PORT_ANCHOR_SRCS})
+
+  # 其余 src/port/**(各 group 的平台特定强符号实现)默认全部排除, 稍后仅按命中分组加回。
+  if(PRJ_PORT_ALL_SRCS)
+    list(REMOVE_ITEM PRJ_SRCS ${PRJ_PORT_ALL_SRCS})
+  endif()
+
+  set(_port_group "")
+  foreach(_map ${PRJ_PORT_GROUPS})
+    separate_arguments(_pair UNIX_COMMAND "${_map}")
+    list(GET _pair 0 _map_platform)
+    list(GET _pair 1 _map_group)
+    if("${PLATFORM}" STREQUAL "${_map_platform}")
+      set(_port_group "${_map_group}")
+      break()
+    endif()
+  endforeach()
+  if(_port_group)
+    file(GLOB_RECURSE PRJ_PORT_CUR_SRCS
+         "${PRJ_SRC_DIR}/port/${_port_group}/*.c"
+         "${PRJ_SRC_DIR}/port/${_port_group}/*.cpp"
+         "${PRJ_SRC_DIR}/port/${_port_group}/*.cxx")
+    if(PRJ_PORT_CUR_SRCS)
+      list(APPEND PRJ_SRCS ${PRJ_PORT_CUR_SRCS})
+      # 单一真相源: 为命中的分组定义 LCU_PORT_GROUP_<GROUP大写>=1 传给代码层,
+      # 供 port_anchor.c 调度与该 group 的 port 实现文件自门控。代码层无需再维护平台宏列表。
+      string(TOUPPER "${_port_group}" _port_group_upper)
+      add_compile_definitions(LCU_PORT_GROUP_${_port_group_upper}=1)
+      message(STATUS "port layer: PLATFORM=${PLATFORM} -> src/port/${_port_group}/ enabled => ${PRJ_PORT_CUR_SRCS}")
+      message(STATUS "port layer: defined LCU_PORT_GROUP_${_port_group_upper}=1 for code layer")
+    else()
+      message(WARNING "port layer: PLATFORM=${PLATFORM} mapped to '${_port_group}' but src/port/${_port_group}/ has no sources")
+    endif()
+  else()
+    message(STATUS "port layer: PLATFORM=${PLATFORM} has no port group; all src/port/** excluded (port_anchor.c stays as no-op)")
+  endif()
+endif()
+
 message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 
 

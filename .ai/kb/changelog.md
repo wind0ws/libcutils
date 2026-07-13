@@ -148,3 +148,10 @@
 - **改动**:`git mv` 4 个探针(`diagnostics_probe/crt_client/multicrt_probe/release_static_probe.c`)`debug/`→`mem/`,使真实路径与 CMake 引用对齐;未改源码,守卫与剔除逻辑本就正确。
 - **影响**:Linux 跨平台构建恢复(探针正确剔除、`PRJ_DEMO_SRCS` 不再含 diagnostics);MSVC 探针目标 configure 不再缺源文件。
 - **关联**:`src_demo/mem/diagnostics_*.c`,`tool/CMakeLists.txt:185-189,282-299`
+
+### 21. port 层单一真相源解耦(CMake 生成 group 宏,业务层零平台宏) — 2026-07-13
+- **动机**:平台判断散在两处——lcu.c 用 `_PLATFORM_ARMV7_UCLIBC||_PLATFORM_GCC12_UCLIBC` 决定是否调锚点,port 文件用同一 `||` 链定义 `LCU_PLATFORM_UCLIBC_COMPAT`;新增 uClibc 板需同步改两处宏 + CMake 映射,漏一处即静默失效(违反 DRY/单一真相源)。
+- **改动**:①CMake 命中分组时除加回源码外,自动 `add_compile_definitions(LCU_PORT_GROUP_<GROUP大写>=1)`,平台→分组映射唯一真相源收敛到 `PRJ_PORT_GROUPS`。②新增调度层 `inc/port/port_anchor.h` + `src/port/port_anchor.c`(始终编译、按 `LCU_PORT_GROUP_*` 调度,无匹配即空函数);lcu.c 改为无条件调 `lcu_port_anchor()`,删除全部 `_PLATFORM_*` 门控。③`global_func_impl.c`→`uclibc_port.c`,门控由 `LCU_PORT_GROUP_UCLIBC` 推导,不再列平台宏。④各 `#ifdef` 加 `#pragma message` 打印编译路径便于排查。
+- **影响**:新增同源 uClibc 板(如 hisi_uclibc)仅在 `PRJ_PORT_GROUPS` 加一行、代码零改动;三重隔离(CMake 排除+文件自门控+调度侧门控)保留。实测:armv7_uclibc 交叉构建 `[100%]` 通过、三条 pragma 全触发、`port_anchor.o`+`uclibc_port.o` 均入库;非 uClibc(linux native)构建 `uclibc_port.c` 被排除、`port_anchor.c` 编为空 op、无宏定义无未定义引用。
+- **关联**:`inc/port/port_anchor.h`,`src/port/port_anchor.c`,`src/port/uclibc/uclibc_port.c`,`src/lcu.c`,`tool/CMakeLists.txt`(PRJ_PORT_GROUPS + LCU_PORT_GROUP_* 生成)
+

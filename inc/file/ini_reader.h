@@ -159,7 +159,7 @@ INI_API int ini_reader_parse_string_length(const char* string, size_t length, in
 /* Initial size in bytes for heap line buffer. Only applies if INI_USE_STACK
    is zero. */
 #ifndef INI_INITIAL_ALLOC
-#define INI_INITIAL_ALLOC 200
+#define INI_INITIAL_ALLOC 256
 #endif
 
 /* Stop parsing on first error (default is to keep parsing). */

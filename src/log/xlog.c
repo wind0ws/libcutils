@@ -105,13 +105,12 @@ static portable_mutex_t g_xlog_mutex = NULL;
  * 问题: 原 xlog_global_init 是 check-then-act (if(mutex)return; init), 多线程并发
  *       (例如 logger_facade_xlog.h 的 _LOG_INIT_IMPL 宏可能绕过 lcu_global_init 直接调用)
  *       会创建多份 mutex 并泄漏.
- * 方案: 用平台 once 机制初始化一个"守护锁" g_xlog_guard (创建一次, 进程生命周期内不销毁),
- *       守护锁保护真正的 g_xlog_mutex 的 init/cleanup. 这样:
- *         1. 消除 init 竞态 (once 保证守护锁只建一次);
+ * 方案: 用平台守护锁保护真正的 g_xlog_mutex 的 init/cleanup. 非 Windows 平台通过
+ *       once 机制初始化 portable mutex; Windows 使用无内核句柄的静态 SRWLOCK. 这样:
+ *         1. 消除 init 竞态;
  *         2. 保留 init→cleanup→init 的 reinit 能力 (g_xlog_mutex 可反复创建/销毁);
- *         3. 优先用轻量 call_once / InitOnceExecuteOnce (fast-path 近乎零开销),
- *            pthread_once 仅作 POSIX 兜底.
- * 三层 fallback 顺序: C11 call_once > Win32 InitOnceExecuteOnce > POSIX pthread_once. */
+ *         3. 避免 Windows DLL 重载时遗留守护锁内核句柄.
+ * 平台顺序: C11 call_once > Win32 SRWLOCK > POSIX pthread_once. */
 
 #if !defined(_WIN32) && defined(LCU_HAVE_C11_THREADS_H) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
     /* Tier 1: C11 threads.h call_once */
@@ -122,17 +121,9 @@ static portable_mutex_t g_xlog_mutex = NULL;
     static void pri_xlog_ensure_guard(void) { call_once(&g_xlog_guard_once, pri_xlog_guard_init); }
 
 #elif defined(_WIN32)
-    /* Tier 2: Win32 InitOnceExecuteOnce */
+    /* Tier 2: SRWLOCK is static and owns no kernel handle. */
     #include <synchapi.h>
-    static portable_mutex_t g_xlog_guard = NULL;
-    static INIT_ONCE g_xlog_guard_once = INIT_ONCE_STATIC_INIT;
-    static BOOL CALLBACK pri_xlog_guard_init(PINIT_ONCE i, PVOID p, PVOID* c)
-    {
-        (void)i; (void)p; (void)c;
-        portable_mutex_init(&g_xlog_guard, NULL);
-        return TRUE;
-    }
-    static void pri_xlog_ensure_guard(void) { InitOnceExecuteOnce(&g_xlog_guard_once, pri_xlog_guard_init, NULL, NULL); }
+    static SRWLOCK g_xlog_guard = SRWLOCK_INIT;
 
 #else
     /* Tier 3: POSIX pthread_once 兜底 (uclibc/musl/老 NDK) */
@@ -145,6 +136,17 @@ static portable_mutex_t g_xlog_mutex = NULL;
 
 int xlog_global_init()
 {
+#if defined(_WIN32)
+	AcquireSRWLockExclusive(&g_xlog_guard);
+	int ret = 1; /* 1: 已初始化(幂等) */
+	if (NULL == g_xlog_mutex)
+	{
+		portable_mutex_init(&g_xlog_mutex, NULL);
+		ret = 0;
+	}
+	ReleaseSRWLockExclusive(&g_xlog_guard);
+	return ret;
+#else
 	pri_xlog_ensure_guard();
 	if (NULL == g_xlog_guard)
 	{
@@ -162,10 +164,23 @@ int xlog_global_init()
 	}
 	portable_mutex_unlock(&g_xlog_guard);
 	return ret;
+#endif
 }
 
 int xlog_global_cleanup()
 {
+#if defined(_WIN32)
+	AcquireSRWLockExclusive(&g_xlog_guard);
+	int ret = 1;
+	if (g_xlog_mutex)
+	{
+		portable_mutex_destroy(&g_xlog_mutex);
+		g_xlog_mutex = NULL;
+		ret = 0;
+	}
+	ReleaseSRWLockExclusive(&g_xlog_guard);
+	return ret;
+#else
 	if (NULL == g_xlog_guard)
 	{
 		if (NULL == g_xlog_mutex) { return 1; }
@@ -183,6 +198,7 @@ int xlog_global_cleanup()
 	}
 	portable_mutex_unlock(&g_xlog_guard);
 	return ret;
+#endif
 }
 
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))

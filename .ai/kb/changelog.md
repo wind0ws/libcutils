@@ -155,3 +155,8 @@
 - **影响**:新增同源 uClibc 板(如 hisi_uclibc)仅在 `PRJ_PORT_GROUPS` 加一行、代码零改动;三重隔离(CMake 排除+文件自门控+调度侧门控)保留。实测:armv7_uclibc 交叉构建 `[100%]` 通过、三条 pragma 全触发、`port_anchor.o`+`uclibc_port.o` 均入库;非 uClibc(linux native)构建 `uclibc_port.c` 被排除、`port_anchor.c` 编为空 op、无宏定义无未定义引用。
 - **关联**:`inc/port/port_anchor.h`,`src/port/port_anchor.c`,`src/port/uclibc/uclibc_port.c`,`src/lcu.c`,`tool/CMakeLists.txt`(PRJ_PORT_GROUPS + LCU_PORT_GROUP_* 生成)
 
+### 22. Windows LCU DLL unload handle leak fix - 2026-07-29
+- **动机**: Windows 下 xlog 的 portable mutex 守卫持有 Event；此外，静态 pthreads-win32 的 `pthread_join` 会为外部调用线程隐式创建 Thread + Event，DLL 重载时未随 LCU 生命周期清理。
+- **改动**: xlog 守卫改用静态 `SRWLOCK`；LCU 最终 cleanup 时显式清理静态 pthread 运行时；新增覆盖并发 xlog 初始化、同 DLL 二次 init/cleanup、portable thread join 和真实 DLL 重载的句柄计数回归测试；生命周期测试仅在 Windows 双库 demo 中编译并注册。
+- **影响**: Windows DLL 重载不再遗留上述内核句柄；xlog 返回语义、非静态 pthread 模式及非 Windows 平台行为不变。
+- **关联**: `src/log/xlog.c`, `src/lcu.c`, `src/thread/portable_thread_posix.c`, `inc/thread/portable_thread.h`, `src_demo/log/lcu_dll_lifecycle_test.c`

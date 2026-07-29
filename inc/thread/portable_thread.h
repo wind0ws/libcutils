@@ -65,8 +65,16 @@ extern "C"
 {
 #endif
 
-    // get current tid. you can cast it to pid_t(normally it is int).
-    unsigned long portable_thread_gettid();
+	// This function is only intended to pair with portable_thread_global_cleanup and has no practical effect.
+	// Called by lcu_global_init; other callers normally do not need this API.
+	int portable_thread_global_init();
+	
+	// Cleanup platform thread runtime after all portable threads have stopped.
+	// Called by lcu_global_cleanup; other callers normally do not need this API.
+	int portable_thread_global_cleanup();
+
+	// get current tid. you can cast it to pid_t(normally it is int).
+	unsigned long portable_thread_gettid();
 
 	// set name for current thread. suggest use this method instead of pthread_setname_np
 	int portable_thread_set_current_name(const char* name);

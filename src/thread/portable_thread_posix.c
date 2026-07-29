@@ -35,6 +35,21 @@ typedef struct
 	sem_t id;
 } portable_sem_posix_t;
 
+// ====================================================
+
+int portable_thread_global_init()
+{
+	return 0;
+}
+
+int portable_thread_global_cleanup()
+{
+#if defined(_WIN32) && defined(PTW32_STATIC_LIB)
+	return pthread_win32_process_detach_np() ? 0 : -1;
+#else
+	return 0;
+#endif
+}
 
 unsigned long portable_thread_gettid()
 {	

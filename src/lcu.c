@@ -3,6 +3,7 @@
 #include "time/time_util.h"
 #include "log/xlog.h"
 #include "port/port_anchor.h"
+#include "thread/portable_thread.h"
 
 /* 平台适配层统一锚点由 port_anchor.c 提供: 
  * lcu_global_init() 无条件调用 lcu_port_anchor(), 
@@ -29,14 +30,16 @@ char* lcu_get_version()
 int lcu_global_init()
 {
 	/* 触碰平台适配锚点(链接期保证 port .o 被拉入; 运行期该调用无副作用)。
-	 * 无平台适配需求时 lcu_port_anchor() 为空操作。 */
+	 * 无平台适配需求时 lcu_port_anchor() 为空操作。 
+	 */
 	lcu_port_anchor();
 	if (g_init_times++ > 0)
 	{
 		return 0;
 	}
 	// do not use any lcu function before init! such as XLOG, get TIME 
-	int ret = time_util_global_init();
+	int ret = portable_thread_global_init(); 
+	ret |= time_util_global_init();
 	ret |= xlog_global_init();
 	return ret;
 }
@@ -50,5 +53,6 @@ int lcu_global_cleanup()
 	// now cleanup, do not use any lcu function after cleanup!
 	int ret = xlog_global_cleanup();
 	ret |= time_util_global_cleanup();
+	ret |= portable_thread_global_cleanup();
 	return ret;
 }

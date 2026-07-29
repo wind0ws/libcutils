@@ -47,8 +47,9 @@ extern "C" {
      * @brief Global initialization for xlog
      *
      * @note Thread Safety:
-     *       This function is thread-safe and uses platform-specific once-initialization
-     *       (C11 call_once / Win32 InitOnceExecuteOnce / POSIX pthread_once).
+     *       This function is thread-safe. Windows serializes initialization with a
+     *       static SRW lock; other platforms initialize a guard with call_once or
+     *       pthread_once.
      *       Multiple concurrent calls are safe; only the first call performs initialization.
      *
      * @note Recommended Usage:
@@ -56,11 +57,7 @@ extern "C" {
      *       (e.g., _LOG_INIT_IMPL in logger_facade_xlog.h) may call it directly.
      *       It is safe to call this function multiple times or from multiple threads.
      *
-     * @note Performance:
-     *       After the first initialization, subsequent calls use a lock-free fast path
-     *       (single atomic comparison), with negligible overhead.
-     *
-     * @return 0 on success, negative error code on failure
+     * @return 0 when initialized, 1 when already initialized
      */
 	int xlog_global_init();
 

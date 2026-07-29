@@ -257,6 +257,12 @@ message(STATUS "\n PRJ_SRCS => ${PRJ_SRCS}\n ")
 
 set(PRJ_DEMO_SRC_DIR "${PRJ_ROOT_DIR}/src_demo")
 file(GLOB_RECURSE PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/*.c" "${PRJ_DEMO_SRC_DIR}/*.cpp" "${PRJ_DEMO_SRC_DIR}/*.hpp")
+set(LCU_DLL_LIFECYCLE_TEST_ENABLED OFF)
+if(WIN32 AND BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
+  set(LCU_DLL_LIFECYCLE_TEST_ENABLED ON)
+else()
+  list(REMOVE_ITEM PRJ_DEMO_SRCS "${PRJ_DEMO_SRC_DIR}/log/lcu_dll_lifecycle_test.c")
+endif()
 set(LCU_DIAGNOSTICS_PROBE_SRCS
     "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_probe.c"
     "${PRJ_DEMO_SRC_DIR}/mem/diagnostics_crt_client.c"
@@ -350,6 +356,9 @@ IF (BUILD_DEMO)
                  ${PRJ_DEMO_SRCS})
   # demo 内部头（lcu_test_registry.h / lcu_test_args.h / lcu_test_console.h / lcu_test_glob.h）
   target_include_directories(${target_prj_demo} PRIVATE ${PRJ_DEMO_SRC_DIR})
+  if(LCU_DLL_LIFECYCLE_TEST_ENABLED)
+    target_compile_definitions(${target_prj_demo} PRIVATE LCU_ENABLE_DLL_LIFECYCLE_TEST=1)
+  endif()
   list(APPEND target_names ${target_prj_demo})
 ENDIF (BUILD_DEMO)
 
@@ -609,6 +618,12 @@ if(BUILD_DEMO)
     endforeach()
     list(REMOVE_DUPLICATES _lcu_tests)
     list(REMOVE_DUPLICATES _lcu_tests_optional)
+
+    # This case must run from the static-linked demo while loading a separate
+    # lcu.dll. Other configurations cannot exercise a real DLL lifecycle.
+    if(NOT LCU_DLL_LIFECYCLE_TEST_ENABLED)
+        list(REMOVE_ITEM _lcu_tests lcu_dll_lifecycle_test)
+    endif()
 
     # C6: 工作目录设为 deploy，解决 DLL 路径 + 相对路径问题
     if(CMAKE_CONFIGURATION_TYPES)

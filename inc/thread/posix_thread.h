@@ -68,6 +68,8 @@
 #define GETTID()  gettid()
 #elif defined(__linux__)
 #define GETTID()  syscall(__NR_gettid)
+#elif defined(__CYGWIN__)
+#define GETTID()  ((unsigned long)pthread_self())
 #elif defined(_WIN32)
 #define GETTID()  GetCurrentThreadId()
 #else

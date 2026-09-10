@@ -115,6 +115,14 @@ int pthread_rwlock_rdlock(pthread_rwlock_t* rwlock);
 int pthread_rwlock_wrlock(pthread_rwlock_t* rwlock);
 int pthread_rwlock_unlock(pthread_rwlock_t* rwlock);
 
+/*
+ * End-of-process cleanup for lazy-init'd static-initializer mutexes (PTHREAD_*_INITIALIZER).
+ * Those mutexes are never destroyed by the caller, so their heap CRITICAL_SECTIONs would leak;
+ * this destroys+frees them all. Hooked from portable_thread_global_cleanup(). No-op if none were
+ * registered. Not for direct callers.
+ */
+void pri_win32_static_mutex_cleanup(void);
+
 #ifdef __cplusplus
 };
 #endif // __cplusplus

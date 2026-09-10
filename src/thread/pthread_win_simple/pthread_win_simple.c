@@ -125,6 +125,65 @@ int pthread_mutex_destroy(pthread_mutex_t* mutex)
 	return 0;
 }
 
+/*==============================================================================
+ * Static-initializer mutex registry (leak fix).
+ *
+ * A mutex declared as PTHREAD_MUTEX_INITIALIZER (etc.) is a static sentinel;
+ * pthread_mutex_lock lazy-inits it on first use by calloc'ing a heap
+ * CRITICAL_SECTION and storing the pointer back into the static slot. Static
+ * mutexes are never destroyed by the caller, so that heap block would leak one
+ * CRITICAL_SECTION (40B) per static mutex at exit.
+ *
+ * Fix: record every lazy-init'd static into a process-static registry (done
+ * under the existing ptw32_mcs_lock in pthread_mutex_lock, so registration is
+ * race-free). pri_win32_static_mutex_cleanup() — hooked from
+ * portable_thread_global_cleanup() — destroys+frees them all at exit, before
+ * the CRT leak dump fires. Only the lazy-init (sentinel->heap) path registers;
+ * dynamically init'd mutexes (pthread_mutex_init / cond->mLock) are never
+ * registered, so this never double-frees.
+ *==============================================================================*/
+typedef struct pri_win32_static_mutex_node
+{
+	pthread_mutex_t mutex;
+	struct pri_win32_static_mutex_node* next;
+} pri_win32_static_mutex_node;
+
+static pri_win32_static_mutex_node* pri_win32_static_mutex_registry = NULL;
+
+static void pri_win32_static_mutex_register(pthread_mutex_t mx)
+{
+	pri_win32_static_mutex_node* node =
+		(pri_win32_static_mutex_node*)calloc(1, sizeof(*node));
+	if (NULL == node)
+	{
+		return; /* OOM: leave the static's heap CRITICAL_SECTION to be reclaimed
+		 * at process teardown (no worse than the pre-fix behavior). */
+	}
+	node->mutex = mx;
+	node->next = pri_win32_static_mutex_registry;
+	pri_win32_static_mutex_registry = node;
+}
+
+/* Destroy+free every lazy-init'd static mutex. Called once at process exit from
+ * portable_thread_global_cleanup(); all worker threads have already joined, so no
+ * lock is needed here. */
+void pri_win32_static_mutex_cleanup(void)
+{
+	pri_win32_static_mutex_node* node = pri_win32_static_mutex_registry;
+	pri_win32_static_mutex_registry = NULL;
+	while (NULL != node)
+	{
+		pri_win32_static_mutex_node* next = node->next;
+		if (NULL != node->mutex)
+		{
+			DeleteCriticalSection(&(node->mutex->mHandle));
+			free(node->mutex);
+		}
+		free(node);
+		node = next;
+	}
+}
+
 int pthread_mutex_lock(pthread_mutex_t* mutex)
 {
 	int ret = 0;
@@ -139,11 +198,18 @@ int pthread_mutex_lock(pthread_mutex_t* mutex)
 		if (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
 		{
 			ret = pthread_mutex_init(mutex, NULL);
+			if (0 == ret)
+			{
+				/* Was a static sentinel; the newly calloc'd heap CRITICAL_SECTION
+				 * would leak at exit (statics are never destroyed). Register it
+				 * for end-of-process cleanup. Registration is under the MCS lock. */
+				pri_win32_static_mutex_register(*mutex);
+			}
 		}
 		else if (NULL == *mutex)
 		{
 			ret = EINVAL;
-		}		
+		}
 		ptw32_mcs_lock_release(&node);
 		if (0 != ret)
 		{

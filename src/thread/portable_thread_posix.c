@@ -46,15 +46,46 @@ int portable_thread_global_cleanup()
 {
 #if defined(_WIN32) && defined(PTW32_STATIC_LIB)
 	return pthread_win32_process_detach_np() ? 0 : -1;
+#elif defined(_WIN32) && (_LCU_CFG_WIN_PTHREAD_MODE == LCU_WIN_PTHREAD_IMPLEMENT_MODE_SIMPLE)
+	/* SIMPLE port: destroy+free every lazy-init'd static-initializer mutex so the
+	 * heap CRITICAL_SECTIONs they allocated no longer leak at exit. Runs before the
+	 * CRT leak dump (lcu_global_cleanup -> MEM_CHECK_DEINIT). */
+	pri_win32_static_mutex_cleanup();
+	return 0;
 #else
 	return 0;
 #endif
 }
 
+// TLS cache for gettid: first call per thread does one syscall, subsequent calls
+// are ~1ns register reads. Fallback to direct syscall when compiler lacks TLS support.
+#if defined(__GNUC__) || defined(__clang__)
+    #define LCU_TLS __thread
+    #define LCU_HAS_TLS 1
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86) || defined(_M_ARM64))
+    #define LCU_TLS __declspec(thread)
+    #define LCU_HAS_TLS 1
+#else
+    #define LCU_TLS
+    #define LCU_HAS_TLS 0
+#endif
+
+#if LCU_HAS_TLS
+static LCU_TLS long g_cached_tid = -1;
+
 unsigned long portable_thread_gettid()
-{	
-	return (unsigned long)GETTID();
+{
+    if (g_cached_tid < 0) {
+        g_cached_tid = (long)GETTID();
+    }
+    return (unsigned long)g_cached_tid;
 }
+#else
+unsigned long portable_thread_gettid()
+{
+    return (unsigned long)GETTID();
+}
+#endif
 
 //==============================================================
 int portable_thread_set_current_name(const char* name)

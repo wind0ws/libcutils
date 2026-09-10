@@ -1,6 +1,7 @@
 #include "mem/mem_debug.h"
 #include "log/xlog.h"
 #include "mem/strings.h"             /* for strlcpy        */
+#include "log/log_sanitizer.h"       /* for log_sanitize_in_place / clear_patterns */
 #include "thread/portable_thread.h"  /* for portable_mutex */
 #include "time/time_util.h"          /* for get time       */
 #include <malloc.h>
@@ -110,7 +111,8 @@ static portable_mutex_t g_xlog_mutex = NULL;
  *         1. 消除 init 竞态;
  *         2. 保留 init→cleanup→init 的 reinit 能力 (g_xlog_mutex 可反复创建/销毁);
  *         3. 避免 Windows DLL 重载时遗留守护锁内核句柄.
- * 平台顺序: C11 call_once > Win32 SRWLOCK > POSIX pthread_once. */
+ * 平台顺序: C11 call_once > Win32 SRWLOCK > POSIX pthread_once. 
+ */
 
 #if !defined(_WIN32) && defined(LCU_HAVE_C11_THREADS_H) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
     /* Tier 1: C11 threads.h call_once */
@@ -169,9 +171,10 @@ int xlog_global_init()
 
 int xlog_global_cleanup()
 {
+	/* 守护锁保护真正的 g_xlog_mutex 的 init/cleanup。按平台取锁。 */
+	int ret = 1; /* 1: 未初始化(幂等) */
 #if defined(_WIN32)
 	AcquireSRWLockExclusive(&g_xlog_guard);
-	int ret = 1;
 	if (g_xlog_mutex)
 	{
 		portable_mutex_destroy(&g_xlog_mutex);
@@ -179,26 +182,38 @@ int xlog_global_cleanup()
 		ret = 0;
 	}
 	ReleaseSRWLockExclusive(&g_xlog_guard);
-	return ret;
 #else
+	pri_xlog_ensure_guard();
 	if (NULL == g_xlog_guard)
 	{
-		if (NULL == g_xlog_mutex) { return 1; }
-		portable_mutex_destroy(&g_xlog_mutex);
-		g_xlog_mutex = NULL;
-		return 0;
+		/* 守护锁创建失败 (OOM 等极端情况), 退化为无锁清理，尽力而为 */
+		if (NULL != g_xlog_mutex)
+		{
+			portable_mutex_destroy(&g_xlog_mutex);
+			g_xlog_mutex = NULL;
+			ret = 0;
+		}
 	}
-	portable_mutex_lock(&g_xlog_guard);
-	int ret = 1;
-	if (g_xlog_mutex)
+	else
 	{
-		portable_mutex_destroy(&g_xlog_mutex);
-		g_xlog_mutex = NULL;
-		ret = 0;
+		portable_mutex_lock(&g_xlog_guard);
+		if (g_xlog_mutex)
+		{
+			portable_mutex_destroy(&g_xlog_mutex);
+			g_xlog_mutex = NULL;
+			ret = 0;
+		}
+		portable_mutex_unlock(&g_xlog_guard);
 	}
-	portable_mutex_unlock(&g_xlog_guard);
-	return ret;
 #endif
+
+	/* 清理脱敏模式表（释放动态注册的内部拷贝）。
+	 * 必须无条件执行：模式表独立于 g_xlog_mutex 生命周期
+	 * (测试可在未 init 时注册)，此前 _WIN32 分支在 return 之后才调用，导致该清理
+	 * 永不执行、动态注册的 pattern 在 Windows 下泄漏。 
+	 */
+	log_sanitize_clear_patterns();
+	return ret;
 }
 
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
@@ -525,25 +540,29 @@ static inline int print_func_line(char* buffer, size_t remaining_size, const cha
 
 #endif // !USE_SNPRINTF_HEADER
 
-PRINTF_FMT_CHK_GNUC(5, 6)
-void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line,
-	PRINTF_FMT_CHK_MSC const char* fmt, ...)
+/* 内部 v* helper：接收已初始化的 va_list，避免 va_list 穿透变参函数 */
+static void pri_xlog_print_v(LogLevel level, unsigned int flags, const char* tag,
+	const char* func_name, int file_line, const char* fmt, va_list va)
 {
-	va_list va;
 	char default_buffer[DEFAULT_LOG_BUF_SIZE] = { 0 };
 	size_t default_buffer_remaining_size;
 	char* buffer_log = default_buffer;
 	size_t buffer_log_size = sizeof(default_buffer);
 	size_t buffer_strlen;
 	size_t header_len = 0;
-	
+
 	if (!XLOG_IS_LEVEL_LOGABLE(level))
 	{
 		return;
 	}
 
+	/* 拷贝一份入参 va_list 供首遍（测长）格式化使用，保持入参 va 不被消费，
+	 * 供大消息 malloc 重试时 va_copy 重新取一份（否则首遍已消费，重试会读到空值）。 */
+	va_list va1;
+	va_copy(va1, va);
+
 	XLOG_LOCK();
-	do 
+	do
 	{
 		const bool is_log2console = g_xlog_cfg.cache_tgt.log2console;
 		const bool is_log2usercb = g_xlog_cfg.cache_tgt.log2usercb;
@@ -557,11 +576,11 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 		}
 		if (g_xlog_cfg.format && (is_log2console || is_log2usercb))
 		{
-			if (g_xlog_cfg.cache_fmt.timestamp /* g_xlog_cfg.format & LOG_FORMAT_WITH_TIMESTAMP */)
+			if (g_xlog_cfg.cache_fmt.timestamp)
 			{
 				header_len += time_util_get_time_str_current(buffer_log, g_xlog_cfg.timezone_hour);
 			}
-			if (g_xlog_cfg.cache_fmt.tag_level /* g_xlog_cfg.format & LOG_FORMAT_WITH_TAG_LEVEL */)
+			if (g_xlog_cfg.cache_fmt.tag_level)
 			{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 				header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, " %c/%-8s", g_map_level_chars[level], tag);
@@ -569,7 +588,7 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 				header_len += print_level_tag(buffer_log + header_len, level, tag);
 #endif // USE_SNPRINTF_HEADER
 		    }
-			if (g_xlog_cfg.cache_fmt.tid /* g_xlog_cfg.format & LOG_FORMAT_WITH_TID */)
+			if (g_xlog_cfg.cache_fmt.tid)
 			{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 				header_len += snprintf(buffer_log + header_len, buffer_log_size - header_len, "(%5d)", XLOG_GETTID());
@@ -583,15 +602,12 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 				++header_len;
 				buffer_log[header_len] = ' ';
 				++header_len;
-				buffer_log[header_len] = '\0'; // general speaking, no need do this, but we have good habit
-				//#define XLOG_HEADER_COLON (": ")
-				//memcpy(buffer_log + header_len, XLOG_HEADER_COLON, sizeof(XLOG_HEADER_COLON));
-				//header_len += (sizeof(XLOG_HEADER_COLON) - 1);
+				buffer_log[header_len] = '\0';
 			}
-        }
+	        }
 		buffer_strlen = header_len;
 		if (func_name && file_line > 0 &&
-			(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 32U) //we should count func_name and line number, but normally, 32 bytes is enough
+			(default_buffer_remaining_size = buffer_log_size - buffer_strlen - 1) > 32U)
 		{
 #if(defined(USE_SNPRINTF_HEADER) && USE_SNPRINTF_HEADER)
 			buffer_strlen += snprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, "(%s:%d) ", func_name, file_line);
@@ -600,11 +616,11 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 #endif // USE_SNPRINTF_HEADER
 	    }
 
+		/* LOGX body 起点：头部（时间戳/tag/tid/func:line）长度，在追加消息体前捕获 */
+		const size_t body_offset = buffer_strlen;
+
 		default_buffer_remaining_size = buffer_log_size - buffer_strlen;
-		va_start(va, fmt);
-		// we get the formatted string length. ('\0' is not belong of the length)
-		int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va);
-		va_end(va);
+		int ret_vsn = vsnprintf(buffer_log + buffer_strlen, default_buffer_remaining_size, fmt, va1);
 		if (ret_vsn < 0)
 		{
 			fprintf(stderr, "[XLOG] (%s:%d) failed(%d) on measure log format length" _LOG_SUFFIX, __func__, __LINE__, ret_vsn);
@@ -621,21 +637,28 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 			if (!(buffer_log = (char*)malloc(buffer_log_size)))
 			{
 				fprintf(stderr, "[XLOG] (%s:%d) failed malloc(%zu) byte on xlog" _LOG_SUFFIX, __func__, __LINE__, buffer_log_size);
-				break; // oops, out of memory
+				break;
 			}
-			// here we only copy header to new buffer
 			strlcpy(buffer_log, default_buffer, buffer_strlen + 1U);
 
-			va_start(va, fmt);
-			// vsnprintf ensure '\0' at end of string.
-			ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va);
-			va_end(va);
-			buffer_strlen += ret_vsn;
+		va_list va2;
+		va_copy(va2, va);   /* 入参 va 未被消费，此处可重新取一份完整副本 */
+		ret_vsn = vsnprintf(buffer_log + buffer_strlen, need_fmt_str_size, fmt, va2);
+		va_end(va2);
+		buffer_strlen += ret_vsn;
+		}
+
+		/* LOGX: 脱敏（仅扫描消息体，不碰头部） */
+		if (flags & LOG_FLAG_SANITIZE)
+		{
+			/* body_offset = 头部长度（时间戳/tag/tid/func:line），不含消息体。
+			 * 必须在 vsnprintf 追加消息体之前捕获，否则 buffer_strlen 已含消息体。 */
+			buffer_strlen = log_sanitize_in_place(buffer_log, body_offset);
 		}
 
 #if defined(__ANDROID__)
 		if (g_xlog_cfg.cache_tgt.log2android)
-		{   // android platform log_print does not need our header information, just skip it
+		{
 			__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
 	    }
 #endif // __ANDROID__
@@ -654,12 +677,34 @@ void __xlog_internal_print(LogLevel level, const char* tag, const char* func_nam
 			g_xlog_cfg.cb_pack.cb(level, buffer_log, buffer_strlen + 1U, g_xlog_cfg.cb_pack.cb_user_data);
 		}
 	} while (0);
+	va_end(va1);
 	XLOG_UNLOCK();
 
 	if (buffer_log != default_buffer)
 	{
 		free(buffer_log);
 	}
+}
+
+PRINTF_FMT_CHK_GNUC(6, 7)
+void xlog_internal_print_ex(LogLevel level, unsigned int flags, const char* tag, const char* func_name, int file_line,
+	PRINTF_FMT_CHK_MSC const char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	pri_xlog_print_v(level, flags, tag, func_name, file_line, fmt, va);
+	va_end(va);
+}
+
+/* 旧函数退化为 flags=0 调新函数，保持 ABI 兼容 */
+PRINTF_FMT_CHK_GNUC(5, 6)
+void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line,
+	PRINTF_FMT_CHK_MSC const char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	pri_xlog_print_v(level, 0, tag, func_name, file_line, fmt, va);
+	va_end(va);
 }
 #ifdef _WIN32
 #pragma warning(pop)

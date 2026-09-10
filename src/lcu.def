@@ -18,4 +18,7 @@ EXPORTS
 	xlog_get_flush_mode                 @17
 	__xlog_internal_print               @18
 	__xlog_internal_hex_print           @19
-	
+	xlog_internal_print_ex              @20
+	log_sanitize_in_place               @21
+	log_sanitize_register_pattern       @22
+	log_sanitize_clear_patterns         @23

@@ -48,6 +48,30 @@
 #undef LOGE_HEX
 //================CLEANUP PREVIOUS DEFINITION================
 
+#undef TLOGX
+#undef LOGX
+#undef TLOGXV
+#undef TLOGXD
+#undef TLOGXI
+#undef TLOGXW
+#undef TLOGXE
+#undef LOGXV
+#undef LOGXD
+#undef LOGXI
+#undef LOGXW
+#undef LOGXE
+#undef TLOGXV_TRACE
+#undef TLOGXD_TRACE
+#undef TLOGXI_TRACE
+#undef TLOGXW_TRACE
+#undef TLOGXE_TRACE
+#undef LOGXV_TRACE
+#undef LOGXD_TRACE
+#undef LOGXI_TRACE
+#undef LOGXW_TRACE
+#undef LOGXE_TRACE
+//================CLEANUP LOGX DEFINITION================
+
 #if(!defined(_LCU_LOGGER_DISABLE) || 0 != _LCU_LOGGER_DISABLE)
 
 #ifndef _LOG_TAG
@@ -66,6 +90,8 @@
 #error "You should define \"_LOGX_IMPL\" and \"_LOGX_TRACE_IMPL\""
 #elif(!defined(_LOGV_HEX_IMPL))
 #error "You should define \"_LOGX_HEX_IMPL\""
+#elif(!defined(_LOGX_TRACE_IMPL))
+#error "You should define \"_LOGX_TRACE_IMPL(level, flags, tag, func_name, line_num, fmt, ...)\""
 #endif // _LOG_XX_IMPL definition check
 
 // init at beginning of your app
@@ -115,6 +141,38 @@
 #define LOGW_HEX(chars, chars_count)  TLOGW_HEX(_LOG_TAG, chars, chars_count)
 #define LOGE_HEX(chars, chars_count)  TLOGE_HEX(_LOG_TAG, chars, chars_count)
 
+//================LOGX EXTENSION FAMILY================
+// 低层原语（完整参数，flags=0 时等同普通日志）
+#define TLOGX(level, flags, tag, fmt, ...)  _LOGX_TRACE_IMPL(level, flags, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGX(level, flags, fmt, ...)        TLOGX(level, flags, _LOG_TAG, fmt, ##__VA_ARGS__)
+
+// 快捷宏（隐含 LOG_FLAG_SANITIZE，自动脱敏敏感字段）
+#define TLOGXV(tag, fmt, ...)  TLOGX(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXD(tag, fmt, ...)  TLOGX(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXI(tag, fmt, ...)  TLOGX(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXW(tag, fmt, ...)  TLOGX(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXE(tag, fmt, ...)  TLOGX(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+
+#define LOGXV(fmt, ...)  TLOGXV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXD(fmt, ...)  TLOGXD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXI(fmt, ...)  TLOGXI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXW(fmt, ...)  TLOGXW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXE(fmt, ...)  TLOGXE(_LOG_TAG, fmt, ##__VA_ARGS__)
+
+// TRACE 变体（带 func:line）
+#define TLOGXV_TRACE(tag, fmt, ...)  _LOGX_TRACE_IMPL(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXD_TRACE(tag, fmt, ...)  _LOGX_TRACE_IMPL(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXI_TRACE(tag, fmt, ...)  _LOGX_TRACE_IMPL(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXW_TRACE(tag, fmt, ...)  _LOGX_TRACE_IMPL(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXE_TRACE(tag, fmt, ...)  _LOGX_TRACE_IMPL(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+
+#define LOGXV_TRACE(fmt, ...)  TLOGXV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXD_TRACE(fmt, ...)  TLOGXD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXI_TRACE(fmt, ...)  TLOGXI_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXW_TRACE(fmt, ...)  TLOGXW_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXE_TRACE(fmt, ...)  TLOGXE_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+//================LOGX EXTENSION FAMILY================
+
 #else
 
 #ifndef _LOG_NOTHING
@@ -163,6 +221,31 @@
 #define LOGI_HEX(chars, chars_count) _LOG_NOTHING()
 #define LOGW_HEX(chars, chars_count) _LOG_NOTHING()
 #define LOGE_HEX(chars, chars_count) _LOG_NOTHING()
+
+//================LOGX EXTENSION FAMILY (no-op)================
+#define TLOGX(level, flags, tag, fmt, ...)  _LOG_NOTHING()
+#define LOGX(level, flags, fmt, ...)        _LOG_NOTHING()
+#define TLOGXV(tag, fmt, ...)               _LOG_NOTHING()
+#define TLOGXD(tag, fmt, ...)               _LOG_NOTHING()
+#define TLOGXI(tag, fmt, ...)               _LOG_NOTHING()
+#define TLOGXW(tag, fmt, ...)               _LOG_NOTHING()
+#define TLOGXE(tag, fmt, ...)               _LOG_NOTHING()
+#define LOGXV(fmt, ...)                     _LOG_NOTHING()
+#define LOGXD(fmt, ...)                     _LOG_NOTHING()
+#define LOGXI(fmt, ...)                     _LOG_NOTHING()
+#define LOGXW(fmt, ...)                     _LOG_NOTHING()
+#define LOGXE(fmt, ...)                     _LOG_NOTHING()
+#define TLOGXV_TRACE(tag, fmt, ...)         _LOG_NOTHING()
+#define TLOGXD_TRACE(tag, fmt, ...)         _LOG_NOTHING()
+#define TLOGXI_TRACE(tag, fmt, ...)         _LOG_NOTHING()
+#define TLOGXW_TRACE(tag, fmt, ...)         _LOG_NOTHING()
+#define TLOGXE_TRACE(tag, fmt, ...)         _LOG_NOTHING()
+#define LOGXV_TRACE(fmt, ...)               _LOG_NOTHING()
+#define LOGXD_TRACE(fmt, ...)               _LOG_NOTHING()
+#define LOGXI_TRACE(fmt, ...)               _LOG_NOTHING()
+#define LOGXW_TRACE(fmt, ...)               _LOG_NOTHING()
+#define LOGXE_TRACE(fmt, ...)               _LOG_NOTHING()
+//================LOGX EXTENSION FAMILY (no-op)================
 
 
 #endif // !_LCU_LOGGER_DISABLE

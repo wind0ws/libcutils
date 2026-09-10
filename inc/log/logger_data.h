@@ -53,6 +53,9 @@
 
 #define LOG_STAR_LINE "**************************************************************"
 
+/* LOGX 扩展标志位。当前仅定义脱敏位，其余位保留，未定义位的行为 unspecified。 */
+#define LOG_FLAG_SANITIZE  (0x01U)
+
 #if(defined(_MSC_VER) && defined(__cplusplus))
 #pragma warning(disable:26812) //for disable enum class warning in c++
 #endif // _MSC_VER && __cplusplus

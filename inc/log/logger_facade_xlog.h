@@ -39,6 +39,7 @@
 #define _LOGW_HEX_IMPL(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_WARN, tag, chars, chars_count)
 #define _LOGE_HEX_IMPL(tag, chars, chars_count) __xlog_internal_hex_print(LOG_LEVEL_ERROR, tag, chars, chars_count)
 
+#define _LOGX_TRACE_IMPL(level, flags, tag, func_name, line_num, fmt, ...) xlog_internal_print_ex(level, flags, tag, func_name, line_num, fmt, ##__VA_ARGS__)
 
 #include "logger_facade.h"
 

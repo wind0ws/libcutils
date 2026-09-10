@@ -31,6 +31,7 @@
 #define _LOGW_HEX_IMPL(tag, chars, chars_count) SLOGW_HEX(tag, chars, chars_count)
 #define _LOGE_HEX_IMPL(tag, chars, chars_count) SLOGE_HEX(tag, chars, chars_count)
 
+#define _LOGX_TRACE_IMPL(level, flags, tag, func_name, line_num, fmt, ...) _SLOGX_TRACE_IMPL(level, flags, tag, func_name, line_num, fmt, ##__VA_ARGS__)
 
 #include "logger_facade.h"
 

@@ -91,7 +91,7 @@ extern "C" {
 	void xlog_auto_level_up(LogLevel trigger_level);
 
 	/**
-	 * set default log tag. use this tag if you not provide, such as call LOGX.
+	 * set default log tag. use this tag if you not provide, such as call LOG<level>.
 	 * note: tag length should below 24.
 	 */
 	void xlog_set_default_tag(char* tag);
@@ -165,15 +165,23 @@ extern "C" {
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
-	 * USE LOGX or TLOGX macro instead.
+	 * USE LOG<level> or TLOG<level> macro instead.
 	 */
 	PRINTF_FMT_CHK_GNUC(5, 6)
-	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line, 
+	void __xlog_internal_print(LogLevel level, const char* tag, const char* func_name, int file_line,
 		PRINTF_FMT_CHK_MSC const char* fmt, ...);
 
 	/**
 	 * DO NOT call this method directly.(for xlog internal use only)
-	 * USE LOGX_HEX or TLOGX_HEX macro instead.
+	 * USE LOG<level> or TLOG<level> macro instead.
+	 */
+	PRINTF_FMT_CHK_GNUC(6, 7)
+	void xlog_internal_print_ex(LogLevel level, unsigned int flags, const char* tag, const char* func_name, int line_num,
+		PRINTF_FMT_CHK_MSC const char* fmt, ...);
+
+	/**
+	 * DO NOT call this method directly.(for xlog internal use only)
+	 * USE LOG<level>_HEX or TLOG<level>_HEX macro instead.
 	 */
 	void __xlog_internal_hex_print(LogLevel level, const char* tag, const char* chars, size_t chars_count);
 
@@ -227,6 +235,31 @@ extern "C" {
 #define LOGI_HEX(chars, chars_count) _LOG_NOTHING()
 #define LOGW_HEX(chars, chars_count) _LOG_NOTHING()
 #define LOGE_HEX(chars, chars_count) _LOG_NOTHING()
+
+//================LOGX EXTENSION FAMILY (no-op)================
+#define TLOGX(level, flags, tag, fmt, ...)    _LOG_NOTHING()
+#define LOGX(level, flags, fmt, ...)          _LOG_NOTHING()
+#define TLOGXV(tag, fmt, ...)                 _LOG_NOTHING()
+#define TLOGXD(tag, fmt, ...)                 _LOG_NOTHING()
+#define TLOGXI(tag, fmt, ...)                 _LOG_NOTHING()
+#define TLOGXW(tag, fmt, ...)                 _LOG_NOTHING()
+#define TLOGXE(tag, fmt, ...)                 _LOG_NOTHING()
+#define LOGXV(fmt, ...)                       _LOG_NOTHING()
+#define LOGXD(fmt, ...)                       _LOG_NOTHING()
+#define LOGXI(fmt, ...)                       _LOG_NOTHING()
+#define LOGXW(fmt, ...)                       _LOG_NOTHING()
+#define LOGXE(fmt, ...)                       _LOG_NOTHING()
+#define TLOGXV_TRACE(tag, fmt, ...)           _LOG_NOTHING()
+#define TLOGXD_TRACE(tag, fmt, ...)           _LOG_NOTHING()
+#define TLOGXI_TRACE(tag, fmt, ...)           _LOG_NOTHING()
+#define TLOGXW_TRACE(tag, fmt, ...)           _LOG_NOTHING()
+#define TLOGXE_TRACE(tag, fmt, ...)           _LOG_NOTHING()
+#define LOGXV_TRACE(fmt, ...)                 _LOG_NOTHING()
+#define LOGXD_TRACE(fmt, ...)                 _LOG_NOTHING()
+#define LOGXI_TRACE(fmt, ...)                 _LOG_NOTHING()
+#define LOGXW_TRACE(fmt, ...)                 _LOG_NOTHING()
+#define LOGXE_TRACE(fmt, ...)                 _LOG_NOTHING()
+//================LOGX EXTENSION FAMILY (no-op)================
 
 #else
 
@@ -283,6 +316,35 @@ extern "C" {
 #define LOGW_HEX(chars, chars_count) TLOGW_HEX(_LOG_TAG, chars, chars_count)
 #define LOGE_HEX(chars, chars_count) TLOGE_HEX(_LOG_TAG, chars, chars_count)
 
-#endif // LCU_XLOG_OFF
+//================LOGX EXTENSION FAMILY================
+#define TLOGX(level, flags, tag, fmt, ...)  xlog_internal_print_ex(level, flags, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
+#define LOGX(level, flags, fmt, ...)        TLOGX(level, flags, _LOG_TAG, fmt, ##__VA_ARGS__)
+
+#define TLOGXV(tag, fmt, ...)  TLOGX(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXD(tag, fmt, ...)  TLOGX(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXI(tag, fmt, ...)  TLOGX(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXW(tag, fmt, ...)  TLOGX(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXE(tag, fmt, ...)  TLOGX(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+
+#define LOGXV(fmt, ...)  TLOGXV(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXD(fmt, ...)  TLOGXD(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXI(fmt, ...)  TLOGXI(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXW(fmt, ...)  TLOGXW(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXE(fmt, ...)  TLOGXE(_LOG_TAG, fmt, ##__VA_ARGS__)
+
+#define TLOGXV_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXD_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXI_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXW_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXE_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+
+#define LOGXV_TRACE(fmt, ...)  TLOGXV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXD_TRACE(fmt, ...)  TLOGXD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXI_TRACE(fmt, ...)  TLOGXI_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXW_TRACE(fmt, ...)  TLOGXW_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+#define LOGXE_TRACE(fmt, ...)  TLOGXE_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
+//================LOGX EXTENSION FAMILY================
+
+#endif // close LCU_XLOG_OFF #if
 
 #endif // !LCU_XLOG_H

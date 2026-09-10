@@ -172,11 +172,17 @@ include_directories(${PRJ_HEADER_ROOT_DIR}
 #file(COPY ${HEADER_FILES}  DESTINATION  ${CMAKE_CURRENT_LIST_DIR}/output/include/)
 
 #method2: copy header dir to output dir, and remove cmake configure_file, and copy generate configure_file.
-file(COPY ${PRJ_HEADER_ROOT_DIR} DESTINATION ${PRJ_OUTPUT_DIR}/)
+file(COPY ${PRJ_HEADER_ROOT_DIR} DESTINATION ${PRJ_OUTPUT_DIR})
 file(GLOB_RECURSE OUT_H_IN_FILES ${PRJ_OUTPUT_DIR}/inc/config/*.h.in)
-file(REMOVE ${OUT_H_IN_FILES})
+# 防御: GLOB 可能为空(如上一步 COPY 因 deploy 目录无写权限而失败),
+# 此时 file(REMOVE) 会因缺少参数报 "file must be called with at least two arguments".
+if(OUT_H_IN_FILES)
+    file(REMOVE ${OUT_H_IN_FILES})
+endif()
 file(GLOB_RECURSE GENERATE_H_FILES ${CMAKE_BINARY_DIR}/generate/*.h)
-file(COPY ${GENERATE_H_FILES} DESTINATION ${PRJ_OUTPUT_DIR}/inc/config/)
+if(GENERATE_H_FILES)
+    file(COPY ${GENERATE_H_FILES} DESTINATION ${PRJ_OUTPUT_DIR}/inc/config)
+endif()
 #file(COPY ${PRJ_ROOT_DIR}/lib/ DESTINATION ${PRJ_OUTPUT_DIR}/lib/)
 #===================== PUBLISH HEADER END =====================
 
@@ -206,7 +212,8 @@ file(GLOB_RECURSE PRJ_SRCS "${PRJ_SRC_DIR}/*.c" "${PRJ_SRC_DIR}/*.cpp" "${PRJ_SR
 #      自门控) + 加 "<PLATFORM> <newgroup>" 映射 + 在 port_anchor.c 增一个调度块。
 set(PRJ_PORT_GROUPS
     "armv7_uclibc uclibc"
-    "gcc12_uclibc uclibc")
+    "gcc12_uclibc uclibc"
+    "gcc12.4_uclibc uclibc")
 
 file(GLOB_RECURSE PRJ_PORT_ALL_SRCS "${PRJ_SRC_DIR}/port/*.c" "${PRJ_SRC_DIR}/port/*.cpp" "${PRJ_SRC_DIR}/port/*.cxx")
 if(PRJ_PORT_ALL_SRCS)

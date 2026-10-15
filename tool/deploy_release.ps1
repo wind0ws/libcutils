@@ -53,7 +53,7 @@ function Write-Section([string]$msg) {
     Write-Host ("=" * 70) -ForegroundColor Cyan
 }
 
-# 校验平台名: 内建 windows/android/linux 直通; 其余查 toolchain 文件存在性
+# 校验平台名: 内建 windows/android/linux/ohos 直通; 其余查 toolchain 文件存在性
 function Test-Platform([string]$platform) {
     if ($platform -in @('windows','android','linux','ohos')) { return $true }
     $tc = Join-Path (Join-Path $ToolDir "cmake\toolchains") "$platform.toolchain.cmake"

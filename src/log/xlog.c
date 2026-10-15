@@ -9,9 +9,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#if(defined(__ANDROID__))
-#include <android/log.h>
-#endif
+#include "log/native_log_backend.h"
 
 #define XLOG_GETTID()      (int)GETTID()
 
@@ -51,9 +49,9 @@ typedef struct xlog_config
 	/* for calculate locale time */
 	int timezone_hour;
 
-	struct 
+	struct
 	{
-		bool log2android;
+		bool log2native;
 		bool log2console;
 		bool log2usercb;
 	} cache_tgt;
@@ -72,8 +70,8 @@ static xlog_config_t g_xlog_cfg =
 	LOG_LEVEL_OFF,
 	"XLog",
 	{NULL, NULL},
-#if defined(__ANDROID__)
-	LOG_TARGET_ANDROID,
+#if defined(__ANDROID__) || defined(__OHOS__)
+	LOG_TARGET_NATIVE,
 #else
 	LOG_TARGET_CONSOLE,
 #endif // __ANDROID__
@@ -82,11 +80,11 @@ static xlog_config_t g_xlog_cfg =
 	LOG_FLUSH_MODE_AUTO,
 	DEFAULT_TIMEZONE_HOUR,
 	{
-#if defined(__ANDROID__)
-		.log2android = true,
+#if defined(__ANDROID__) || defined(__OHOS__)
+		.log2native = true,
 		.log2console = false,
 #else
-		.log2android = false,
+		.log2native = false,
 		.log2console = true,
 #endif
         .log2usercb = false
@@ -101,6 +99,18 @@ static xlog_config_t g_xlog_cfg =
 static portable_mutex_t g_xlog_mutex = NULL;
 #define XLOG_LOCK()     do { if (g_xlog_mutex) { portable_mutex_lock(&g_xlog_mutex);} } while (0)
 #define XLOG_UNLOCK()   do { if (g_xlog_mutex) { portable_mutex_unlock(&g_xlog_mutex);} } while (0)
+
+#if defined(__OHOS__)
+unsigned int g_lcu_ohos_domain = 0;  /* native_log_backend.h extern 的实体 */
+void xlog_set_ohos_domain(unsigned int domain)
+{
+	/* domain 范围 0x0-0xFFFF; 越界忽略, 对称 xlog_set_timezone 防御风格 */
+	if (domain > 0xFFFFu) { return; }
+	XLOG_LOCK();
+	g_lcu_ohos_domain = domain;
+	XLOG_UNLOCK();
+}
+#endif
 
 /* ===================== P2-6: xlog_global_init 线程安全 =====================
  * 问题: 原 xlog_global_init 是 check-then-act (if(mutex)return; init), 多线程并发
@@ -218,17 +228,12 @@ int xlog_global_cleanup()
 
 #define _XLOG_IS_TARGET_LOGABLE(log_target) (g_xlog_cfg.target & (log_target))
 #define XLOG_IS_CONSOLE_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_CONSOLE)
-#define XLOG_IS_ANDROID_LOGABLE             _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_ANDROID)
+#define XLOG_IS_NATIVE_LOGABLE               _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_NATIVE)
 #define XLOG_IS_USER_CALLBACK_LOGABLE       _XLOG_IS_TARGET_LOGABLE(LOG_TARGET_USER_CALLBACK)
 
 #define XLOG_IS_LEVEL_LOGABLE(level) (g_xlog_cfg.target && g_xlog_cfg.min_level && level < LOG_LEVEL_UNKNOWN && level >= g_xlog_cfg.min_level)
 
 static const char g_map_level_chars[] = { '0', LEVEL_CHAR_V, LEVEL_CHAR_D, LEVEL_CHAR_I, LEVEL_CHAR_W, LEVEL_CHAR_E, '?' };
-
-#if defined(__ANDROID__)
-static const int g_map_android_level_chars[] = { ANDROID_LOG_ERROR, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
-			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR };
-#endif // __ANDROID__
 
 #if(!defined(_LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT) || 0 == _LCU_LOGGER_UNSUPPORT_STDOUT_REDIRECT)
 #ifdef _WIN32
@@ -324,7 +329,7 @@ void xlog_set_target(int target)
 	}
 	XLOG_LOCK();
 	g_xlog_cfg.target = target;
-	g_xlog_cfg.cache_tgt.log2android = XLOG_IS_ANDROID_LOGABLE;
+	g_xlog_cfg.cache_tgt.log2native = XLOG_IS_NATIVE_LOGABLE;
 	g_xlog_cfg.cache_tgt.log2console = XLOG_IS_CONSOLE_LOGABLE;
 	g_xlog_cfg.cache_tgt.log2usercb = XLOG_IS_USER_CALLBACK_LOGABLE;
 	XLOG_UNLOCK();
@@ -656,12 +661,10 @@ static void pri_xlog_print_v(LogLevel level, unsigned int flags, const char* tag
 			buffer_strlen = log_sanitize_in_place(buffer_log, body_offset);
 		}
 
-#if defined(__ANDROID__)
-		if (g_xlog_cfg.cache_tgt.log2android)
+		if (g_xlog_cfg.cache_tgt.log2native)
 		{
-			__android_log_print(g_map_android_level_chars[level], tag, "%s", buffer_log + header_len);
-	    }
-#endif // __ANDROID__
+			LCU_NATIVE_LOG_PRINT(level, tag, buffer_log + header_len);
+		}
 
 		if (is_log2console)
 		{

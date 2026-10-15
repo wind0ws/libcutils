@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "log/native_log_backend.h"
+#include "native_log_backend.h"
 
 #define XLOG_GETTID()      (int)GETTID()
 

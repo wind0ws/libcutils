@@ -1,6 +1,6 @@
 #include "log/slog.h"
 #include "log/log_sanitizer.h"
-#include "log/native_log_backend.h"
+#include "native_log_backend.h"
 #include "mem/strings.h"
 #include <stdarg.h>
 #include <stdbool.h>

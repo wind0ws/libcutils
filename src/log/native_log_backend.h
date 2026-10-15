@@ -50,7 +50,7 @@ static inline int lcu_level_to_native(int lcu_level)
 	const size_t n = sizeof(g_lcu_native_level) / sizeof(g_lcu_native_level[0]);
 	if (lcu_level < 0 || (size_t)lcu_level >= n)
 	{
-		return g_lcu_native_level[n - 1]; /* UNKNOWN->ERROR */
+		return g_lcu_native_level[n - 1]; /* out-of-range -> ERROR */
 	}
 	return g_lcu_native_level[lcu_level];
 }

@@ -55,6 +55,22 @@
 - **状态**: `[open]` 1.9.0+ 路线
 - **关联**: 条目 8 M-4
 
+### 设备/模拟器 HiLog 验真
+- **位置**: `src/log/native_log_backend.h` OHOS 分支(`OH_LOG_Print` 调用)
+- **根因**: 本期验收为编译通过(3 ABI 全绿),但 HiLog 运行时行为未验真——`%{public}s` 是否真可见、level/domain/tag 是否正确映射,需设备 hdc 连上后跑 demo 验证
+- **修复方向**: 设备/模拟器上跑 `lcu_demo`,用 `hdc shell hilog` 确认日志可见性与字段正确性
+- **优先级**: 中
+- **状态**: `[open]`
+- **关联**: 条目 23
+
+### OHOS 线程命名缺口
+- **位置**: `tool/CMakeLists.txt:521`(`ELSEIF(OHOS)` 分支 `set(HAVE_PTHREAD_SETNAME_NP 0)`)
+- **根因**: `HAVE_PTHREAD_SETNAME_NP` 在 OHOS 下未探测(CMake 直接设 0),线程名静默禁用;不影响 log 交付
+- **修复方向**: 探测 OHOS NDK 是否支持 `pthread_setname_np`(OHOS 基于 musl,可能需 `__pthread_setname_np`),支持则改 `check_symbol_exists`
+- **优先级**: 低
+- **状态**: `[open]`
+- **关联**: 条目 23
+
 ---
 
 ## 已结案项(历史参考)

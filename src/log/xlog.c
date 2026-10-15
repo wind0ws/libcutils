@@ -74,7 +74,7 @@ static xlog_config_t g_xlog_cfg =
 	LOG_TARGET_NATIVE,
 #else
 	LOG_TARGET_CONSOLE,
-#endif // __ANDROID__
+#endif // __ANDROID__ || __OHOS__
 	(LOG_FORMAT_WITH_TIMESTAMP | LOG_FORMAT_WITH_TAG_LEVEL),
 	NULL,
 	LOG_FLUSH_MODE_AUTO,

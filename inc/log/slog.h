@@ -55,7 +55,7 @@ extern "C" {
          _slog_internal_print_ex(level, flags, tag, func, line, fmt, ##__VA_ARGS__); } while (0)
 
 #elif defined(__OHOS__)
-/* OHOS: 不直传用户 fmt (os_log 会脱敏), 路由到 _slog_internal_print_ex 预格式化后走 HiLog */
+/* OHOS: 不直传用户 fmt (HiLog os_log 会脱敏), 路由到 _slog_internal_print_ex 预格式化后走 HiLog */
 #define _SLOGV_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_VERBOSE) _slog_internal_print_ex(LOG_LEVEL_VERBOSE, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
 #define _SLOGD_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_DEBUG)   _slog_internal_print_ex(LOG_LEVEL_DEBUG, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
 #define _SLOGI_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO)    _slog_internal_print_ex(LOG_LEVEL_INFO, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)

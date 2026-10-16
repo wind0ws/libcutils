@@ -63,13 +63,12 @@
 - **状态**: `[open]`
 - **关联**: 条目 23
 
-### OHOS 线程命名缺口
-- **位置**: `tool/CMakeLists.txt:521`(`ELSEIF(OHOS)` 分支 `set(HAVE_PTHREAD_SETNAME_NP 0)`)
+### OHOS 线程命名缺口 — `[closed]` 2026-10-16
+- **位置**: `tool/CMakeLists.txt`(`ELSEIF(OHOS)` 分支)
 - **根因**: `HAVE_PTHREAD_SETNAME_NP` 在 OHOS 下未探测(CMake 直接设 0),线程名静默禁用;不影响 log 交付
 - **修复方向**: 探测 OHOS NDK 是否支持 `pthread_setname_np`(OHOS 基于 musl,可能需 `__pthread_setname_np`),支持则改 `check_symbol_exists`
 - **优先级**: 低
-- **状态**: `[open]`
-- **关联**: 条目 23
+- **状态**: `[closed]` — 实测 OHOS musl `pthread.h:379` 在 `#ifdef _GNU_SOURCE` 下声明 `int pthread_setname_np(pthread_t, const char *)`;CMakeLists `ELSEIF(OHOS)` 改 `check_symbol_exists` + `CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE` 探测成功(`HAVE_PTHREAD_SETNAME_NP=1`,3 ABI 实测确认)。`posix_thread_set_current_name` 走 `pthread_setname_np` 主路径,`__linux__` 回退 prctl 仍作兜底。
 
 ---
 

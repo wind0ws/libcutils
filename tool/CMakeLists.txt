@@ -517,8 +517,15 @@ IF(UNIX AND NOT OHOS)
   endif(ANDROID)
 ELSEIF(OHOS)
   message(STATUS "Current build system is OHOS!")
+  # pthread 在 libc 内 (libpthread.a 是空桩, 同 Bionic), 无需 pthread-lib.
+  # 探测 pthread_setname_np: OHOS musl 在 _GNU_SOURCE 下声明 (posix_thread.h 已定义
+  # _GNU_SOURCE), 故 check_symbol_exists 需带 -D_GNU_SOURCE 才能命中声明.
+  # posix_thread_set_current_name 优先走 pthread_setname_np (HAVE_PTHREAD_SETNAME_NP=1),
+  # 回退 prctl(PR_SET_NAME) (OHOS __linux__ 分支, sys/prctl.h 实测存在).
   set(pthread-lib "")
-  set(HAVE_PTHREAD_SETNAME_NP 0)
+  set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -D_GNU_SOURCE)
+  check_symbol_exists(pthread_setname_np "pthread.h" HAVE_PTHREAD_SETNAME_NP)
+  set(CMAKE_REQUIRED_DEFINITIONS "")
   find_library(hilog-lib hilog_ndk.z)
   if(NOT hilog-lib)
     message(FATAL_ERROR "hilog_ndk.z not found in sysroot (CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH})")

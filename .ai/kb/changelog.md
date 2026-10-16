@@ -189,3 +189,10 @@
 - **改动**: 新增 `native_log_backend.h` 编译期分发宏收敛 xlog/slog native 后端；xlog 加 `LOG_TARGET_OHOS`+`LOG_TARGET_NATIVE` 泛化 `log2native` + `xlog_set_ohos_domain` setter；slog.h 加 OHOS 快路径路由 `_slog_internal_print_ex`；CMakeLists 加 `ELSEIF(OHOS)` 链 `libhilog_ndk.z`；新增 `make_ohos.bat`/`deploy_for_ohos.bat`；`deploy_release.ps1` 注册 ohos builtin；`common_macro.h` 修 `sys/cdefs.h` 在 OHOS 下缺失(OHOS 预定义 `__linux__` 但 sysroot 无 cdefs.h，`#if` 守卫排除 `__OHOS__`)；xlog.c/slog.c `#include "log/native_log_backend.h"` 改相对路径(CMake 仅 `-I inc`，src 内部 include 需相对源文件目录)
 - **影响**: OHOS 3 ABI(armeabi-v7a/arm64-v8a/x86_64)编译通过，静态库 `liblcu_a.a`+动态库 `liblcu.so`+`lcu_demo` 全产出；Android 3 ABI 回归不破；非 native 平台零影响
 - **关联**: grilling 设计树 + 3 路 MoA 评审
+
+### 24. OHOS pthread_setname_np 探测完善 — 2026-10-16
+
+- **动机**: 补完 open-item(条目 23 遗留)：OHOS 线程命名缺口
+- **改动**: `CMakeLists.txt` `ELSEIF(OHOS)` 分支的 `set(HAVE_PTHREAD_SETNAME_NP 0)` 改为 `check_symbol_exists(pthread_setname_np "pthread.h")` + `CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE`(OHOS musl `pthread.h:379` 在 `_GNU_SOURCE` 下声明该函数)；探测成功后 `posix_thread_set_current_name` 走 `pthread_setname_np(pthread_self(),name)` 主路径，`__linux__` 回退 prctl 仍作兜底
+- **影响**: OHOS 线程命名从静默禁用变为启用(`HAVE_PTHREAD_SETNAME_NP=1`，3 ABI 实测)；Android/Linux/Windows 不受影响(各自分支不变)；open-item 条目 22(原线程命名缺口)`[closed]`
+- **关联**: `tool/CMakeLists.txt`, `src/thread/posix_thread.c`, `inc/thread/posix_thread.h`, open-items 条目 23

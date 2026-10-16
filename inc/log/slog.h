@@ -113,7 +113,7 @@ extern "C" {
     do { if (_g_slog_min_level && _g_slog_min_level <= level) \
          _slog_internal_print_ex(level, flags, tag, func, line, fmt, ##__VA_ARGS__); } while (0)
 
-#endif // __ANDROID__
+#endif // platform fast-path (__ANDROID__ / __OHOS__ / else)
 
 #define SLOG_SET_MIN_LEVEL(min_level)  slog_set_min_level(min_level)
 #define SLOG_GET_MIN_LEVEL()           slog_get_min_level()

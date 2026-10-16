@@ -552,7 +552,7 @@ ELSEIF(WIN32)
 ELSE()
   set(pthread-lib "")
   set(log-lib "")
-ENDIF(UNIX)
+ENDIF(UNIX AND NOT OHOS)
 
 list(LENGTH dependency_local_libs dependency_local_libs_length)
 message(STATUS "dependency_local_libs(${dependency_local_libs_length}) => ${dependency_local_libs}")

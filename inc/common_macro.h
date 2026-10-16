@@ -11,7 +11,7 @@
 #include <sys/types.h>      /* for ssize_t                       */
 #include "mem/diagnostics.h"
 
-#if(defined(__linux__) || defined(__ANDROID__))
+#if((defined(__linux__) && !defined(__OHOS__)) || defined(__ANDROID__))
 #include <sys/cdefs.h>      /* for __BEGIN_DECLS / __END_DECLS   */
 #endif // __linux__ || __ANDROID__
 

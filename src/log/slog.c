@@ -1,5 +1,6 @@
 #include "log/slog.h"
 #include "log/log_sanitizer.h"
+#include "native_log_backend.h"
 #include "mem/strings.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -147,20 +148,13 @@ static void _slog_print_ex_v(int level, unsigned int flags, const char* tag,
 		}
 	}
 
-#ifdef __ANDROID__
-	/* Android: __android_log_print 接收 tag 参数，无需前缀 */
+#if defined(__ANDROID__) || defined(__OHOS__)
+	/* Android/OHOS: native 后端接收 tag 参数，无需前缀 */
 	if (flags & LOG_FLAG_SANITIZE)
 	{
 		log_sanitize_in_place(body, 0);
 	}
-	{
-		static const char map_android[] = {
-			ANDROID_LOG_UNKNOWN, ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG,
-			ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_ERROR
-		};
-		int android_level = (level < 0 || level > 5) ? ANDROID_LOG_ERROR : map_android[level];
-		__android_log_print(android_level, tag, "%s", body);
-	}
+	LCU_NATIVE_LOG_PRINT(level, tag, body);
 #else
 	/* console: 前缀写入独立小缓冲，与 body 分离 */
 	{

@@ -53,16 +53,16 @@ function Write-Section([string]$msg) {
     Write-Host ("=" * 70) -ForegroundColor Cyan
 }
 
-# 校验平台名: 内建 windows/android/linux 直通; 其余查 toolchain 文件存在性
+# 校验平台名: 内建 windows/android/linux/ohos 直通; 其余查 toolchain 文件存在性
 function Test-Platform([string]$platform) {
-    if ($platform -in @('windows','android','linux')) { return $true }
+    if ($platform -in @('windows','android','linux','ohos')) { return $true }
     $tc = Join-Path (Join-Path $ToolDir "cmake\toolchains") "$platform.toolchain.cmake"
     return (Test-Path $tc)
 }
 
 # 列出全部可用平台 (内建 + toolchains 目录)，用于报错提示
 function Get-AvailablePlatforms {
-    $builtin = @('windows','android','linux')
+    $builtin = @('windows','android','linux','ohos')
     $tcDir = Join-Path $ToolDir "cmake\toolchains"
     $tc = @()
     if (Test-Path $tcDir) {
@@ -114,6 +114,9 @@ function Build-Platform([string]$platform) {
         'android' {
             return (Invoke-CmdBat "deploy_for_android.bat" "$BuildType c++_static")
         }
+        'ohos' {
+            return (Invoke-CmdBat "deploy_for_ohos.bat" "$BuildType")
+        }
         'linux' {
             return (Invoke-WslBash $Distro "dos2unix -q deploy_for_linux.sh make_cross_platform.sh setup_env.sh; chmod +x ./deploy_for_linux.sh; ./deploy_for_linux.sh $BuildType")
         }
@@ -149,7 +152,7 @@ if (Test-Path $deployTypeDir) {
 }
 
 # ---- WSL 预检 ----
-$needWsl = $Platforms | Where-Object { $_ -notin @('windows','android') }
+$needWsl = $Platforms | Where-Object { $_ -notin @('windows','android','ohos') }
 if ($needWsl) {
     if (-not (Test-WslDistro $Distro)) {
         $dl = (& wsl.exe -l -q 2>$null) -replace "`0","" -split "`r?`n" | Where-Object { $_.Trim() }

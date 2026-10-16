@@ -182,3 +182,10 @@
 - **改动**: xlog 守卫改用静态 `SRWLOCK`；LCU 最终 cleanup 时显式清理静态 pthread 运行时；新增覆盖并发 xlog 初始化、同 DLL 二次 init/cleanup、portable thread join 和真实 DLL 重载的句柄计数回归测试；生命周期测试仅在 Windows 双库 demo 中编译并注册。
 - **影响**: Windows DLL 重载不再遗留上述内核句柄；xlog 返回语义、非静态 pthread 模式及非 Windows 平台行为不变。
 - **关联**: `src/log/xlog.c`, `src/lcu.c`, `src/thread/portable_thread_posix.c`, `inc/thread/portable_thread.h`, `src_demo/log/lcu_dll_lifecycle_test.c`
+
+### 23. 鸿蒙 HiLog 日志后端接入 — 2026-10-16
+
+- **动机**: 让 log 模块支持鸿蒙 HiLog 输出
+- **改动**: 新增 `native_log_backend.h` 编译期分发宏收敛 xlog/slog native 后端；xlog 加 `LOG_TARGET_OHOS`+`LOG_TARGET_NATIVE` 泛化 `log2native` + `xlog_set_ohos_domain` setter；slog.h 加 OHOS 快路径路由 `_slog_internal_print_ex`；CMakeLists 加 `ELSEIF(OHOS)` 链 `libhilog_ndk.z`；新增 `make_ohos.bat`/`deploy_for_ohos.bat`；`deploy_release.ps1` 注册 ohos builtin；`common_macro.h` 修 `sys/cdefs.h` 在 OHOS 下缺失(OHOS 预定义 `__linux__` 但 sysroot 无 cdefs.h，`#if` 守卫排除 `__OHOS__`)；xlog.c/slog.c `#include "log/native_log_backend.h"` 改相对路径(CMake 仅 `-I inc`，src 内部 include 需相对源文件目录)
+- **影响**: OHOS 3 ABI(armeabi-v7a/arm64-v8a/x86_64)编译通过，静态库 `liblcu_a.a`+动态库 `liblcu.so`+`lcu_demo` 全产出；Android 3 ABI 回归不破；非 native 平台零影响
+- **关联**: grilling 设计树 + 3 路 MoA 评审

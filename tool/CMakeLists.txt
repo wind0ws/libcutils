@@ -494,7 +494,7 @@ endif (WIN32 AND MSVC)
 #==================== FIND DEPENDENCY LIB BEGIN ==================# 
 message(STATUS "CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH}") # <= find_library will find from this path
 set(dependency_local_libs "")
-IF(UNIX)
+IF(UNIX AND NOT OHOS)
   message(STATUS "Current build system is unix!")
   find_package(Threads REQUIRED)
   set(pthread-lib ${CMAKE_THREAD_LIBS_INIT})
@@ -515,6 +515,14 @@ IF(UNIX)
   else()
     set(log-lib "")
   endif(ANDROID)
+ELSEIF(OHOS)
+  message(STATUS "Current build system is OHOS!")
+  set(pthread-lib "")
+  set(HAVE_PTHREAD_SETNAME_NP 0)
+  find_library(hilog-lib hilog_ndk.z)
+  if(NOT hilog-lib)
+    message(FATAL_ERROR "hilog_ndk.z not found in sysroot (CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH})")
+  endif()
 ELSEIF(WIN32)
   message(STATUS "current build system is Windows!")
   set(HAVE_PTHREAD_SETNAME_NP 1)
@@ -544,7 +552,7 @@ ELSEIF(WIN32)
 ELSE()
   set(pthread-lib "")
   set(log-lib "")
-ENDIF(UNIX)
+ENDIF(UNIX AND NOT OHOS)
 
 list(LENGTH dependency_local_libs dependency_local_libs_length)
 message(STATUS "dependency_local_libs(${dependency_local_libs_length}) => ${dependency_local_libs}")
@@ -563,18 +571,20 @@ message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
 IF (BUILD_STATIC_LIBS)	
   target_link_libraries( # Specifies the target library.
           ${target_prj_static} PUBLIC
-  
+
           ${pthread-lib}
           ${log-lib}
+          ${hilog-lib}
           )
 ENDIF (BUILD_STATIC_LIBS)
 
 IF (BUILD_SHARED_LIBS) 
   target_link_libraries( # Specifies the target library.
           ${target_prj_shared} PUBLIC
-  
+
           ${pthread-lib}
           ${log-lib}
+          ${hilog-lib}
           )
 ENDIF (BUILD_SHARED_LIBS)
 

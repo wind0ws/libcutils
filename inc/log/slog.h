@@ -54,6 +54,27 @@ extern "C" {
     do { if (_g_slog_min_level && _g_slog_min_level <= level) \
          _slog_internal_print_ex(level, flags, tag, func, line, fmt, ##__VA_ARGS__); } while (0)
 
+#elif defined(__OHOS__)
+/* OHOS: 不直传用户 fmt (HiLog os_log 会脱敏), 路由到 _slog_internal_print_ex 预格式化后走 HiLog */
+#define _SLOGV_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_VERBOSE) _slog_internal_print_ex(LOG_LEVEL_VERBOSE, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGD_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_DEBUG)   _slog_internal_print_ex(LOG_LEVEL_DEBUG, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGI_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO)    _slog_internal_print_ex(LOG_LEVEL_INFO, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGW_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN)    _slog_internal_print_ex(LOG_LEVEL_WARN, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGE_IMPL(tag, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR)   _slog_internal_print_ex(LOG_LEVEL_ERROR, 0, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+/* TRACE 变体: func/line 透传给 _slog_internal_print_ex */
+#define _SLOGV_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_VERBOSE) _slog_internal_print_ex(LOG_LEVEL_VERBOSE, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGD_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_DEBUG)   _slog_internal_print_ex(LOG_LEVEL_DEBUG, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGI_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO)    _slog_internal_print_ex(LOG_LEVEL_INFO, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGW_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN)    _slog_internal_print_ex(LOG_LEVEL_WARN, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGE_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR)   _slog_internal_print_ex(LOG_LEVEL_ERROR, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
+/* LOGX (脱敏): 隐含 LOG_FLAG_SANITIZE */
+#define _SLOGX_IMPL(level, flags, tag, fmt, ...)  \
+    do { if (_g_slog_min_level && _g_slog_min_level <= level) \
+         _slog_internal_print_ex(level, flags, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
+#define _SLOGX_TRACE_IMPL(level, flags, tag, func, line, fmt, ...)  \
+    do { if (_g_slog_min_level && _g_slog_min_level <= level) \
+         _slog_internal_print_ex(level, flags, tag, func, line, fmt, ##__VA_ARGS__); } while (0)
+
 #else
 
 #ifdef _WIN32
@@ -92,7 +113,7 @@ extern "C" {
     do { if (_g_slog_min_level && _g_slog_min_level <= level) \
          _slog_internal_print_ex(level, flags, tag, func, line, fmt, ##__VA_ARGS__); } while (0)
 
-#endif // __ANDROID__
+#endif // platform fast-path (__ANDROID__ / __OHOS__ / else)
 
 #define SLOG_SET_MIN_LEVEL(min_level)  slog_set_min_level(min_level)
 #define SLOG_GET_MIN_LEVEL()           slog_get_min_level()

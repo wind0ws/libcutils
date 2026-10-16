@@ -19,7 +19,13 @@ typedef enum
 	LOG_TARGET_ANDROID = (0x1 << 1), 
 	LOG_TARGET_CONSOLE = (0x1 << 2),
 	LOG_TARGET_USER_CALLBACK = (0x1 << 3),
+	LOG_TARGET_OHOS = (0x1 << 4),
 } LogTarget;
+
+/* native 平台合取: Android logcat | 鸿蒙 HiLog。xlog 内 log2native 用此判定。
+ * 注: OHOS 构建下设 LOG_TARGET_ANDROID 亦启用 native 输出(HiLog), 因 OHOS 无 logcat,
+ *   native 后端为 HiLog——便于现有调用方代码无改迁移, 属 feature。 */
+#define LOG_TARGET_NATIVE (LOG_TARGET_ANDROID | LOG_TARGET_OHOS)
 
 typedef enum
 {
@@ -137,6 +143,15 @@ extern "C" {
 	 * get current target
 	 */
 	int xlog_get_target();
+
+#if defined(__OHOS__)
+	/**
+	 * @brief set HiLog domain id for OHOS native log backend.
+	 * @param[in] domain : HiLog domain id, valid range 0x0-0xFFFF.
+	 *                     default is 0. out-of-range values are ignored.
+	 */
+	void xlog_set_ohos_domain(unsigned int domain);
+#endif // __OHOS__
 
 	/**
 	 * set log header format.

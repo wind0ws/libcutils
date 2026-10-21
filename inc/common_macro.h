@@ -135,9 +135,14 @@ typedef float               FLOAT;
 #if (!defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED))
 typedef intptr_t ssize_t;
 #define SSIZE_MAX INTPTR_MAX
-#define _SSIZE_T_      
-#define _SSIZE_T_DEFINED 
+#define _SSIZE_T_
+#define _SSIZE_T_DEFINED
 #endif // !_SSIZE_T_ && !_SSIZE_T_DEFINED
+#endif // _WIN32
+
+// SIZE_T_FORMAT/SSIZE_T_FORMAT must be defined on ALL platforms (not just
+// _WIN32): consumers on POSIX/OHOS/etc. rely on them for size_t/ssize_t
+// printf formatting. Only the old-MSVC workaround below is Windows-specific.
 #if (defined(_MSC_VER) && _MSC_VER < 1800)
 /* __LP64__ is defined by compiler. If set to 1 means this is 64bit build system */
 #ifdef __LP64__
@@ -151,7 +156,6 @@ typedef intptr_t ssize_t;
 #define SIZE_T_FORMAT   "%zu"
 #define SSIZE_T_FORMAT  "%zd"
 #endif // _MSC_VER
-#endif // _WIN32
 
 // widely useful macros. pay attention to the influence of double computation!
 #ifndef __max

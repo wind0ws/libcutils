@@ -196,3 +196,10 @@
 - **改动**: `CMakeLists.txt` `ELSEIF(OHOS)` 分支的 `set(HAVE_PTHREAD_SETNAME_NP 0)` 改为 `check_symbol_exists(pthread_setname_np "pthread.h")` + `CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE`(OHOS musl `pthread.h:379` 在 `_GNU_SOURCE` 下声明该函数)；探测成功后 `posix_thread_set_current_name` 走 `pthread_setname_np(pthread_self(),name)` 主路径，`__linux__` 回退 prctl 仍作兜底
 - **影响**: OHOS 线程命名从静默禁用变为启用(`HAVE_PTHREAD_SETNAME_NP=1`，3 ABI 实测)；Android/Linux/Windows 不受影响(各自分支不变)；open-item 条目 22(原线程命名缺口)`[closed]`
 - **关联**: `tool/CMakeLists.txt`, `src/thread/posix_thread.c`, `inc/thread/posix_thread.h`, open-items 条目 23
+
+### 25. LOGX 快捷宏 flags 去硬编码 — 2026-11-03
+
+- **动机**: X 族快捷宏(`TLOGXV..E`/`SLOGXV..E` 及 `_TRACE` 变体)把 `LOG_FLAG_SANITIZE` 写死，宏名隐藏了"隐含脱敏"语义，且 TU 级无 opt-out 手段。
+- **改动**: 新增公开旋钮 `LOGX_FLAGS`(`inc/log/logger_data.h`，`#ifndef` 软默认 `LOG_FLAG_SANITIZE`)；`logger_facade.h`/`xlog.h`/`slog.h` 三处共 30 个 X 快捷宏把写死的 `LOG_FLAG_SANITIZE` 改为 `LOGX_FLAGS`。`.c` 运行时 `flags & LOG_FLAG_SANITIZE` 位测试与 `LOGX`/`TLOGX` 原语不变。覆盖须在任何 log 头首次 include 前 `#define LOGX_FLAGS`。
+- **影响**: 默认行为零变化(默认仍脱敏)；TU 级可 `#define LOGX_FLAGS 0` 关闭默认脱敏(细粒度用 `TLOGX(level, 0, ...)`)。纯宏改动，无 ABI/二进制影响。
+- **关联**: `inc/log/logger_data.h`, `inc/log/logger_facade.h`, `inc/log/xlog.h`, `inc/log/slog.h`

@@ -67,7 +67,7 @@ extern "C" {
 #define _SLOGI_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_INFO)    _slog_internal_print_ex(LOG_LEVEL_INFO, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
 #define _SLOGW_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN)    _slog_internal_print_ex(LOG_LEVEL_WARN, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
 #define _SLOGE_TRACE_IMPL(tag, func_name, line_num, fmt, ...)  do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR)   _slog_internal_print_ex(LOG_LEVEL_ERROR, 0, tag, func_name, line_num, fmt, ##__VA_ARGS__); } while (0)
-/* LOGX (脱敏): 隐含 LOG_FLAG_SANITIZE */
+/* LOGX (脱敏): 隐含 LOGX_FLAGS（默认 LOG_FLAG_SANITIZE） */
 #define _SLOGX_IMPL(level, flags, tag, fmt, ...)  \
     do { if (_g_slog_min_level && _g_slog_min_level <= level) \
          _slog_internal_print_ex(level, flags, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__); } while (0)
@@ -151,18 +151,18 @@ extern "C" {
 #define SLOGW_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_WARN) _slog_internal_hex_print(LOG_LEVEL_WARN, (const char *)tag, (const char *)chars, chars_count); } while(0) 
 #define SLOGE_HEX(tag, chars, chars_count) do { if (_g_slog_min_level && _g_slog_min_level <= LOG_LEVEL_ERROR) _slog_internal_hex_print(LOG_LEVEL_ERROR, (const char *)tag, (const char *)chars, chars_count); } while(0)
 
-/* LOGX 快捷宏（隐含 LOG_FLAG_SANITIZE） */
-#define SLOGXV(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define SLOGXD(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define SLOGXI(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define SLOGXW(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define SLOGXE(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+/* LOGX 快捷宏（隐含 LOGX_FLAGS，默认 LOG_FLAG_SANITIZE） */
+#define SLOGXV(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_VERBOSE, LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define SLOGXD(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_DEBUG,   LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define SLOGXI(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_INFO,    LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define SLOGXW(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_WARN,    LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define SLOGXE(tag, fmt, ...)          _SLOGX_IMPL(LOG_LEVEL_ERROR,   LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
 
-#define SLOGXV_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define SLOGXD_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define SLOGXI_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define SLOGXW_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define SLOGXE_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define SLOGXV_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_VERBOSE, LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define SLOGXD_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_DEBUG,   LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define SLOGXI_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_INFO,    LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define SLOGXW_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_WARN,    LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define SLOGXE_TRACE(tag, fmt, ...)    _SLOGX_TRACE_IMPL(LOG_LEVEL_ERROR,   LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 //===================================================================================================
 

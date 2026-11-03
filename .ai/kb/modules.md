@@ -22,6 +22,11 @@ LOGI("message: %s", str);
 LOGE_TRACE("error code = %d", err_code);  // 带函数名称和代码行数位置信息
 ```
 
+- X 族快捷宏 `LOGXV/D/I/W/E` 隐含脱敏(`LOG_FLAG_SANITIZE`)。其 flags 默认值由公开旋钮
+  `LOGX_FLAGS` 控制：默认即脱敏，TU 级 opt-out 需在**任何 log 头首次 include 前** `#define LOGX_FLAGS 0`；
+  单条细粒度控制用 `TLOGX(level, 0, ...)`(关脱敏) / `TLOGX(level, LOG_FLAG_SANITIZE, ...)`(开脱敏)。
+  该值覆盖整个 flags(不止脱敏位)。
+
 ## 线程使用
 
 ```c

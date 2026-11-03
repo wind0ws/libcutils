@@ -56,6 +56,13 @@
 /* LOGX 扩展标志位。当前仅定义脱敏位，其余位保留，未定义位的行为 unspecified。 */
 #define LOG_FLAG_SANITIZE  (0x01U)
 
+/* LOGX 快捷宏（TLOGXV..E 等）隐含的默认 flags，TU 可覆盖。
+   注意：覆盖必须在本头首次被 include 之前 #define（logger_data.h 有 include 守卫，只求值一次）。
+   该值覆盖整个 flags，不止脱敏位。 */
+#ifndef LOGX_FLAGS
+#define LOGX_FLAGS  LOG_FLAG_SANITIZE
+#endif
+
 #if(defined(_MSC_VER) && defined(__cplusplus))
 #pragma warning(disable:26812) //for disable enum class warning in c++
 #endif // _MSC_VER && __cplusplus

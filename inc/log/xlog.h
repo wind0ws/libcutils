@@ -335,11 +335,11 @@ extern "C" {
 #define TLOGX(level, flags, tag, fmt, ...)  xlog_internal_print_ex(level, flags, tag, _LOG_NULL, 0, fmt, ##__VA_ARGS__)
 #define LOGX(level, flags, fmt, ...)        TLOGX(level, flags, _LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define TLOGXV(tag, fmt, ...)  TLOGX(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define TLOGXD(tag, fmt, ...)  TLOGX(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define TLOGXI(tag, fmt, ...)  TLOGX(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define TLOGXW(tag, fmt, ...)  TLOGX(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
-#define TLOGXE(tag, fmt, ...)  TLOGX(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, fmt, ##__VA_ARGS__)
+#define TLOGXV(tag, fmt, ...)  TLOGX(LOG_LEVEL_VERBOSE, LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define TLOGXD(tag, fmt, ...)  TLOGX(LOG_LEVEL_DEBUG,   LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define TLOGXI(tag, fmt, ...)  TLOGX(LOG_LEVEL_INFO,    LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define TLOGXW(tag, fmt, ...)  TLOGX(LOG_LEVEL_WARN,    LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
+#define TLOGXE(tag, fmt, ...)  TLOGX(LOG_LEVEL_ERROR,   LOGX_FLAGS, tag, fmt, ##__VA_ARGS__)
 
 #define LOGXV(fmt, ...)  TLOGXV(_LOG_TAG, fmt, ##__VA_ARGS__)
 #define LOGXD(fmt, ...)  TLOGXD(_LOG_TAG, fmt, ##__VA_ARGS__)
@@ -347,11 +347,11 @@ extern "C" {
 #define LOGXW(fmt, ...)  TLOGXW(_LOG_TAG, fmt, ##__VA_ARGS__)
 #define LOGXE(fmt, ...)  TLOGXE(_LOG_TAG, fmt, ##__VA_ARGS__)
 
-#define TLOGXV_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_VERBOSE, LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define TLOGXD_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_DEBUG,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define TLOGXI_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_INFO,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define TLOGXW_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_WARN,    LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define TLOGXE_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_ERROR,   LOG_FLAG_SANITIZE, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXV_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_VERBOSE, LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXD_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_DEBUG,   LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXI_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_INFO,    LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXW_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_WARN,    LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define TLOGXE_TRACE(tag, fmt, ...)  xlog_internal_print_ex(LOG_LEVEL_ERROR,   LOGX_FLAGS, tag, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 #define LOGXV_TRACE(fmt, ...)  TLOGXV_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)
 #define LOGXD_TRACE(fmt, ...)  TLOGXD_TRACE(_LOG_TAG, fmt, ##__VA_ARGS__)

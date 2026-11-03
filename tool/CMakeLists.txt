@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(lcu VERSION 1.9.2 LANGUAGES C CXX)
 message(STATUS "\n Current PROJECT_VERSION=${PROJECT_VERSION}, build_type=${CMAKE_BUILD_TYPE} \n")
 
-# C2 修复: enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
+# enable_testing() 必须在顶层（不能在 if(BUILD_DEMO) 子作用域内）
 enable_testing()
 
 # 添加自定义cmake文件目录
@@ -12,7 +12,7 @@ include(CheckSymbolExists)
 include(CheckIncludeFile)
 include(macros)
 
-# P2-6: 探测 C11 <threads.h> 可用性 (cross-compile 下 musl/uclibc 可能缺失).
+# 探测 C11 <threads.h> 可用性 (cross-compile 下 musl/uclibc 可能缺失).
 # 源码侧用 LCU_HAVE_C11_THREADS_H + __has_include 双保险.
 check_include_file("threads.h" LCU_HAVE_C11_THREADS_H)
 if(LCU_HAVE_C11_THREADS_H)
@@ -339,17 +339,6 @@ IF (BUILD_SHARED_LIBS)
   set_target_properties(${target_prj_shared} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}")
   # 设置属性CLEAN_DIRECT_OUTPUT可以使动态库和静态库同时存在
   #set_target_properties(${target_prj_shared} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-  # 指定动态库版本 VERSION 动态库版本 SOVERSION API版本
-  #if(NOT CYGWIN)
-  #  # This property causes shared libraries on Linux to have the full version
-  #  # encoded into their final filename.  We disable this on Cygwin because
-  #  # it causes cygz-${PROJECT_VERSION}.dll to be created when cygz.dll
-  #  # seems to be the default.
-  #  #
-  #  # This has no effect with MSVC, on that platform the version info for
-  #  # the DLL comes from the resource file win32/zlib1.rc
-  #  set_target_properties(${target_prj_shared} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1)
-  #endif()
   IF (NOT MSVC) # strip 
     set_target_properties(${target_prj_shared} PROPERTIES LINK_FLAGS_RELEASE -s)
   ENDIF (NOT MSVC)
@@ -507,11 +496,7 @@ IF(UNIX AND NOT OHOS)
 	  list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${ANDROID_SYSTEM_LIBRARY_PATH}/usr/lib64")
 	  message(STATUS "current CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH}")
 	endif()
-    find_library( # Sets the name of the path variable.
-            log-lib
-
-            # Specifies the name of the NDK library that you want CMake to locate.
-            log)
+    find_library(log-lib log)
   else()
     set(log-lib "")
   endif(ANDROID)
@@ -526,8 +511,8 @@ ELSEIF(OHOS)
   set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -D_GNU_SOURCE)
   check_symbol_exists(pthread_setname_np "pthread.h" HAVE_PTHREAD_SETNAME_NP)
   set(CMAKE_REQUIRED_DEFINITIONS "")
-  find_library(hilog-lib hilog_ndk.z)
-  if(NOT hilog-lib)
+  find_library(log-lib hilog_ndk.z)
+  if(NOT log-lib)
     message(FATAL_ERROR "hilog_ndk.z not found in sysroot (CMAKE_SYSTEM_LIBRARY_PATH => ${CMAKE_SYSTEM_LIBRARY_PATH})")
   endif()
 ELSEIF(WIN32)
@@ -535,8 +520,6 @@ ELSEIF(WIN32)
   set(HAVE_PTHREAD_SETNAME_NP 1)
   #set_property(TARGET ${target_prj_demo} APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   if(NOT ("x${PRJ_WIN_PTHREAD_MODE}" MATCHES "x0"))
-     #find_library(pthread-lib pthread_win_lib)
-     #set(pthread-lib ${pthread_win_lib})
 	 # /LTCG 链接时代码生成, 由于在链接时生成代码,可以全局地对所有obj进行优化. 一般用于release版的生成. 
 	 # 该选项与增量链接是冲突的.开启了链接时代码生成,即便在增量链接开启的情况下,仍然要进行完整链接.
 	 #add_compile_options(/LTCG) 
@@ -549,9 +532,6 @@ ELSEIF(WIN32)
 	   set(pthread-lib "${PRJ_ROOT_DIR}/lib/windows/${PLATFORM_ABI}/pthread_dll.lib")
 	   list(APPEND dependency_local_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/lib/windows/${PLATFORM_ABI}/pthread_dll.dll")
 	 endif()
-     #copy_file_on_post_build(${target_prj_demo} "${PRJ_ROOT_DIR}/lib/windows/${PLATFORM_ABI}/pthreadVC2.dll")
-     #copy_file_on_post_build_to_all_targets("${PRJ_ROOT_DIR}/lib/windows/${PLATFORM_ABI}/pthreadVC2.dll")
-     #list(APPEND dependency_local_libs "${pthread-lib}" "${PRJ_ROOT_DIR}/lib/windows/${PLATFORM_ABI}/pthreadVC2.dll")
   else()
      set(pthread-lib "")
   endif()
@@ -576,22 +556,18 @@ message(STATUS "pthread-lib => ${pthread-lib} , log-lib => ${log-lib}")
 
 #================SETUP dependencies of build target BEGIN================
 IF (BUILD_STATIC_LIBS)	
-  target_link_libraries( # Specifies the target library.
-          ${target_prj_static} PUBLIC
+  target_link_libraries(${target_prj_static} PUBLIC
 
           ${pthread-lib}
           ${log-lib}
-          ${hilog-lib}
           )
 ENDIF (BUILD_STATIC_LIBS)
 
 IF (BUILD_SHARED_LIBS) 
-  target_link_libraries( # Specifies the target library.
-          ${target_prj_shared} PUBLIC
+  target_link_libraries(${target_prj_shared} PUBLIC
 
           ${pthread-lib}
           ${log-lib}
-          ${hilog-lib}
           )
 ENDIF (BUILD_SHARED_LIBS)
 
@@ -601,13 +577,9 @@ IF (BUILD_DEMO)
   else()
     set(demo_link_lib ${target_prj_shared})
   endif (BUILD_STATIC_LIBS)
-  target_link_libraries( # Specifies the target library.
-          ${target_prj_demo}
+  target_link_libraries(${target_prj_demo}
 
           ${demo_link_lib}
-          #${target_prj_static}
-          #${pthread-lib}
-          #${log-lib}
           )
 ENDIF (BUILD_DEMO)
 

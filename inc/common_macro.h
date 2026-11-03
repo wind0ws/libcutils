@@ -301,7 +301,7 @@ static inline int _fclose_safe(FILE** fp_p)
      }
      return return_value;
 }
-#define FCLOSE(fp) _fclose_safe(&fp)
+#define FCLOSE(fp) _fclose_safe(&(fp))
 #define fclose(fp) FCLOSE(fp)
 
 #ifndef RANDOM
